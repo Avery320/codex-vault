@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+vault_path="${CODEX_VAULT_PATH:-${plugin_dir}/fixtures/demo-vault}"
+cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
+
+if [[ ! -f "${cli_entry}" ]]; then
+  echo "Codex Vault is not built. Run 'yarn build' from ${plugin_dir}." >&2
+  exit 1
+fi
+
+if [[ ! -d "${vault_path}" ]]; then
+  echo "Codex Vault path does not exist: ${vault_path}" >&2
+  exit 1
+fi
+
+if [[ -n "${CODEX_MCP_NODE_PATH:-}" ]]; then
+  node_binary="${CODEX_MCP_NODE_PATH}"
+else
+  node_binary="$(command -v node)"
+fi
+
+exec "${node_binary}" "${cli_entry}" mcp --workspace "${vault_path}"

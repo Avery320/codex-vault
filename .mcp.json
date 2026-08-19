@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "codex_vault": {
+      "command": "./scripts/launch_codex_vault_mcp",
+      "args": [],
+      "cwd": ".",
+      "enabled": true,
+      "env_vars": [
+        "CODEX_VAULT_PATH",
+        "CODEX_MCP_NODE_PATH",
+        "FOAM_LOG_LEVEL",
+        "PATH"
+      ],
+      "startup_timeout_sec": 30,
+      "tool_timeout_sec": 120
+    }
+  }
+}
