@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { withMcpServer } from './test-setup';
 
 const SEED = {
@@ -39,6 +41,7 @@ describe('FoamMcpServer lifecycle', () => {
           'traverse_graph',
           'get_graph_summary',
           'get_workspace_info',
+          'get_vault_explorer_state',
           'show_vault_explorer',
           // tags
           'list_tags',
@@ -72,6 +75,14 @@ describe('FoamMcpServer lifecycle', () => {
           }),
         ])
       );
+      const html = await readFile(
+        path.join(__dirname, '..', 'ui', 'vault-explorer.html'),
+        'utf8'
+      );
+      expect(html).toEqual(expect.stringContaining('id="vault-switcher"'));
+      expect(html).toEqual(expect.stringContaining('id="markdown"'));
+      expect(html).toEqual(expect.stringContaining('id="graph"'));
+      expect(html).not.toEqual(expect.stringContaining('id="analyze"'));
 
       const result = (await ctx.client.callTool({
         name: 'show_vault_explorer',
@@ -79,6 +90,8 @@ describe('FoamMcpServer lifecycle', () => {
       })) as {
         structuredContent: {
           focus_uri: string;
+          active_vault: { active: boolean };
+          needs_vault_selection: boolean;
           files: Array<{ uri: string; title: string }>;
           graph: {
             nodeInfo: Record<string, { title: string }>;
@@ -88,6 +101,10 @@ describe('FoamMcpServer lifecycle', () => {
       };
 
       expect(result.structuredContent.focus_uri).toBe('a.md');
+      expect(result.structuredContent.active_vault).toMatchObject({
+        active: true,
+      });
+      expect(result.structuredContent.needs_vault_selection).toBe(false);
       expect(result.structuredContent.files.map(file => file.uri)).toEqual([
         'a.md',
         'b.md',
@@ -98,6 +115,14 @@ describe('FoamMcpServer lifecycle', () => {
       expect(result.structuredContent.graph.links).toEqual([
         { source: 'a.md', target: 'b.md' },
       ]);
+
+      const state = (await ctx.client.callTool({
+        name: 'get_vault_explorer_state',
+        arguments: {},
+      })) as { structuredContent: typeof result.structuredContent };
+      expect(state.structuredContent.files).toEqual(
+        result.structuredContent.files
+      );
     }));
 
   it('every registered tool advertises a description', () =>

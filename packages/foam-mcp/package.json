@@ -13,12 +13,12 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node build-ui.cjs",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json && node build-ui.cjs",
     "clean": "rimraf out",
     "test": "yarn test:unit",
     "test:unit": "vitest run",
     "bench": "echo 'No benchmarks for @foam/mcp'",
-    "lint": "oxlint src"
+    "lint": "oxlint src ui"
   },
   "devDependencies": {
     "@types/markdown-it": "14.1.2",

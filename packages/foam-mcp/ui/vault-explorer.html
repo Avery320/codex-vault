@@ -6,32 +6,36 @@
     <title>Codex Vault</title>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: #f7f7f5;
-        --panel: rgba(255, 255, 255, 0.82);
-        --panel-solid: #fff;
-        --text: #171716;
-        --muted: #6f6f6a;
-        --line: rgba(20, 20, 18, 0.11);
-        --accent: #2563eb;
-        --accent-soft: rgba(37, 99, 235, 0.12);
-        --chip: rgba(20, 20, 18, 0.055);
-        --shadow: 0 12px 32px rgba(30, 30, 25, 0.08);
-        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
-          'Segoe UI', sans-serif;
+        color-scheme: dark;
+        --background-primary: #202020;
+        --background-secondary: #262626;
+        --background-secondary-alt: #1b1b1b;
+        --background-modifier-hover: #333333;
+        --background-modifier-active: #3a3449;
+        --border: #3a3a3a;
+        --text-normal: #dcddde;
+        --text-muted: #9b9b9b;
+        --text-faint: #737373;
+        --interactive-accent: #8b6cef;
+        --interactive-accent-hover: #9d83f4;
+        --danger: #ef6b73;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
 
-      :root[data-theme='dark'] {
-        --bg: #171716;
-        --panel: rgba(30, 30, 29, 0.88);
-        --panel-solid: #20201f;
-        --text: #f3f3ef;
-        --muted: #aaa9a2;
-        --line: rgba(255, 255, 255, 0.1);
-        --accent: #82aaff;
-        --accent-soft: rgba(130, 170, 255, 0.16);
-        --chip: rgba(255, 255, 255, 0.07);
-        --shadow: 0 16px 42px rgba(0, 0, 0, 0.3);
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --background-primary: #ffffff;
+        --background-secondary: #f2f2f2;
+        --background-secondary-alt: #e8e8e8;
+        --background-modifier-hover: #e7e5e2;
+        --background-modifier-active: #e8e2f7;
+        --border: #d7d5d1;
+        --text-normal: #2e2e2e;
+        --text-muted: #6f6f6f;
+        --text-faint: #969696;
+        --interactive-accent: #7056c9;
+        --interactive-accent-hover: #6048b8;
+        --danger: #c83f49;
       }
 
       * {
@@ -44,8 +48,8 @@
         height: 100%;
         margin: 0;
         overflow: hidden;
-        background: var(--bg);
-        color: var(--text);
+        background: var(--background-primary);
+        color: var(--text-normal);
       }
 
       button,
@@ -57,152 +61,158 @@
         color: inherit;
       }
 
-      .app {
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid var(--interactive-accent);
+        outline-offset: -1px;
+      }
+
+      .shell {
         display: grid;
-        grid-template-rows: 54px minmax(0, 1fr);
+        grid-template-columns: 44px 286px minmax(0, 1fr);
         width: 100%;
         height: 100%;
+        background: var(--background-primary);
       }
 
-      .toolbar {
-        display: grid;
-        grid-template-columns: auto minmax(180px, 560px) 1fr auto;
-        align-items: center;
-        gap: 12px;
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--line);
-        background: var(--panel);
-        backdrop-filter: blur(18px);
+      .shell.sidebar-hidden {
+        grid-template-columns: 44px 0 minmax(0, 1fr);
       }
 
-      .brand {
+      .ribbon {
+        z-index: 3;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 9px;
-        min-width: 150px;
-        font-weight: 680;
-        letter-spacing: -0.02em;
+        gap: 8px;
+        padding: 10px 5px;
+        border-right: 1px solid var(--border);
+        background: var(--background-secondary-alt);
       }
 
-      .brand-mark {
+      .ribbon-button {
         display: grid;
         place-items: center;
-        width: 30px;
-        height: 30px;
-        border-radius: 9px;
-        background: var(--text);
-        color: var(--panel-solid);
-        font-size: 13px;
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
       }
 
-      .search-wrap {
+      .ribbon-button:hover,
+      .ribbon-button.active {
+        background: var(--background-modifier-hover);
+        color: var(--text-normal);
+      }
+
+      .ribbon-button.active {
+        box-shadow: inset 2px 0 var(--interactive-accent);
+      }
+
+      .ribbon-button svg {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+
+      .sidebar {
         position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-rows: 42px 42px minmax(0, 1fr) auto;
+        min-width: 0;
+        overflow: hidden;
+        border-right: 1px solid var(--border);
+        background: var(--background-secondary);
       }
 
-      .search-wrap span {
+      .sidebar-hidden .sidebar {
+        display: none;
+      }
+
+      .sidebar-header,
+      .tab-bar {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        height: 42px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sidebar-header {
+        justify-content: space-between;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      #file-count {
+        color: var(--text-faint);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .search-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding: 6px 9px;
+      }
+
+      .search-row svg {
         position: absolute;
-        left: 11px;
-        top: 8px;
-        color: var(--muted);
+        left: 18px;
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: var(--text-muted);
+        stroke-width: 1.8;
       }
 
       #search {
         width: 100%;
-        height: 36px;
-        padding: 0 12px 0 34px;
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        outline: none;
-        background: var(--chip);
-        color: var(--text);
-      }
-
-      #search:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-      }
-
-      .stats {
-        overflow: hidden;
-        color: var(--muted);
+        height: 29px;
+        padding: 0 9px 0 31px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--background-primary);
+        color: var(--text-normal);
         font-size: 12px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
-      .actions {
-        display: flex;
-        gap: 7px;
+      #search::placeholder {
+        color: var(--text-faint);
       }
 
-      .action {
-        height: 34px;
-        padding: 0 11px;
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        background: var(--panel-solid);
-        cursor: pointer;
-      }
-
-      .action:hover {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      .workspace {
-        display: grid;
-        grid-template-columns: minmax(220px, 280px) minmax(300px, 0.92fr) minmax(
-            380px,
-            1.08fr
-          );
+      .tree {
         min-height: 0;
-      }
-
-      .pane {
-        min-width: 0;
-        min-height: 0;
-        border-right: 1px solid var(--line);
-        background: var(--panel);
-      }
-
-      .pane:last-child {
-        border-right: 0;
-      }
-
-      .pane-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 42px;
-        padding: 0 13px;
-        border-bottom: 1px solid var(--line);
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .scroll {
-        height: calc(100% - 42px);
         overflow: auto;
-      }
-
-      #tree {
-        padding: 8px;
+        padding: 5px 7px 16px;
+        scrollbar-color: var(--border) transparent;
       }
 
       details > summary {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 8px;
-        border-radius: 7px;
-        color: var(--muted);
+        min-height: 27px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        color: var(--text-muted);
         cursor: pointer;
         list-style: none;
-        font-size: 12px;
-        font-weight: 650;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+
+      details > summary:hover {
+        background: var(--background-modifier-hover);
       }
 
       details > summary::-webkit-details-marker {
@@ -211,8 +221,9 @@
 
       details > summary::before {
         content: '›';
-        width: 12px;
-        transition: transform 120ms ease;
+        width: 13px;
+        color: var(--text-faint);
+        transition: transform 100ms ease;
       }
 
       details[open] > summary::before {
@@ -220,115 +231,311 @@
       }
 
       .folder-content {
-        padding-left: 10px;
+        margin-left: 7px;
+        padding-left: 8px;
+        border-left: 1px solid var(--border);
       }
 
       .file {
-        display: grid;
-        grid-template-columns: 16px minmax(0, 1fr);
-        gap: 6px;
+        position: relative;
+        display: block;
         width: 100%;
-        padding: 7px 8px;
+        min-height: 27px;
+        overflow: hidden;
+        padding: 4px 7px 4px 25px;
         border: 0;
-        border-radius: 7px;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-normal);
+        text-align: left;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+        font-size: 12.5px;
+      }
+
+      .file::before {
+        position: absolute;
+        left: 8px;
+        content: '◇';
+        color: var(--text-faint);
+      }
+
+      .file:hover {
+        background: var(--background-modifier-hover);
+      }
+
+      .file.active {
+        background: var(--background-modifier-active);
+      }
+
+      .file.active::before {
+        color: var(--interactive-accent);
+      }
+
+      .tree-empty {
+        padding: 22px 12px;
+        color: var(--text-faint);
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .vault-footer {
+        position: relative;
+        border-top: 1px solid var(--border);
+        background: var(--background-secondary-alt);
+      }
+
+      .vault-switcher {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        width: 100%;
+        min-height: 53px;
+        padding: 7px 10px;
+        border: 0;
         background: transparent;
         text-align: left;
         cursor: pointer;
       }
 
-      .file:hover {
-        background: var(--chip);
+      .vault-switcher:hover {
+        background: var(--background-modifier-hover);
       }
 
-      .file.active {
-        background: var(--accent-soft);
-        color: var(--accent);
+      .vault-meta {
+        display: grid;
+        min-width: 0;
+        gap: 2px;
       }
 
-      .file-label {
+      #vault-name {
+        overflow: hidden;
+        font-size: 12.5px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #vault-path {
+        overflow: hidden;
+        color: var(--text-faint);
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .vault-menu {
+        position: absolute;
+        right: 7px;
+        bottom: 50px;
+        left: 7px;
+        z-index: 10;
+        max-height: min(420px, 60vh);
+        overflow: auto;
+        padding: 5px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--background-secondary-alt);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .vault-menu[hidden] {
+        display: none;
+      }
+
+      .vault-option,
+      .vault-action {
+        width: 100%;
+        padding: 7px 8px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .vault-option {
+        display: grid;
+        gap: 2px;
+      }
+
+      .vault-option:hover,
+      .vault-action:hover,
+      .vault-option.active {
+        background: var(--background-modifier-hover);
+      }
+
+      .vault-option.active {
+        box-shadow: inset 2px 0 var(--interactive-accent);
+      }
+
+      .vault-option-name,
+      .vault-action {
+        font-size: 12px;
+      }
+
+      .vault-option-path {
+        overflow: hidden;
+        color: var(--text-faint);
+        font-size: 9.5px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .menu-divider {
+        height: 1px;
+        margin: 4px 2px;
+        background: var(--border);
+      }
+
+      .main {
+        position: relative;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) 24px;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(360px, 1.08fr) minmax(340px, 0.92fr);
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .graph-hidden .workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .graph-hidden .graph-pane {
+        display: none;
+      }
+
+      .pane {
+        display: grid;
+        grid-template-rows: 42px minmax(0, 1fr);
+        min-width: 0;
+        min-height: 0;
+        background: var(--background-primary);
+      }
+
+      .reader {
+        border-right: 1px solid var(--border);
+      }
+
+      .graph-hidden .reader {
+        border-right: 0;
+      }
+
+      .tab-bar {
+        background: var(--background-secondary-alt);
+      }
+
+      .tab {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        height: 42px;
+        max-width: min(360px, 72%);
+        padding: 0 13px;
+        border-right: 1px solid var(--border);
+        background: var(--background-primary);
+        font-size: 12.5px;
+      }
+
+      .tab svg {
+        width: 15px;
+        height: 15px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: var(--text-muted);
+        stroke-width: 1.7;
+      }
+
+      #note-title,
+      .tab-title {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .graph-wrap {
-        position: relative;
-        height: calc(100% - 42px);
+      .tab-meta {
+        min-width: 0;
+        margin-left: auto;
+        padding: 0 11px;
         overflow: hidden;
-        background: radial-gradient(
-            circle at 50% 40%,
-            var(--accent-soft),
-            transparent 34%
-          ),
-          var(--bg);
+        color: var(--text-faint);
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      foam-graph {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-
-      .reader .scroll {
-        background: var(--panel-solid);
+      .reader-scroll {
+        min-height: 0;
+        overflow: auto;
+        scrollbar-color: var(--border) transparent;
       }
 
       .document {
         width: min(760px, 100%);
         margin: 0 auto;
-        padding: 36px clamp(22px, 5vw, 68px) 80px;
-      }
-
-      #note-path {
-        color: var(--muted);
-        font-size: 12px;
-        letter-spacing: 0;
-        text-transform: none;
+        padding: 34px clamp(26px, 5vw, 72px) 80px;
       }
 
       #markdown {
-        font-family: ui-serif, Georgia, 'Noto Serif TC', serif;
-        font-size: 16px;
-        line-height: 1.75;
+        font-size: 15px;
+        line-height: 1.72;
       }
 
       #markdown h1,
       #markdown h2,
       #markdown h3 {
-        line-height: 1.25;
-        letter-spacing: -0.025em;
+        line-height: 1.3;
+        letter-spacing: -0.018em;
       }
 
       #markdown h1 {
-        margin: 0 0 1.25rem;
-        font-size: clamp(30px, 4vw, 46px);
+        margin: 0 0 1.2rem;
+        font-size: 2em;
       }
 
       #markdown h2 {
-        margin-top: 2.2rem;
-        padding-bottom: 0.3rem;
-        border-bottom: 1px solid var(--line);
+        margin-top: 2rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 1.45em;
+      }
+
+      #markdown h3 {
+        margin-top: 1.7rem;
+        font-size: 1.18em;
       }
 
       #markdown a {
-        color: var(--accent);
+        color: var(--interactive-accent-hover);
         text-decoration: none;
+      }
+
+      #markdown a:hover {
+        text-decoration: underline;
       }
 
       #markdown code {
         padding: 0.15em 0.35em;
-        border-radius: 5px;
-        background: var(--chip);
+        border-radius: 4px;
+        background: var(--background-secondary);
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.9em;
+        font-size: 0.88em;
       }
 
       #markdown pre {
         overflow: auto;
-        padding: 16px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: var(--bg);
+        padding: 15px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--background-secondary-alt);
       }
 
       #markdown pre code {
@@ -338,163 +545,394 @@
 
       #markdown blockquote {
         margin-left: 0;
-        padding-left: 16px;
-        border-left: 3px solid var(--accent);
-        color: var(--muted);
+        padding-left: 14px;
+        border-left: 3px solid var(--interactive-accent);
+        color: var(--text-muted);
+      }
+
+      #markdown img {
+        max-width: 100%;
+      }
+
+      #markdown.empty {
+        display: grid;
+        min-height: 45vh;
+        place-items: center;
+        color: var(--text-faint);
+        text-align: center;
       }
 
       .backlinks {
         margin-top: 42px;
-        padding-top: 22px;
-        border-top: 1px solid var(--line);
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
       }
 
       .backlinks h3 {
-        margin: 0 0 12px;
-        font-family: inherit;
-        font-size: 13px;
+        margin: 0 0 10px;
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 650;
+        text-transform: uppercase;
       }
 
       .backlink-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 7px;
+        gap: 6px;
       }
 
-      .chip {
-        padding: 6px 9px;
-        border: 0;
-        border-radius: 999px;
-        background: var(--chip);
+      .backlink {
+        padding: 5px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--background-secondary);
         cursor: pointer;
+        font-size: 11.5px;
       }
 
-      .empty {
+      .backlink:hover {
+        border-color: var(--interactive-accent);
+      }
+
+      .graph-wrap {
+        min-height: 0;
+        overflow: hidden;
+        background: var(--background-primary);
+      }
+
+      foam-graph {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        padding: 0 9px;
+        border-top: 1px solid var(--border);
+        background: var(--background-secondary-alt);
+        color: var(--text-faint);
+        font-size: 10px;
+      }
+
+      #status {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #status.error {
+        color: var(--danger);
+      }
+
+      .empty-vault {
+        position: absolute;
+        inset: 42px 0 24px;
+        z-index: 5;
         display: grid;
         place-items: center;
-        height: 100%;
-        padding: 24px;
-        color: var(--muted);
-        text-align: center;
+        background: var(--background-primary);
       }
 
-      .mobile-toggle {
+      .empty-vault[hidden] {
         display: none;
       }
 
-      @media (max-width: 980px) {
-        .toolbar {
-          grid-template-columns: auto minmax(150px, 1fr) auto;
-        }
+      .empty-vault-card {
+        width: min(430px, calc(100% - 40px));
+        text-align: center;
+      }
 
-        .stats {
-          display: none;
-        }
+      .empty-vault-card h1 {
+        margin: 0 0 8px;
+        font-size: 21px;
+      }
 
-        .mobile-toggle {
-          display: inline-block;
+      .empty-vault-card p {
+        margin: 0 0 20px;
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .empty-actions,
+      .dialog-actions {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .primary,
+      .secondary {
+        min-height: 34px;
+        padding: 0 13px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .primary {
+        border: 1px solid var(--interactive-accent);
+        background: var(--interactive-accent);
+        color: white;
+      }
+
+      .secondary {
+        border: 1px solid var(--border);
+        background: var(--background-secondary);
+        color: var(--text-normal);
+      }
+
+      dialog {
+        width: min(480px, calc(100% - 32px));
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--background-secondary);
+        color: var(--text-normal);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.48);
+      }
+
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.58);
+      }
+
+      .dialog-header {
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .dialog-header h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .vault-form {
+        display: grid;
+        gap: 13px;
+        padding: 17px 18px 18px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        color: var(--text-muted);
+        font-size: 11.5px;
+      }
+
+      .field input {
+        width: 100%;
+        height: 34px;
+        padding: 0 9px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--background-primary);
+        color: var(--text-normal);
+        font-size: 12px;
+      }
+
+      .dialog-error {
+        min-height: 16px;
+        color: var(--danger);
+        font-size: 11px;
+      }
+
+      .dialog-actions {
+        justify-content: flex-end;
+      }
+
+      @media (max-width: 940px) {
+        .shell {
+          grid-template-columns: 42px 244px minmax(0, 1fr);
         }
 
         .workspace {
-          grid-template-columns: 240px minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr);
         }
 
-        .graph-pane,
-        .reader {
-          grid-column: 2;
-          grid-row: 1;
-        }
-
-        .workspace:not(.show-graph) .graph-pane,
-        .workspace.show-graph .reader {
+        .graph-pane {
           display: none;
+        }
+
+        .reader {
+          border-right: 0;
         }
       }
 
-      @media (max-width: 640px) {
-        .brand {
-          min-width: auto;
+      @media (max-width: 620px) {
+        .shell,
+        .shell.sidebar-hidden {
+          grid-template-columns: 40px minmax(0, 1fr);
         }
 
-        .brand-name,
-        #fullscreen,
-        #analyze {
+        .sidebar {
+          grid-column: 2;
+        }
+
+        .main {
           display: none;
         }
 
-        .workspace {
-          grid-template-columns: 1fr;
-        }
-
-        .explorer,
-        .graph-pane,
-        .reader {
-          grid-column: 1;
-        }
-
-        .explorer {
-          display: none;
+        .sidebar-hidden .sidebar {
+          display: grid;
         }
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <header class="toolbar">
-        <div class="brand">
-          <span class="brand-mark">CV</span>
-          <span class="brand-name">Codex Vault</span>
-        </div>
-        <label class="search-wrap">
-          <span>⌕</span>
+    <div id="shell" class="shell">
+      <nav class="ribbon" aria-label="工作區面板">
+        <button
+          id="toggle-sidebar"
+          class="ribbon-button active"
+          type="button"
+          title="切換檔案側欄"
+          aria-label="切換檔案側欄"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h6l2 2h8v14H4z" />
+          </svg>
+        </button>
+        <button
+          id="toggle-graph"
+          class="ribbon-button active"
+          type="button"
+          title="切換知識圖譜"
+          aria-label="切換知識圖譜"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="6" r="2" />
+            <circle cx="18" cy="7" r="2" />
+            <circle cx="12" cy="18" r="2" />
+            <path d="m8 7 8 0M7 8l4 8m6-7-4 7" />
+          </svg>
+        </button>
+      </nav>
+
+      <aside class="sidebar">
+        <header class="sidebar-header">
+          <span>檔案</span>
+          <span id="file-count">0</span>
+        </header>
+        <label class="search-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m16 16 4 4" />
+          </svg>
           <input
             id="search"
             type="search"
-            placeholder="搜尋標題與 Markdown 正文…"
+            placeholder="搜尋筆記…"
+            aria-label="搜尋標題與 Markdown 正文"
           />
         </label>
-        <div id="stats" class="stats">正在載入知識庫…</div>
-        <div class="actions">
-          <button id="toggle-view" class="action mobile-toggle" type="button">
-            圖譜
+        <div id="tree" class="tree"></div>
+        <footer class="vault-footer">
+          <button id="vault-switcher" class="vault-switcher" type="button">
+            <span class="vault-meta">
+              <span id="vault-name">載入知識庫…</span>
+              <span id="vault-path"></span>
+            </span>
+            <span aria-hidden="true">⌃</span>
           </button>
-          <button id="analyze" class="action" type="button">
-            請 Codex 分析
-          </button>
-          <button id="fullscreen" class="action" type="button">全螢幕</button>
-        </div>
-      </header>
-      <main id="workspace" class="workspace">
-        <aside class="pane explorer">
-          <div class="pane-head">
-            <span>檔案</span><span id="file-count">0</span>
-          </div>
-          <div id="tree" class="scroll"></div>
-        </aside>
-        <section class="pane graph-pane">
-          <div class="pane-head">
-            <span>知識圖譜</span><span>拖曳・縮放・點選</span>
-          </div>
-          <div class="graph-wrap"><foam-graph id="graph"></foam-graph></div>
-        </section>
-        <section class="pane reader">
-          <div class="pane-head">
-            <span>Markdown</span><span id="note-path">尚未選擇筆記</span>
-          </div>
-          <div class="scroll">
-            <article class="document">
-              <div id="markdown" class="empty">
-                從檔案列表或圖譜選擇一則筆記。
+          <div id="vault-menu" class="vault-menu" hidden></div>
+        </footer>
+      </aside>
+
+      <main class="main">
+        <div id="workspace" class="workspace">
+          <section class="pane reader">
+            <header class="tab-bar">
+              <div class="tab">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3h9l3 3v15H6z" />
+                  <path d="M15 3v4h4" />
+                </svg>
+                <span id="note-title">Markdown</span>
               </div>
-              <section id="backlinks" class="backlinks" hidden>
-                <h3>反向連結</h3>
-                <div id="backlink-list" class="backlink-list"></div>
-              </section>
-            </article>
+              <span id="note-path" class="tab-meta">尚未選擇筆記</span>
+            </header>
+            <div class="reader-scroll">
+              <article class="document">
+                <div id="markdown" class="empty">
+                  從檔案列表或圖譜選擇一則筆記。
+                </div>
+                <section id="backlinks" class="backlinks" hidden>
+                  <h3>反向連結</h3>
+                  <div id="backlink-list" class="backlink-list"></div>
+                </section>
+              </article>
+            </div>
+          </section>
+
+          <section class="pane graph-pane">
+            <header class="tab-bar">
+              <div class="tab">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="6" cy="6" r="2" />
+                  <circle cx="18" cy="7" r="2" />
+                  <circle cx="12" cy="18" r="2" />
+                  <path d="m8 7 8 0M7 8l4 8m6-7-4 7" />
+                </svg>
+                <span class="tab-title">關聯圖檢視</span>
+              </div>
+              <span class="tab-meta">拖曳 · 縮放 · 點選</span>
+            </header>
+            <div class="graph-wrap">
+              <foam-graph id="graph"></foam-graph>
+            </div>
+          </section>
+        </div>
+
+        <footer class="status-bar">
+          <div id="status">正在載入知識庫…</div>
+        </footer>
+
+        <section id="empty-vault" class="empty-vault" hidden>
+          <div class="empty-vault-card">
+            <h1>開啟知識庫</h1>
+            <p>
+              選擇既有 Obsidian Vault，或建立新的 Markdown 知識庫。Codex Vault
+              只記錄路徑，不會搬移既有筆記。
+            </p>
+            <div class="empty-actions">
+              <button id="open-existing" class="primary" type="button">
+                開啟資料夾
+              </button>
+              <button id="create-new" class="secondary" type="button">
+                建立知識庫
+              </button>
+            </div>
           </div>
         </section>
       </main>
     </div>
+
+    <dialog id="vault-dialog">
+      <header class="dialog-header">
+        <h2 id="vault-dialog-title">開啟知識庫</h2>
+      </header>
+      <form id="vault-form" class="vault-form">
+        <label id="path-field" class="field">
+          <span>知識庫資料夾路徑</span>
+          <input id="vault-folder-path" type="text" required />
+        </label>
+        <label id="name-field" class="field" hidden>
+          <span>知識庫名稱</span>
+          <input id="vault-folder-name" type="text" />
+        </label>
+        <div id="dialog-error" class="dialog-error"></div>
+        <div class="dialog-actions">
+          <button id="dialog-cancel" class="secondary" type="button">
+            取消
+          </button>
+          <button class="primary" type="submit">繼續</button>
+        </div>
+      </form>
+    </dialog>
+
     <script>
       /*__CODEX_VAULT_BUNDLE__*/
     </script>
