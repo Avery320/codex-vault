@@ -38,6 +38,7 @@ describe('FoamMcpServer lifecycle', () => {
           'traverse_graph',
           'get_graph_summary',
           'get_workspace_info',
+          'show_vault_explorer',
           // tags
           'list_tags',
           'search_by_tag',
@@ -51,6 +52,51 @@ describe('FoamMcpServer lifecycle', () => {
           'get_outline',
         ])
       );
+    }));
+
+  it('show_vault_explorer advertises and returns an MCP App graph payload', () =>
+    withMcpServer(SEED, async ctx => {
+      const list = await ctx.client.listTools();
+      const tool = list.tools.find(item => item.name === 'show_vault_explorer');
+
+      expect(tool?._meta).toMatchObject({
+        ui: { resourceUri: 'ui://codex-vault/vault-explorer.html' },
+      });
+      const resources = await ctx.client.listResources();
+      expect(resources.resources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            uri: 'ui://codex-vault/vault-explorer.html',
+            mimeType: 'text/html;profile=mcp-app',
+          }),
+        ])
+      );
+
+      const result = (await ctx.client.callTool({
+        name: 'show_vault_explorer',
+        arguments: { focus_uri: 'a.md' },
+      })) as {
+        structuredContent: {
+          focus_uri: string;
+          files: Array<{ uri: string; title: string }>;
+          graph: {
+            nodeInfo: Record<string, { title: string }>;
+            links: Array<{ source: string; target: string }>;
+          };
+        };
+      };
+
+      expect(result.structuredContent.focus_uri).toBe('a.md');
+      expect(result.structuredContent.files.map(file => file.uri)).toEqual([
+        'a.md',
+        'b.md',
+      ]);
+      expect(
+        Object.keys(result.structuredContent.graph.nodeInfo).sort()
+      ).toEqual(['a.md', 'b.md']);
+      expect(result.structuredContent.graph.links).toEqual([
+        { source: 'a.md', target: 'b.md' },
+      ]);
     }));
 
   it('every registered tool advertises a description', () =>

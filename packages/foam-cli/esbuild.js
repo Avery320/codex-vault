@@ -6,7 +6,9 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
 async function main() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')
+  );
   const corePkg = JSON.parse(
     fs.readFileSync(path.join(__dirname, '../foam-core/package.json'), 'utf8')
   );
@@ -45,12 +47,25 @@ async function main() {
   }
 
   copyGraphBundle();
+  copyMcpAppBundle();
   copyAssets();
 }
 
 function copyGraphBundle() {
-  const src = path.join(__dirname, '../foam-graph/out/foam-graph.standalone.js');
+  const src = path.join(
+    __dirname,
+    '../foam-graph/out/foam-graph.standalone.js'
+  );
   const dest = path.join(__dirname, 'out/foam-graph.standalone.js');
+  if (fs.existsSync(src)) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+}
+
+function copyMcpAppBundle() {
+  const src = path.join(__dirname, '../foam-mcp/out/ui/vault-explorer.html');
+  const dest = path.join(__dirname, 'out/ui/vault-explorer.html');
   if (fs.existsSync(src)) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(src, dest);

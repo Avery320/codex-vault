@@ -18,6 +18,8 @@ import { registerTagTools } from './tools/tags';
 import { registerSearchTools } from './tools/search';
 import { registerStructureTools } from './tools/structure';
 import type { VaultFullTextIndex } from './full-text-index';
+import { registerExplorerTool } from './tools/explorer';
+import { registerVaultExplorerResource } from './ui-resource';
 
 /**
  * Pre-bound `registerTool` helper handed to tool modules. Has the same
@@ -101,6 +103,7 @@ export class FoamMcpServer {
     // Read-only tools always registered.
     registerStructureTools(register, foam, rootUri);
     registerGraphTools(register, foam, rootUri, { readOnly });
+    registerExplorerTool(register, foam, rootUri);
     this.fullTextIndex = registerSearchTools(
       register,
       foam,
@@ -114,6 +117,7 @@ export class FoamMcpServer {
     // the actual capability surface.
     registerResourceTools(register, foam, dataStore, rootUri, { readOnly });
     registerTagTools(register, foam, dataStore, rootUri, { readOnly });
+    registerVaultExplorerResource(this.mcp);
 
     // The MCP SDK fires `oninitialized` once the client has sent its
     // `initialized` notification — at which point `getClientVersion()` has
