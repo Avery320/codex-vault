@@ -68,9 +68,16 @@ describe('search tools', () => {
           ).map(m => m.uri)
         ).toEqual(['changing.md']);
 
+        const preview = await ctx.callToolJson<{
+          expected_content_sha256: string;
+        }>('preview_resource_update', {
+          uri: 'changing.md',
+          content: '# Changing\n\n更新後的標記是海棠。',
+        });
         await ctx.callToolJson('update_resource', {
           uri: 'changing.md',
           content: '# Changing\n\n更新後的標記是海棠。',
+          expected_content_sha256: preview.expected_content_sha256,
         });
 
         const oldMatches = await ctx.callToolJson<Array<{ uri: string }>>(

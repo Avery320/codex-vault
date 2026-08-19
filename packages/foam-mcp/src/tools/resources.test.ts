@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { withMcpServer } from '../test-setup';
 
 const SEED = {
@@ -5,6 +6,9 @@ const SEED = {
   'b.md': '---\ntitle: Note B\n---\n# B\n\nReferences [[c]].',
   'subdir/c.md': '# C\n\nLeaf note.',
 };
+
+const sha256 = (content: string) =>
+  createHash('sha256').update(content, 'utf8').digest('hex');
 
 describe('resource tools', () => {
   it('list_resources returns all notes by default', () =>
@@ -42,11 +46,12 @@ describe('resource tools', () => {
 
   it('read_resource returns the raw markdown content', () =>
     withMcpServer(SEED, async ctx => {
-      const result = await ctx.callToolJson<{ content: string }>(
-        'read_resource',
-        { uri: 'a.md' }
-      );
+      const result = await ctx.callToolJson<{
+        content: string;
+        content_sha256: string;
+      }>('read_resource', { uri: 'a.md' });
       expect(result.content).toBe(SEED['a.md']);
+      expect(result.content_sha256).toBe(sha256(SEED['a.md']));
     }));
 
   it('read_resource on a missing file returns a structured error', () =>
@@ -57,11 +62,43 @@ describe('resource tools', () => {
       expect(err.code).toBe('resource_not_found');
     }));
 
-  it('update_resource with content overwrites the file', () =>
+  it('preview_resource_update returns a diff without changing the file', () =>
     withMcpServer(SEED, async ctx => {
+      const preview = await ctx.callToolJson<{
+        changed: boolean;
+        expected_content_sha256: string;
+        next_content_sha256: string;
+        diff: string;
+      }>('preview_resource_update', {
+        uri: 'a.md',
+        content: '# A — updated',
+      });
+
+      expect(preview.changed).toBe(true);
+      expect(preview.expected_content_sha256).toBe(sha256(SEED['a.md']));
+      expect(preview.next_content_sha256).toBe(sha256('# A — updated'));
+      expect(preview.diff).toContain('-# A');
+      expect(preview.diff).toContain('+# A — updated');
+
+      const unchanged = await ctx.callToolJson<{ content: string }>(
+        'read_resource',
+        { uri: 'a.md' }
+      );
+      expect(unchanged.content).toBe(SEED['a.md']);
+    }));
+
+  it('update_resource applies content only with the previewed hash', () =>
+    withMcpServer(SEED, async ctx => {
+      const preview = await ctx.callToolJson<{
+        expected_content_sha256: string;
+      }>('preview_resource_update', {
+        uri: 'a.md',
+        content: '# A — updated',
+      });
       await ctx.callToolJson('update_resource', {
         uri: 'a.md',
         content: '# A — updated',
+        expected_content_sha256: preview.expected_content_sha256,
       });
       const after = await ctx.callToolJson<{ content: string }>(
         'read_resource',
@@ -70,11 +107,18 @@ describe('resource tools', () => {
       expect(after.content).toBe('# A — updated');
     }));
 
-  it('update_resource with properties merges frontmatter', () =>
+  it('update_resource with properties merges frontmatter after preview', () =>
     withMcpServer(SEED, async ctx => {
+      const preview = await ctx.callToolJson<{
+        expected_content_sha256: string;
+      }>('preview_resource_update', {
+        uri: 'a.md',
+        properties: { status: 'active' },
+      });
       await ctx.callToolJson('update_resource', {
         uri: 'a.md',
         properties: { status: 'active' },
+        expected_content_sha256: preview.expected_content_sha256,
       });
       const after = await ctx.callToolJson<{ content: string }>(
         'read_resource',
@@ -82,6 +126,59 @@ describe('resource tools', () => {
       );
       expect(after.content).toContain('status: active');
       expect(after.content).toContain('title: Note A');
+    }));
+
+  it('update_resource rejects a missing preview hash', () =>
+    withMcpServer(SEED, async ctx => {
+      const result = await ctx.callTool('update_resource', {
+        uri: 'a.md',
+        content: '# unsafe overwrite',
+      });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('expected_content_sha256');
+    }));
+
+  it('update_resource rejects a stale preview and preserves newer content', () =>
+    withMcpServer(SEED, async ctx => {
+      const preview = await ctx.callToolJson<{
+        expected_content_sha256: string;
+      }>('preview_resource_update', {
+        uri: 'a.md',
+        content: '# proposed',
+      });
+
+      await ctx.dataStore.write(ctx.rootUri.joinPath('a.md'), '# changed');
+      const result = await ctx.callTool('update_resource', {
+        uri: 'a.md',
+        content: '# proposed',
+        expected_content_sha256: preview.expected_content_sha256,
+      });
+
+      expect(result.isError).toBe(true);
+      const error = JSON.parse(result.content[0].text!);
+      expect(error.code).toBe('conflict');
+      expect(error.data.current_content_sha256).toBe(sha256('# changed'));
+      expect(await ctx.dataStore.read(ctx.rootUri.joinPath('a.md'))).toBe(
+        '# changed'
+      );
+    }));
+
+  it('create_resource accepts an explicit Unicode path and Markdown content', () =>
+    withMcpServer(SEED, async ctx => {
+      const result = await ctx.callToolJson<{ uri: string }>(
+        'create_resource',
+        {
+          path: '專案/會議筆記.md',
+          title: '會議筆記',
+          content: '# 會議筆記\n\n- 決議',
+        }
+      );
+      expect(result.uri).toBe('專案/會議筆記.md');
+      const created = await ctx.callToolJson<{ content: string }>(
+        'read_resource',
+        { uri: result.uri }
+      );
+      expect(created.content).toBe('# 會議筆記\n\n- 決議');
     }));
 
   it('delete_resource without confirm returns invalid_input', () =>
@@ -154,6 +251,7 @@ describe('resource tools — path traversal containment', () => {
       const result = await ctx.callTool('update_resource', {
         uri: '/tmp/path-traversal-write.txt',
         content: 'pwned',
+        expected_content_sha256: sha256('irrelevant'),
       });
       expect(result.isError).toBe(true);
       const err = JSON.parse(result.content[0].text!);
@@ -215,7 +313,9 @@ describe('resource tools — JS template execution', () => {
       expect(result.isError).toBe(true);
       const err = JSON.parse(result.content[0].text!);
       expect(err.code).toBe('untrusted_workspace');
-      expect(err.data?.templatePath).toBe('/workspace/.foam/templates/new-note.js');
+      expect(err.data?.templatePath).toBe(
+        '/workspace/.foam/templates/new-note.js'
+      );
     }));
 
   it('create_resource rejects absolute dir outside the workspace', () =>
@@ -269,6 +369,7 @@ describe('resource tools (read-only mode)', () => {
       expect(names).not.toContain('create_resource');
       expect(names).not.toContain('delete_resource');
       expect(names).not.toContain('move_resource');
+      expect(names).toContain('preview_resource_update');
     }));
 
   it('read tools still work in read-only mode', () =>

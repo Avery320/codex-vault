@@ -26,6 +26,7 @@ describe('FoamMcpServer lifecycle', () => {
           'list_resources',
           'get_resource',
           'read_resource',
+          'preview_resource_update',
           'create_resource',
           'update_resource',
           'delete_resource',
@@ -127,6 +128,7 @@ describe('FoamMcpServer lifecycle', () => {
         expect(names).not.toContain(writer);
       }
       expect(names).toContain('list_resources');
+      expect(names).toContain('preview_resource_update');
       expect(names).toContain('list_tags');
     }));
 

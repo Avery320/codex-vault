@@ -14,7 +14,7 @@
     "longDescription": "Codex Vault adapts Foam's Markdown knowledge graph and MCP tools for local, agent-assisted note exploration in Codex. It starts in read-only mode and supports Obsidian-style wikilinks, backlinks, tags, and graph traversal.",
     "developerName": "Avery Tsai",
     "category": "Productivity",
-    "capabilities": ["Interactive", "Read"],
+    "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
       "搜尋我的 Vault，整理與這個主題最相關的筆記。",
       "顯示目前筆記的 backlinks 與相鄰知識節點。",

@@ -222,6 +222,7 @@ export type FoamErrorCode =
   | 'resource_not_found'
   | 'ambiguous_identifier'
   | 'resource_exists'
+  | 'conflict'
   | 'invalid_input'
   | 'untrusted_workspace'
   | 'io_error';

@@ -8,6 +8,7 @@
       "env_vars": [
         "CODEX_VAULT_PATH",
         "CODEX_VAULT_CONFIG_PATH",
+        "CODEX_VAULT_ALLOW_WRITES",
         "CODEX_MCP_NODE_PATH",
         "FOAM_LOG_LEVEL",
         "XDG_CONFIG_HOME",

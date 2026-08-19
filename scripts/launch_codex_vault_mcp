@@ -3,11 +3,11 @@ set -euo pipefail
 
 plugin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
+config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
 
 if [[ -n "${CODEX_VAULT_PATH:-}" ]]; then
   vault_path="${CODEX_VAULT_PATH}"
 else
-  config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
   config_path="${CODEX_VAULT_CONFIG_PATH:-${config_home}/codex-vault/vault-path}"
   if [[ -f "${config_path}" ]]; then
     IFS= read -r vault_path < "${config_path}" || true
@@ -36,4 +36,22 @@ else
   node_binary="$(command -v node)"
 fi
 
-exec "${node_binary}" "${cli_entry}" mcp --workspace "${vault_path}"
+allow_writes="${CODEX_VAULT_ALLOW_WRITES:-}"
+if [[ -z "${allow_writes}" && -f "${config_home}/codex-vault/allow-writes" ]]; then
+  IFS= read -r allow_writes < "${config_home}/codex-vault/allow-writes" || true
+fi
+
+mcp_args=(mcp --workspace "${vault_path}")
+case "${allow_writes}" in
+  1 | true | TRUE)
+    mcp_args+=(--allow-writes)
+    ;;
+  "" | 0 | false | FALSE)
+    ;;
+  *)
+    echo "Invalid CODEX_VAULT_ALLOW_WRITES value: ${allow_writes}" >&2
+    exit 1
+    ;;
+esac
+
+exec "${node_binary}" "${cli_entry}" "${mcp_args[@]}"
