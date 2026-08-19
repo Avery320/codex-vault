@@ -2,8 +2,23 @@
 set -euo pipefail
 
 plugin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-vault_path="${CODEX_VAULT_PATH:-${plugin_dir}/fixtures/demo-vault}"
 cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
+
+if [[ -n "${CODEX_VAULT_PATH:-}" ]]; then
+  vault_path="${CODEX_VAULT_PATH}"
+else
+  config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
+  config_path="${CODEX_VAULT_CONFIG_PATH:-${config_home}/codex-vault/vault-path}"
+  if [[ -f "${config_path}" ]]; then
+    IFS= read -r vault_path < "${config_path}" || true
+    if [[ -z "${vault_path}" ]]; then
+      echo "Codex Vault config is empty: ${config_path}" >&2
+      exit 1
+    fi
+  else
+    vault_path="${plugin_dir}/fixtures/demo-vault"
+  fi
+fi
 
 if [[ ! -f "${cli_entry}" ]]; then
   echo "Codex Vault is not built. Run 'yarn build' from ${plugin_dir}." >&2

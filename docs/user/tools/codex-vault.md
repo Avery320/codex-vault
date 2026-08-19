@@ -5,9 +5,15 @@ local Codex plugin. The initial development profile is deliberately read-only.
 
 ## Development vault
 
-Without configuration, the MCP launcher opens `fixtures/demo-vault`. To point a
-development session at another vault, set `CODEX_VAULT_PATH` to an absolute
-directory before starting Codex.
+The launcher selects a vault in this order:
+
+1. `CODEX_VAULT_PATH`, when set to an absolute directory.
+2. The first line of `~/.config/codex-vault/vault-path` (or the file selected by
+   `CODEX_VAULT_CONFIG_PATH`).
+3. `fixtures/demo-vault` as a safe development fallback.
+
+The config file keeps a personal vault path outside the plugin repository and
+continues to work when Codex installs a new cached copy of the plugin.
 
 ## Build and validate
 
