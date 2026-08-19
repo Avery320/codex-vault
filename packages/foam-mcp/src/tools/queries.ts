@@ -1,14 +1,16 @@
 import { z } from 'zod';
 import {
-  Foam,
   FoamError,
   QueryDescriptor,
-  QueryStore,
   URI,
   executeQuery,
 } from '@foam/core';
 import { uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  requireWorkspace,
+} from '../workspace-context';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data) }],
@@ -16,9 +18,7 @@ const json = (data: unknown) => ({
 
 export function registerQueryTools(
   register: ToolRegistrar,
-  foam: Foam,
-  queryStore: QueryStore,
-  rootUri: URI
+  workspaceProvider: FoamMcpWorkspaceProvider
 ) {
   // ─── list_queries ──────────────────────────────────────────────────────────
   register(
@@ -29,6 +29,7 @@ export function registerQueryTools(
       inputSchema: {},
     },
     async () => {
+      const { foam, queryStore } = requireWorkspace(workspaceProvider);
       const loaded = await queryStore.loadAll();
       return json(
         loaded.map(item => ({
@@ -53,6 +54,7 @@ export function registerQueryTools(
       },
     },
     async args => {
+      const { queryStore } = requireWorkspace(workspaceProvider);
       const loaded = await queryStore.load(queryStore.getFileUri(args.id));
       if (!loaded) {
         throw new FoamError(
@@ -91,6 +93,8 @@ export function registerQueryTools(
       },
     },
     async args => {
+      const { foam, queryStore, rootUri } =
+        requireWorkspace(workspaceProvider);
       if ((args.id && args.descriptor) || (!args.id && !args.descriptor)) {
         throw new FoamError(
           'invalid_input',
@@ -130,7 +134,10 @@ export function registerQueryTools(
   );
 }
 
-function countMatches(descriptor: QueryDescriptor, foam: Foam): number {
+function countMatches(
+  descriptor: QueryDescriptor,
+  foam: ReturnType<typeof requireWorkspace>['foam']
+): number {
   try {
     const { results } = executeQuery(descriptor, foam.workspace, foam.graph, {
       trusted: false,

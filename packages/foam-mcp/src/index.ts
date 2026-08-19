@@ -1,5 +1,16 @@
 export { FoamMcpServer } from './server';
-export type { FoamMcpServerOptions } from './server';
+export type { FoamMcpServerOptions, FoamMcpServerMode } from './server';
+export {
+  createWorkspaceContext,
+  requireWorkspace,
+  StaticWorkspaceProvider,
+} from './workspace-context';
+export type {
+  FoamMcpWorkspaceContext,
+  FoamMcpWorkspaceProvider,
+  VaultManager,
+  VaultSummary,
+} from './workspace-context';
 
 // Re-export the transports consumers are likely to need so they don't have
 // to take a direct dependency on @modelcontextprotocol/sdk (which would

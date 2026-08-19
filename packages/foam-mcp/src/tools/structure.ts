@@ -1,7 +1,11 @@
 import { z } from 'zod';
-import { Foam, URI, outlineData, resolveNote } from '@foam/core';
+import { outlineData, resolveNote } from '@foam/core';
 import { parseUriInput, serializeOutlineResult } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  requireWorkspace,
+} from '../workspace-context';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data) }],
@@ -9,8 +13,7 @@ const json = (data: unknown) => ({
 
 export function registerStructureTools(
   register: ToolRegistrar,
-  foam: Foam,
-  rootUri: URI
+  workspaceProvider: FoamMcpWorkspaceProvider
 ) {
   register(
     'get_outline',
@@ -21,6 +24,7 @@ export function registerStructureTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       const resource = resolveNote(foam.workspace, { uri });
       const outline = outlineData(foam.workspace, resource);

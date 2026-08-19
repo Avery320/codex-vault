@@ -1,8 +1,11 @@
 import { z } from 'zod';
-import { Foam, IDataStore, URI, searchWorkspace } from '@foam/core';
+import { searchWorkspace } from '@foam/core';
 import { serializeSearchMatch } from '../serializers';
-import { VaultFullTextIndex } from '../full-text-index';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  requireWorkspace,
+} from '../workspace-context';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data) }],
@@ -10,12 +13,8 @@ const json = (data: unknown) => ({
 
 export function registerSearchTools(
   register: ToolRegistrar,
-  foam: Foam,
-  dataStore: IDataStore,
-  rootUri: URI
-): VaultFullTextIndex {
-  const fullTextIndex = new VaultFullTextIndex(foam.workspace, dataStore);
-
+  workspaceProvider: FoamMcpWorkspaceProvider
+): void {
   register(
     'search_resources',
     {
@@ -27,12 +26,14 @@ export function registerSearchTools(
       },
     },
     async args => {
+      const { foam, rootUri, searchIndex } =
+        requireWorkspace(workspaceProvider);
       const limit = args.limit ?? 20;
       const metadataMatches = searchWorkspace(foam.workspace, {
         query: args.query,
         limit,
       });
-      const contentMatches = await fullTextIndex.search(args.query, limit);
+      const contentMatches = await searchIndex.search(args.query, limit);
       const seen = new Set<string>();
       const matches = [...metadataMatches, ...contentMatches]
         .filter(match => {
@@ -58,6 +59,7 @@ export function registerSearchTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const matches = searchWorkspace(foam.workspace, {
         properties: [{ key: args.property, value: args.value }],
         limit: args.limit,
@@ -66,5 +68,4 @@ export function registerSearchTools(
     }
   );
 
-  return fullTextIndex;
 }

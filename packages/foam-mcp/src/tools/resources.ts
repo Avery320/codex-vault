@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
-  Foam,
   FoamError,
-  IDataStore,
-  URI,
   listNotes,
   noteShowData,
   noteCreate,
@@ -20,6 +17,10 @@ import {
   serializeNoteDetail,
 } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  requireWorkspace,
+} from '../workspace-context';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data) }],
@@ -96,9 +97,7 @@ function buildNextContent(
 
 export function registerResourceTools(
   register: ToolRegistrar,
-  foam: Foam,
-  dataStore: IDataStore,
-  rootUri: URI,
+  workspaceProvider: FoamMcpWorkspaceProvider,
   opts: { readOnly?: boolean } = {}
 ) {
   const { readOnly = false } = opts;
@@ -115,6 +114,7 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const items = listNotes(foam.workspace, {
         type: args.type,
         tags: args.tag ? [args.tag] : undefined,
@@ -136,6 +136,7 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       if (!args.uri && !args.identifier) {
         throw new FoamError(
           'invalid_input',
@@ -163,6 +164,7 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       const content = await dataStore.read(uri);
       if (content === null) {
@@ -194,6 +196,7 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { dataStore, rootUri } = requireWorkspace(workspaceProvider);
       if (args.content === undefined && args.properties === undefined) {
         throw new FoamError(
           'invalid_input',
@@ -240,6 +243,8 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, dataStore, rootUri } =
+        requireWorkspace(workspaceProvider);
       if (args.path) {
         const uri = parseUriInput(args.path, rootUri);
         if (!uri.path.toLocaleLowerCase().endsWith('.md')) {
@@ -310,6 +315,8 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, dataStore, rootUri } =
+        requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       if (args.content === undefined && args.properties === undefined) {
         throw new FoamError(
@@ -361,6 +368,8 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, dataStore, rootUri } =
+        requireWorkspace(workspaceProvider);
       if (args.confirm !== true) {
         throw new FoamError(
           'invalid_input',
@@ -392,6 +401,8 @@ export function registerResourceTools(
       },
     },
     async args => {
+      const { foam, dataStore, rootUri } =
+        requireWorkspace(workspaceProvider);
       const oldUri = parseUriInput(args.uri, rootUri);
       const newUri = parseUriInput(args.new_path, rootUri);
       const resource = resolveNote(foam.workspace, { uri: oldUri });

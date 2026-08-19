@@ -1,5 +1,10 @@
 import path from 'node:path';
-import { FoamMcpServer, StdioServerTransport } from '@foam/mcp';
+import {
+  createWorkspaceContext,
+  FoamMcpServer,
+  StaticWorkspaceProvider,
+  StdioServerTransport,
+} from '@foam/mcp';
 import {
   ITelemetryReporter,
   Logger,
@@ -97,11 +102,16 @@ export async function runMcpCommand(
 
   // The dispatcher already forked the reporter for component='mcp' — this
   // command just routes it into FoamMcpServer.
+  const workspaceProvider = new StaticWorkspaceProvider(
+    createWorkspaceContext({
+      foam,
+      rootUri,
+      queryStore: createNodeQueryStore(rootUri),
+    })
+  );
   const server = new FoamMcpServer({
-    foam,
-    rootUri,
+    workspaceProvider,
     mode: args.allowWrites ? 'read-write' : 'read',
-    queryStore: createNodeQueryStore(rootUri),
     telemetry: reporter,
   });
 

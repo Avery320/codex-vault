@@ -13,6 +13,10 @@ import {
 } from '@foam/core';
 import { InMemoryDataStore } from '@foam/core/test';
 import { FoamMcpServer, FoamMcpServerMode } from './server';
+import {
+  createWorkspaceContext,
+  StaticWorkspaceProvider,
+} from './workspace-context';
 
 export interface McpTestContext {
   client: Client;
@@ -111,11 +115,16 @@ export async function withMcpServer<T>(
     'off'
   );
 
+  const workspaceProvider = new StaticWorkspaceProvider(
+    createWorkspaceContext({
+      foam,
+      rootUri,
+      queryStore: new QueryStore(dataStore as IDataStore, rootUri),
+    })
+  );
   const server = new FoamMcpServer({
-    foam,
-    rootUri,
+    workspaceProvider,
     mode: opts.mode ?? 'read-write',
-    queryStore: new QueryStore(dataStore as IDataStore, rootUri),
     telemetry: opts.telemetry,
   });
 

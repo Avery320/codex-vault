@@ -1,7 +1,5 @@
 import { z } from 'zod';
 import {
-  Foam,
-  URI,
   linksData,
   listOrphans,
   listDeadends,
@@ -19,6 +17,10 @@ import {
   uriToOutputString,
 } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  requireWorkspace,
+} from '../workspace-context';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data) }],
@@ -28,8 +30,7 @@ const MAX_TRAVERSAL_DEPTH = 5;
 
 export function registerGraphTools(
   register: ToolRegistrar,
-  foam: Foam,
-  rootUri: URI,
+  workspaceProvider: FoamMcpWorkspaceProvider,
   opts: { readOnly?: boolean } = {}
 ) {
   const { readOnly = false } = opts;
@@ -45,6 +46,7 @@ export function registerGraphTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       const resource = resolveNote(foam.workspace, { uri });
       const data = linksData(foam.workspace, foam.graph, resource);
@@ -73,6 +75,7 @@ export function registerGraphTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const items = listOrphans(foam.workspace, foam.graph, {
         excludeTypes: args.exclude_types,
       });
@@ -90,6 +93,7 @@ export function registerGraphTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const items = listDeadends(foam.workspace, foam.graph, {
         excludeTypes: args.exclude_types,
       });
@@ -106,6 +110,7 @@ export function registerGraphTools(
       inputSchema: {},
     },
     async () => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const items = listPlaceholders(foam.workspace, foam.graph);
       return json(items.map(i => serializePlaceholderItem(i, rootUri)));
     }
@@ -124,6 +129,7 @@ export function registerGraphTools(
       },
     },
     async args => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const start = parseUriInput(args.uri, rootUri);
       const result = traverseGraph(
         foam.workspace,
@@ -145,6 +151,7 @@ export function registerGraphTools(
       inputSchema: {},
     },
     async () => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const allResources = foam.workspace.list();
       const noteCount = allResources.filter(r => r.type === 'note').length;
       const attachmentCount = allResources.length - noteCount;
@@ -197,6 +204,7 @@ export function registerGraphTools(
       inputSchema: {},
     },
     async () => {
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const all = foam.workspace.list();
       const noteCount = all.filter(r => r.type === 'note').length;
       return json({

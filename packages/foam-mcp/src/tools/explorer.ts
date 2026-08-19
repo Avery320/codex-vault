@@ -1,16 +1,45 @@
 import { z } from 'zod';
-import { Foam, URI, buildGraphData, resolveNote } from '@foam/core';
+import { buildGraphData, resolveNote } from '@foam/core';
 import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import {
+  FoamMcpWorkspaceProvider,
+  VaultManager,
+  VaultSummary,
+} from '../workspace-context';
 
 export const VAULT_EXPLORER_RESOURCE_URI =
   'ui://codex-vault/vault-explorer.html';
 
 export function registerExplorerTool(
   register: ToolRegistrar,
-  foam: Foam,
-  rootUri: URI
+  workspaceProvider: FoamMcpWorkspaceProvider,
+  vaultManager?: VaultManager
 ): void {
+  register(
+    'get_vault_explorer_state',
+    {
+      description:
+        'Return the current vault, file tree, and graph data without opening another UI.',
+      inputSchema: {
+        focus_uri: z.string().optional(),
+      },
+    },
+    async args => {
+      const state = await buildExplorerState(
+        workspaceProvider,
+        vaultManager,
+        args.focus_uri
+      );
+      return {
+        content: [
+          { type: 'text' as const, text: JSON.stringify(state) },
+        ],
+        structuredContent: state,
+      };
+    }
+  );
+
   register(
     'show_vault_explorer',
     {
@@ -19,6 +48,8 @@ export function registerExplorerTool(
         'Open the interactive Codex Vault explorer with file navigation, Markdown reading, search, backlinks, and a knowledge graph.',
       inputSchema: {
         focus_uri: z.string().optional(),
+        project_path: z.string().optional(),
+        vault_id: z.string().optional(),
       },
       _meta: {
         ui: { resourceUri: VAULT_EXPLORER_RESOURCE_URI },
@@ -28,49 +59,98 @@ export function registerExplorerTool(
       },
     },
     async args => {
-      let focusUri: string | undefined;
-      if (args.focus_uri) {
-        const uri = parseUriInput(args.focus_uri, rootUri);
-        resolveNote(foam.workspace, { uri });
-        focusUri = uriToOutputString(uri, rootUri);
+      if (vaultManager) {
+        await vaultManager.openVault({
+          vaultId: args.vault_id,
+          projectPath: args.project_path,
+        });
       }
-
-      const graph = buildGraphData(
-        foam.workspace.list(),
-        foam.graph.getAllConnections(),
-        {
-          resourceToId: uri => uriToOutputString(uri, rootUri),
-          includePlaceholders: true,
-        }
+      const state = await buildExplorerState(
+        workspaceProvider,
+        vaultManager,
+        args.focus_uri
       );
-      const files = foam.workspace
-        .list()
-        .filter(resource => resource.type === 'note')
-        .map(resource => ({
-          uri: uriToOutputString(resource.uri, rootUri),
-          title: resource.title,
-          type: resource.type,
-          tags: resource.tags.map(tag => tag.label),
-        }))
-        .sort((left, right) => left.uri.localeCompare(right.uri));
 
       return {
         content: [
           {
             type: 'text' as const,
-            text: `Opened Codex Vault Explorer with ${files.length} notes and ${graph.links.length} connections.`,
+            text: state.active_vault
+              ? `Opened ${state.active_vault.name} with ${state.summary.note_count} notes and ${state.summary.connection_count} connections.`
+              : 'Opened Codex Vault Explorer. Select or create a vault to continue.',
           },
         ],
-        structuredContent: {
-          focus_uri: focusUri,
-          files,
-          graph,
-          summary: {
-            note_count: files.length,
-            connection_count: graph.links.length,
-          },
-        },
+        structuredContent: state,
       };
     }
   );
+}
+
+async function buildExplorerState(
+  workspaceProvider: FoamMcpWorkspaceProvider,
+  vaultManager: VaultManager | undefined,
+  focusUriInput: string | undefined
+) {
+  const active = workspaceProvider.getActive();
+  const vaults = vaultManager
+    ? await vaultManager.listVaults()
+    : active
+      ? [{ ...active.vault, active: true }]
+      : [];
+
+  if (!active) {
+    return {
+      focus_uri: undefined,
+      active_vault: null,
+      vaults,
+      files: [],
+      graph: { nodeInfo: {}, links: [] },
+      summary: { note_count: 0, connection_count: 0 },
+      needs_vault_selection: true,
+    };
+  }
+
+  const { foam, rootUri } = active;
+  let focusUri: string | undefined;
+  if (focusUriInput) {
+    const uri = parseUriInput(focusUriInput, rootUri);
+    resolveNote(foam.workspace, { uri });
+    focusUri = uriToOutputString(uri, rootUri);
+  }
+
+  const graph = buildGraphData(
+    foam.workspace.list(),
+    foam.graph.getAllConnections(),
+    {
+      resourceToId: uri => uriToOutputString(uri, rootUri),
+      includePlaceholders: true,
+    }
+  );
+  const files = foam.workspace
+    .list()
+    .filter(resource => resource.type === 'note')
+    .map(resource => ({
+      uri: uriToOutputString(resource.uri, rootUri),
+      title: resource.title,
+      type: resource.type,
+      tags: resource.tags.map(tag => tag.label),
+    }))
+    .sort((left, right) => left.uri.localeCompare(right.uri));
+  const activeVault: VaultSummary = {
+    ...active.vault,
+    active: true,
+  };
+
+  return {
+    focus_uri: focusUri,
+    active_vault: activeVault,
+    vaults,
+    files,
+    graph,
+    summary: {
+      note_count: files.length,
+      connection_count: graph.links.length,
+    },
+    needs_vault_selection: false,
+  };
 }

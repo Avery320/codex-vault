@@ -1,11 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
-  Foam,
   ITelemetryReporter,
   NoopTelemetryReporter,
-  QueryStore,
-  URI,
   bucketNoteCount,
 } from '@foam/core';
 import pkg from '../package.json';
@@ -17,9 +14,12 @@ import { registerQueryTools } from './tools/queries';
 import { registerTagTools } from './tools/tags';
 import { registerSearchTools } from './tools/search';
 import { registerStructureTools } from './tools/structure';
-import type { VaultFullTextIndex } from './full-text-index';
 import { registerExplorerTool } from './tools/explorer';
 import { registerVaultExplorerResource } from './ui-resource';
+import {
+  FoamMcpWorkspaceProvider,
+  VaultManager,
+} from './workspace-context';
 
 /**
  * Pre-bound `registerTool` helper handed to tool modules. Has the same
@@ -39,16 +39,12 @@ export type ToolRegistrar = McpServer['registerTool'];
 export type FoamMcpServerMode = 'read' | 'read-write';
 
 export interface FoamMcpServerOptions {
-  /** Already-bootstrapped Foam instance. */
-  foam: Foam;
-  /** Workspace root used to resolve relative URIs at the wire boundary. */
-  rootUri: URI;
+  /** Supplies the workspace used by each tool invocation. */
+  workspaceProvider: FoamMcpWorkspaceProvider;
   /** Access mode. See {@link FoamMcpServerMode}. */
   mode: FoamMcpServerMode;
-  /**
-   * Store for saved queries (Smart Folders).
-   */
-  queryStore: QueryStore;
+  /** Optional multi-vault operations exposed by Codex Vault. */
+  vaultManager?: VaultManager;
   /**
    * Reporter receiving `mcp.*` events. Defaults to a noop so unhosted
    * consumers (tests, embedded uses) don't have to wire telemetry in.
@@ -77,9 +73,8 @@ const READ_ONLY_INSTRUCTIONS =
 export class FoamMcpServer {
   private readonly mcp: McpServer;
   private readonly telemetry: ITelemetryReporter;
-  private readonly foam: Foam;
+  private readonly workspaceProvider: FoamMcpWorkspaceProvider;
   private readonly mode: FoamMcpServerMode;
-  private readonly fullTextIndex: VaultFullTextIndex;
   private sessionWithToolFired = false;
 
   constructor(opts: FoamMcpServerOptions) {
@@ -93,30 +88,23 @@ export class FoamMcpServer {
     );
 
     this.telemetry = opts.telemetry ?? NoopTelemetryReporter;
-    this.foam = opts.foam;
+    this.workspaceProvider = opts.workspaceProvider;
     this.mode = opts.mode;
 
-    const { foam, rootUri } = opts;
-    const dataStore = foam.services.dataStore;
     const register = this.makeRegisterTool();
 
     // Read-only tools always registered.
-    registerStructureTools(register, foam, rootUri);
-    registerGraphTools(register, foam, rootUri, { readOnly });
-    registerExplorerTool(register, foam, rootUri);
-    this.fullTextIndex = registerSearchTools(
-      register,
-      foam,
-      dataStore,
-      rootUri
-    );
-    registerQueryTools(register, foam, opts.queryStore, rootUri);
+    registerStructureTools(register, opts.workspaceProvider);
+    registerGraphTools(register, opts.workspaceProvider, { readOnly });
+    registerExplorerTool(register, opts.workspaceProvider, opts.vaultManager);
+    registerSearchTools(register, opts.workspaceProvider);
+    registerQueryTools(register, opts.workspaceProvider);
 
     // Modules that mix read and write tools accept a `readOnly` flag and
     // skip registering the writers entirely. Clients that list tools see
     // the actual capability surface.
-    registerResourceTools(register, foam, dataStore, rootUri, { readOnly });
-    registerTagTools(register, foam, dataStore, rootUri, { readOnly });
+    registerResourceTools(register, opts.workspaceProvider, { readOnly });
+    registerTagTools(register, opts.workspaceProvider, { readOnly });
     registerVaultExplorerResource(this.mcp);
 
     // The MCP SDK fires `oninitialized` once the client has sent its
@@ -161,7 +149,8 @@ export class FoamMcpServer {
   }
 
   private fireSessionStarted(): void {
-    const resources = this.foam.workspace.list();
+    const active = this.workspaceProvider.getActive();
+    const resources = active?.foam.workspace.list() ?? [];
     const noteCount = resources.filter(r => r.type === 'note').length;
     const attachmentCount = resources.filter(
       r => r.type === 'image' || r.type === 'attachment'
@@ -192,7 +181,7 @@ export class FoamMcpServer {
   }
 
   async close(): Promise<void> {
-    this.fullTextIndex.dispose();
+    await this.workspaceProvider.close();
     await this.mcp.close();
   }
 }
