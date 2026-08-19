@@ -246,11 +246,14 @@ describe('foam mcp tools (Inspector integration)', () => {
   });
 
   describe('search tools', () => {
-    it('search_resources matches by title substring', () => {
+    it('search_resources matches titles and Markdown body text', () => {
       const matches = parseJson<Array<{ uri: string }>>(
         callTool(workspaceDir, 'search_resources', { query: 'Meeting' })
       );
-      expect(matches.map(m => m.uri)).toEqual(['meeting-notes.md']);
+      expect(matches.map(m => m.uri).sort()).toEqual([
+        'meeting-notes.md',
+        'project-plan.md',
+      ]);
     });
   });
 
