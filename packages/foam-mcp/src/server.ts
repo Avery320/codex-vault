@@ -14,6 +14,7 @@ import { registerQueryTools } from './tools/queries';
 import { registerTagTools } from './tools/tags';
 import { registerSearchTools } from './tools/search';
 import { registerStructureTools } from './tools/structure';
+import { registerVaultTools } from './tools/vaults';
 import { registerExplorerTool } from './tools/explorer';
 import { registerVaultExplorerResource } from './ui-resource';
 import {
@@ -105,6 +106,9 @@ export class FoamMcpServer {
     // the actual capability surface.
     registerResourceTools(register, opts.workspaceProvider, { readOnly });
     registerTagTools(register, opts.workspaceProvider, { readOnly });
+    if (opts.vaultManager) {
+      registerVaultTools(register, opts.vaultManager);
+    }
     registerVaultExplorerResource(this.mcp);
 
     // The MCP SDK fires `oninitialized` once the client has sent its

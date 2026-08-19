@@ -4,29 +4,12 @@ set -euo pipefail
 plugin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
 config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
-
-if [[ -n "${CODEX_VAULT_PATH:-}" ]]; then
-  vault_path="${CODEX_VAULT_PATH}"
-else
-  config_path="${CODEX_VAULT_CONFIG_PATH:-${config_home}/codex-vault/vault-path}"
-  if [[ -f "${config_path}" ]]; then
-    IFS= read -r vault_path < "${config_path}" || true
-    if [[ -z "${vault_path}" ]]; then
-      echo "Codex Vault config is empty: ${config_path}" >&2
-      exit 1
-    fi
-  else
-    vault_path="${plugin_dir}/fixtures/demo-vault"
-  fi
-fi
+registry_path="${CODEX_VAULT_REGISTRY_PATH:-${config_home}/codex-vault/vaults.json}"
+obsidian_registry_path="${CODEX_OBSIDIAN_REGISTRY_PATH:-${HOME}/Library/Application Support/obsidian/obsidian.json}"
+legacy_vault_path_file="${CODEX_VAULT_LEGACY_PATH_FILE:-${config_home}/codex-vault/vault-path}"
 
 if [[ ! -f "${cli_entry}" ]]; then
   echo "Codex Vault is not built. Run 'yarn build' from ${plugin_dir}." >&2
-  exit 1
-fi
-
-if [[ ! -d "${vault_path}" ]]; then
-  echo "Codex Vault path does not exist: ${vault_path}" >&2
   exit 1
 fi
 
@@ -41,7 +24,12 @@ if [[ -z "${allow_writes}" && -f "${config_home}/codex-vault/allow-writes" ]]; t
   IFS= read -r allow_writes < "${config_home}/codex-vault/allow-writes" || true
 fi
 
-mcp_args=(mcp --workspace "${vault_path}")
+mcp_args=(
+  mcp
+  --vault-registry "${registry_path}"
+  --obsidian-registry "${obsidian_registry_path}"
+  --legacy-vault-path "${legacy_vault_path_file}"
+)
 case "${allow_writes}" in
   1 | true | TRUE)
     mcp_args+=(--allow-writes)

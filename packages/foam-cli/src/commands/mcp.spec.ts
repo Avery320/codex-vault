@@ -37,9 +37,21 @@ async function withCliMcpServer<T>(
   extraArgs: string[],
   fn: (ctx: CliMcpContext) => Promise<T>
 ): Promise<T> {
+  return withCliMcpArgs(
+    ['--workspace', workspaceDir, ...extraArgs],
+    workspaceDir,
+    fn
+  );
+}
+
+async function withCliMcpArgs<T>(
+  mcpArgs: string[],
+  workspaceDir: string,
+  fn: (ctx: CliMcpContext) => Promise<T>
+): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [CLI_PATH, 'mcp', '--workspace', workspaceDir, ...extraArgs],
+    args: [CLI_PATH, 'mcp', ...mcpArgs],
     stderr: 'pipe',
     // Disable telemetry: this test spawns the *built* CLI binary, which
     // wires the real AppInsights reporter in main(). Without this we'd
@@ -181,4 +193,58 @@ describe('foam mcp (CLI e2e)', () => {
         expect(JSON.parse(info.content[0].text).read_only).toBe(false);
       })
     ), 30000);
+
+  it('loads and switches vaults through the persistent registry mode', () =>
+    withTmpDir(
+      {
+        'Alpha/alpha.md': '# Alpha\n',
+        'Alpha/.obsidian/app.json': '{}',
+        'Beta/beta.md': '# Beta\n',
+        'Beta/.obsidian/app.json': '{}',
+      },
+      async rootDir => {
+        const obsidianRegistry = path.join(rootDir, 'obsidian.json');
+        const registryPath = path.join(rootDir, 'config', 'vaults.json');
+        writeFileSync(
+          obsidianRegistry,
+          JSON.stringify({
+            vaults: {
+              alpha: {
+                path: path.join(rootDir, 'Alpha'),
+                ts: 20,
+                open: true,
+              },
+              beta: { path: path.join(rootDir, 'Beta'), ts: 10 },
+            },
+          })
+        );
+
+        await withCliMcpArgs(
+          [
+            '--vault-registry',
+            registryPath,
+            '--obsidian-registry',
+            obsidianRegistry,
+          ],
+          rootDir,
+          async ctx => {
+            expect(await listResourceUris(ctx.client)).toEqual(['alpha.md']);
+            await ctx.client.callTool({
+              name: 'select_vault',
+              arguments: { vault_id: 'beta' },
+            });
+            expect(await listResourceUris(ctx.client)).toEqual(['beta.md']);
+          }
+        );
+      }
+    ), 30000);
 });
+
+async function listResourceUris(client: Client): Promise<string[]> {
+  const result = (await client.callTool({
+    name: 'list_resources',
+    arguments: {},
+  })) as { content: Array<{ text: string }> };
+  const items = JSON.parse(result.content[0].text) as Array<{ uri: string }>;
+  return items.map(item => item.uri);
+}

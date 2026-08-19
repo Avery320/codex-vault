@@ -1,9 +1,11 @@
 import path from 'node:path';
 import {
   createWorkspaceContext,
+  FoamMcpWorkspaceProvider,
   FoamMcpServer,
   StaticWorkspaceProvider,
   StdioServerTransport,
+  VaultManager,
 } from '@foam/mcp';
 import {
   ITelemetryReporter,
@@ -13,8 +15,15 @@ import {
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
 import { createNodeQueryStore } from '../support/node-query-store';
 import { NodeWatcher } from '../support/watcher';
-import { parseArgs, getFlag, resolveWorkspaceDir } from '../support/args';
+import {
+  parseArgs,
+  getFlag,
+  getString,
+  resolveWorkspaceDir,
+} from '../support/args';
 import type { CliLogger } from '../support/types';
+import { VaultRegistry } from '../support/vault-registry';
+import { NodeVaultWorkspaceManager } from '../support/vault-workspace-manager';
 
 export const MCP_HELP = `Usage: foam mcp [options]
 
@@ -31,6 +40,12 @@ tools (create/update/delete/move resources and tag mutations).
 
 Options:
   --workspace <dir>   Workspace root (default: FOAM_WORKSPACE env var, then cwd)
+  --vault-registry <file>
+                      Use the persistent multi-vault registry instead of one workspace
+  --obsidian-registry <file>
+                      Import known Obsidian vaults (read-only)
+  --legacy-vault-path <file>
+                      Migrate the previous single-path Codex Vault setting
   --allow-writes      Register write tools. Off by default.
   --help              Show this help
 
@@ -52,14 +67,21 @@ Logging:
 `;
 
 export interface McpArgs {
-  workspaceDir: string;
+  workspaceDir?: string;
+  vaultRegistryPath?: string;
+  obsidianRegistryPath?: string;
+  legacyVaultPathFile?: string;
   allowWrites: boolean;
 }
 
 export function parseMcpArgs(argv: string[]): McpArgs {
   const args = parseArgs(argv);
+  const vaultRegistryPath = getString(args, 'vault-registry');
   return {
-    workspaceDir: resolveWorkspaceDir(args),
+    workspaceDir: vaultRegistryPath ? undefined : resolveWorkspaceDir(args),
+    vaultRegistryPath,
+    obsidianRegistryPath: getString(args, 'obsidian-registry'),
+    legacyVaultPathFile: getString(args, 'legacy-vault-path'),
     allowWrites: getFlag(args, 'allow-writes'),
   };
 }
@@ -79,38 +101,58 @@ export async function runMcpCommand(
     | undefined) ?? 'error';
   Logger.setLevel(logLevel);
 
-  const rootDir = path.resolve(args.workspaceDir);
-  logger.error(`[foam-mcp] Loading workspace: ${rootDir}`);
+  let workspaceProvider: FoamMcpWorkspaceProvider;
+  let vaultManager: VaultManager | undefined;
+  let staticWatcher: NodeWatcher | undefined;
 
-  // Watcher first — chokidar needs to be ignoring files that the workspace
-  // matcher would ignore too, but `loadWorkspaceFromDirectory` builds the
-  // matcher internally. To keep things simple in Phase 1 we watch the whole
-  // root and let chokidar's `ignoreInitial` handle the bootstrap snapshot.
-  const watcher = new NodeWatcher(rootDir, {
-    ignored: [/(^|[\\/])\../, /node_modules/],
-  });
-
-  const { foam, rootUri } = await loadWorkspaceFromDirectory(rootDir, {
-    watcher,
-  });
-
-  logger.error(
-    `[foam-mcp] Workspace loaded: ${foam.workspace.list().length} resources, ${
-      foam.graph.getAllConnections().length
-    } connections`
-  );
+  if (args.vaultRegistryPath) {
+    const registry = new VaultRegistry({
+      registryPath: path.resolve(args.vaultRegistryPath),
+      obsidianRegistryPath: args.obsidianRegistryPath
+        ? path.resolve(args.obsidianRegistryPath)
+        : undefined,
+      legacyVaultPathFile: args.legacyVaultPathFile
+        ? path.resolve(args.legacyVaultPathFile)
+        : undefined,
+    });
+    const manager = new NodeVaultWorkspaceManager(registry);
+    await manager.initialize();
+    workspaceProvider = manager;
+    vaultManager = manager;
+    const active = manager.getActive();
+    logger.error(
+      active
+        ? `[foam-mcp] Active vault: ${active.vault.path} (${active.foam.workspace.list().length} resources)`
+        : '[foam-mcp] No active vault. Waiting for vault selection.'
+    );
+  } else {
+    const rootDir = path.resolve(args.workspaceDir ?? process.cwd());
+    logger.error(`[foam-mcp] Loading workspace: ${rootDir}`);
+    staticWatcher = new NodeWatcher(rootDir, {
+      ignored: [/(^|[\\/])\../, /node_modules/],
+    });
+    const { foam, rootUri } = await loadWorkspaceFromDirectory(rootDir, {
+      watcher: staticWatcher,
+    });
+    logger.error(
+      `[foam-mcp] Workspace loaded: ${foam.workspace.list().length} resources, ${
+        foam.graph.getAllConnections().length
+      } connections`
+    );
+    workspaceProvider = new StaticWorkspaceProvider(
+      createWorkspaceContext({
+        foam,
+        rootUri,
+        queryStore: createNodeQueryStore(rootUri),
+      })
+    );
+  }
 
   // The dispatcher already forked the reporter for component='mcp' — this
   // command just routes it into FoamMcpServer.
-  const workspaceProvider = new StaticWorkspaceProvider(
-    createWorkspaceContext({
-      foam,
-      rootUri,
-      queryStore: createNodeQueryStore(rootUri),
-    })
-  );
   const server = new FoamMcpServer({
     workspaceProvider,
+    vaultManager,
     mode: args.allowWrites ? 'read-write' : 'read',
     telemetry: reporter,
   });
@@ -132,7 +174,7 @@ export async function runMcpCommand(
 
   logger.error('[foam-mcp] Shutting down.');
   await server.close();
-  await watcher.dispose();
+  await staticWatcher?.dispose();
   await reporter.dispose();
   return 0;
 }

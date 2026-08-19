@@ -5,9 +5,13 @@ description: Search, read, and analyze an Obsidian-compatible Markdown vault thr
 
 # Vault Knowledge
 
-Use Codex Vault's MCP tools as the source of truth for the configured vault.
+Use Codex Vault's MCP tools as the source of truth for remembered vaults and
+the active workspace.
 
-- Start with `get_workspace_info` when the active vault or access mode is unclear.
+- When the user asks to open the knowledge workspace, call `show_vault_explorer` and pass the current Codex project root as `project_path` when it is known.
+- Start with `list_vaults` when the active vault is unclear. Call `get_workspace_info` after a vault is active to confirm its path, counts, and access mode.
+- Use `select_vault` to switch an existing vault. Only call `register_vault` or `create_vault` when the user explicitly asks to add or create one.
+- `forget_vault` only removes a remembered entry, but still requires explicit user intent and `confirm: true`. It never deletes the vault folder.
 - Use `search_resources`, tag/property queries, and graph tools to narrow the relevant notes before reading full Markdown.
 - Read the selected notes before summarizing them. Distinguish note content from your own inference.
 - Use connections, orphans, dead ends, and placeholders to explain knowledge-graph structure rather than inferring links from titles alone.

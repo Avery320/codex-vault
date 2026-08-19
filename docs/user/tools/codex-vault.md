@@ -1,19 +1,33 @@
 # Codex Vault plugin
 
 Codex Vault packages Foam's Markdown workspace, graph, and MCP server as a
-local Codex plugin. The initial development profile is deliberately read-only.
+local Codex plugin.
 
-## Development vault
+## Vault management
 
-The launcher selects a vault in this order:
+Codex Vault remembers multiple folders in
+`~/.config/codex-vault/vaults.json`. Each entry has a stable ID, display name,
+canonical filesystem path, and last-opened timestamp. The registry also keeps
+an optional Codex-project-to-vault mapping.
 
-1. `CODEX_VAULT_PATH`, when set to an absolute directory.
-2. The first line of `~/.config/codex-vault/vault-path` (or the file selected by
-   `CODEX_VAULT_CONFIG_PATH`).
-3. `fixtures/demo-vault` as a safe development fallback.
+On first launch the plugin imports existing entries from Obsidian's local vault
+registry without modifying it. It also migrates the previous
+`~/.config/codex-vault/vault-path` setting once. There is no demo-vault
+fallback.
 
-The config file keeps a personal vault path outside the plugin repository and
-continues to work when Codex installs a new cached copy of the plugin.
+Available operations:
+
+- `list_vaults`: list remembered vaults and the active selection.
+- `register_vault`: remember and open an existing folder.
+- `create_vault`: create a folder with `.obsidian`, remember it, and open it.
+- `select_vault`: switch without restarting the MCP server.
+- `forget_vault`: forget a registry entry after confirmation; never delete the
+  folder or notes.
+
+`show_vault_explorer` accepts `project_path`. A registered project mapping wins;
+otherwise the most specific containing vault is selected. If the project is
+inside an unregistered folder containing `.obsidian`, that vault is remembered
+automatically.
 
 ## Safe write mode
 
