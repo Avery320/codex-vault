@@ -30,6 +30,7 @@
   "dependencies": {
     "@foam/core": "*",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "minisearch": "7.2.0",
     "zod": "^4.0.0"
   }
 }

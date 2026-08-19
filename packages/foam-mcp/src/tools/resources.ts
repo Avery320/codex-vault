@@ -169,8 +169,7 @@ export function registerResourceTools(
         nextContent = args.content;
       } else {
         const existing = (await dataStore.read(uri)) ?? '';
-        const base =
-          args.content !== undefined ? args.content : existing;
+        const base = args.content !== undefined ? args.content : existing;
         nextContent = args.properties
           ? mergeFrontmatter(
               base,
@@ -180,6 +179,7 @@ export function registerResourceTools(
           : base;
       }
       await dataStore.write(uri, nextContent);
+      await foam.workspace.fetchAndSet(uri);
       return json({ uri: uriToOutputString(uri, rootUri) });
     }
   );

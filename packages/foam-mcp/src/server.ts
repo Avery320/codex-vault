@@ -17,6 +17,7 @@ import { registerQueryTools } from './tools/queries';
 import { registerTagTools } from './tools/tags';
 import { registerSearchTools } from './tools/search';
 import { registerStructureTools } from './tools/structure';
+import type { VaultFullTextIndex } from './full-text-index';
 
 /**
  * Pre-bound `registerTool` helper handed to tool modules. Has the same
@@ -43,7 +44,7 @@ export interface FoamMcpServerOptions {
   /** Access mode. See {@link FoamMcpServerMode}. */
   mode: FoamMcpServerMode;
   /**
-   * Store for saved queries (Smart Folders). 
+   * Store for saved queries (Smart Folders).
    */
   queryStore: QueryStore;
   /**
@@ -76,6 +77,7 @@ export class FoamMcpServer {
   private readonly telemetry: ITelemetryReporter;
   private readonly foam: Foam;
   private readonly mode: FoamMcpServerMode;
+  private readonly fullTextIndex: VaultFullTextIndex;
   private sessionWithToolFired = false;
 
   constructor(opts: FoamMcpServerOptions) {
@@ -99,7 +101,12 @@ export class FoamMcpServer {
     // Read-only tools always registered.
     registerStructureTools(register, foam, rootUri);
     registerGraphTools(register, foam, rootUri, { readOnly });
-    registerSearchTools(register, foam, rootUri);
+    this.fullTextIndex = registerSearchTools(
+      register,
+      foam,
+      dataStore,
+      rootUri
+    );
     registerQueryTools(register, foam, opts.queryStore, rootUri);
 
     // Modules that mix read and write tools accept a `readOnly` flag and
@@ -181,6 +188,7 @@ export class FoamMcpServer {
   }
 
   async close(): Promise<void> {
+    this.fullTextIndex.dispose();
     await this.mcp.close();
   }
 }
