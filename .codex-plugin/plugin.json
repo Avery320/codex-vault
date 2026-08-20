@@ -1,12 +1,17 @@
 {
   "name": "codex-vault",
-  "version": "0.1.0+codex.20260819185338",
+  "version": "0.1.0+codex.20260820021413",
   "description": "Explore an Obsidian-compatible Markdown vault with Codex agents, backlinks, search, and an interactive knowledge graph.",
   "author": {
     "name": "Avery Tsai"
   },
   "license": "MIT",
-  "keywords": ["markdown", "obsidian", "knowledge-graph", "mcp"],
+  "keywords": [
+    "markdown",
+    "obsidian",
+    "knowledge-graph",
+    "mcp"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codex Vault",
@@ -14,11 +19,15 @@
     "longDescription": "Codex Vault adapts Foam's Markdown knowledge graph and MCP tools for local, agent-assisted note exploration in Codex. It starts in read-only mode and supports Obsidian-style wikilinks, backlinks, tags, and graph traversal.",
     "developerName": "Avery Tsai",
     "category": "Productivity",
-    "capabilities": ["Interactive", "Read", "Write"],
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
     "defaultPrompt": [
-      "搜尋我的 Vault，整理與這個主題最相關的筆記。",
-      "顯示目前筆記的 backlinks 與相鄰知識節點。",
-      "找出 Vault 中的孤立筆記與失效連結。"
+      "\u641c\u5c0b\u6211\u7684 Vault\uff0c\u6574\u7406\u8207\u9019\u500b\u4e3b\u984c\u6700\u76f8\u95dc\u7684\u7b46\u8a18\u3002",
+      "\u986f\u793a\u76ee\u524d\u7b46\u8a18\u7684 backlinks \u8207\u76f8\u9130\u77e5\u8b58\u7bc0\u9ede\u3002",
+      "\u627e\u51fa Vault \u4e2d\u7684\u5b64\u7acb\u7b46\u8a18\u8207\u5931\u6548\u9023\u7d50\u3002"
     ],
     "brandColor": "#8250DF",
     "composerIcon": "./assets/icon/FOAM_ICON_256.png",
