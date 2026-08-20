@@ -800,6 +800,7 @@ document.addEventListener('click', event => {
 app.ontoolresult = receiveToolResult;
 app.onhostcontextchanged = context => applyTheme(context.theme);
 
+applyTheme(undefined);
 void app.connect().then(() => {
   applyTheme(app.getHostContext()?.theme);
   void requestFullscreen();
