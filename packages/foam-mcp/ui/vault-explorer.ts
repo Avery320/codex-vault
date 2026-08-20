@@ -1,13 +1,15 @@
 import { App } from '@modelcontextprotocol/ext-apps';
 import MarkdownIt from 'markdown-it';
 import '@foam/graph-view';
-
-interface VaultFile {
-  uri: string;
-  title: string;
-  type: string;
-  tags: string[];
-}
+import {
+  convertWikiLinks,
+  createTree,
+  filterGraphData,
+  resolveWikiTarget,
+  type GraphData,
+  type TreeNode,
+  type VaultFile,
+} from './vault-explorer-model';
 
 interface VaultSummary {
   id: string;
@@ -15,20 +17,6 @@ interface VaultSummary {
   path: string;
   last_opened_at: number;
   active: boolean;
-}
-
-interface GraphData {
-  nodeInfo: Record<
-    string,
-    {
-      id: string;
-      type: string;
-      title: string;
-      properties: Record<string, unknown>;
-      tags: Array<{ label: string }>;
-    }
-  >;
-  links: Array<{ source: string; target: string }>;
 }
 
 interface ExplorerPayload {
@@ -72,13 +60,10 @@ interface ToolResultLike {
   content?: Array<{ type: string; text?: string }>;
 }
 
-interface TreeNode {
-  directories: Map<string, TreeNode>;
-  files: VaultFile[];
-}
-
 interface GraphPreferences {
-  showTags: boolean;
+  filterQuery: string;
+  showOrphans: boolean;
+  showUnresolved: boolean;
   textFade: number;
   nodeSize: number;
   linkWidth: number;
@@ -91,7 +76,9 @@ type VaultDialogMode = 'register' | 'create';
 type GraphMode = 'global' | 'local';
 
 const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
-  showTags: false,
+  filterQuery: '',
+  showOrphans: true,
+  showUnresolved: false,
   textFade: 0,
   nodeSize: 1.5,
   linkWidth: 1,
@@ -146,9 +133,12 @@ const graphSettingsElement = query<HTMLElement>('#graph-settings');
 const graphSettingsToggleElement = query<HTMLButtonElement>(
   '#graph-settings-toggle'
 );
-const graphGlobalElement = query<HTMLButtonElement>('#graph-global');
-const graphLocalElement = query<HTMLButtonElement>('#graph-local');
-const graphShowTagsElement = query<HTMLInputElement>('#graph-show-tags');
+const graphLocalToggleElement = query<HTMLButtonElement>('#graph-local-toggle');
+const graphFilterElement = query<HTMLInputElement>('#graph-filter');
+const graphShowOrphansElement = query<HTMLInputElement>('#graph-show-orphans');
+const graphShowUnresolvedElement = query<HTMLInputElement>(
+  '#graph-show-unresolved'
+);
 const graphTextFadeElement = query<HTMLInputElement>('#graph-text-fade');
 const graphNodeSizeElement = query<HTMLInputElement>('#graph-node-size');
 const graphLinkWidthElement = query<HTMLInputElement>('#graph-link-width');
@@ -157,6 +147,9 @@ const graphLinkDistanceElement = query<HTMLInputElement>(
   '#graph-link-distance'
 );
 const graphDepthElement = query<HTMLInputElement>('#graph-depth');
+const filesViewElement = query<HTMLButtonElement>('#toggle-sidebar');
+const noteViewElement = query<HTMLButtonElement>('#show-note');
+const graphViewElement = query<HTMLButtonElement>('#toggle-graph');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
@@ -168,6 +161,8 @@ let dialogMode: VaultDialogMode = 'register';
 let currentTheme = 'dark';
 let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
+const singlePaneMedia = window.matchMedia('(max-width: 1000px)');
+const mobileMedia = window.matchMedia('(max-width: 680px)');
 
 graphElement.showControls = false;
 graphElement.maxFitZoom = 2.2;
@@ -184,14 +179,23 @@ function applyTheme(theme: string | undefined): void {
   applyGraphPreferences();
 }
 
+function applyGraphFilters(): void {
+  graphElement.graphData = payload
+    ? filterGraphData(payload.graph, {
+        query: graphPreferences.filterQuery,
+        showOrphans: graphPreferences.showOrphans,
+        showUnresolved: graphPreferences.showUnresolved,
+      })
+    : null;
+}
+
 function applyGraphPreferences(): void {
   const dark = currentTheme === 'dark';
   graphElement.graphStyle = {
     colorMode: 'none',
     showNodesOfType: {
       note: true,
-      tag: graphPreferences.showTags,
-      placeholder: false,
+      placeholder: graphPreferences.showUnresolved,
       image: false,
       attachment: false,
     },
@@ -227,13 +231,16 @@ function applyGraphScope(): void {
   graphElement.graphScope = local
     ? { depth: graphPreferences.localDepth }
     : 'full';
-  graphGlobalElement.classList.toggle('active', !local);
-  graphLocalElement.classList.toggle('active', local);
-  graphLocalElement.disabled = activeUri === null;
+  graphLocalToggleElement.classList.toggle('active', local);
+  graphLocalToggleElement.disabled = activeUri === null;
+  graphLocalToggleElement.setAttribute('aria-pressed', String(local));
+  graphLocalToggleElement.title = local ? '顯示全域圖譜' : '聚焦目前筆記';
 }
 
 function syncGraphSettingsControls(): void {
-  graphShowTagsElement.checked = graphPreferences.showTags;
+  graphFilterElement.value = graphPreferences.filterQuery;
+  graphShowOrphansElement.checked = graphPreferences.showOrphans;
+  graphShowUnresolvedElement.checked = graphPreferences.showUnresolved;
   graphTextFadeElement.value = String(graphPreferences.textFade);
   graphNodeSizeElement.value = String(graphPreferences.nodeSize);
   graphLinkWidthElement.value = String(graphPreferences.linkWidth);
@@ -260,8 +267,11 @@ function syncGraphSettingsControls(): void {
 }
 
 function readGraphSettingsControls(): void {
+  const previous = graphPreferences;
   graphPreferences = {
-    showTags: graphShowTagsElement.checked,
+    filterQuery: graphFilterElement.value,
+    showOrphans: graphShowOrphansElement.checked,
+    showUnresolved: graphShowUnresolvedElement.checked,
     textFade: Number(graphTextFadeElement.value),
     nodeSize: Number(graphNodeSizeElement.value),
     linkWidth: Number(graphLinkWidthElement.value),
@@ -269,6 +279,13 @@ function readGraphSettingsControls(): void {
     linkDistance: Number(graphLinkDistanceElement.value),
     localDepth: Number(graphDepthElement.value),
   };
+  if (
+    previous.filterQuery !== graphPreferences.filterQuery ||
+    previous.showOrphans !== graphPreferences.showOrphans ||
+    previous.showUnresolved !== graphPreferences.showUnresolved
+  ) {
+    applyGraphFilters();
+  }
   applyGraphPreferences();
 }
 
@@ -310,7 +327,6 @@ function receiveToolResult(result: ToolResultLike): void {
 function setExplorerPayload(next: ExplorerPayload): void {
   const vaultChanged = payload?.active_vault?.id !== next.active_vault?.id;
   payload = next;
-  graphElement.graphData = next.graph;
   emptyVaultElement.hidden = !next.needs_vault_selection;
 
   if (vaultChanged) {
@@ -321,6 +337,8 @@ function setExplorerPayload(next: ExplorerPayload): void {
 
   renderVault(next);
   renderFileTree(next.files);
+  applyGraphFilters();
+  applyGraphPreferences();
   setStatus(
     `${next.summary.note_count} 則筆記 · ${next.summary.connection_count} 條連結`
   );
@@ -381,24 +399,6 @@ function createMenuAction(
   return button;
 }
 
-function createTree(files: VaultFile[]): TreeNode {
-  const root: TreeNode = { directories: new Map(), files: [] };
-  for (const file of files) {
-    const segments = file.uri.split('/');
-    let node = root;
-    for (const directory of segments.slice(0, -1)) {
-      let child = node.directories.get(directory);
-      if (!child) {
-        child = { directories: new Map(), files: [] };
-        node.directories.set(directory, child);
-      }
-      node = child;
-    }
-    node.files.push(file);
-  }
-  return root;
-}
-
 function renderFileTree(files: VaultFile[]): void {
   visibleFiles = files;
   treeElement.replaceChildren();
@@ -452,6 +452,7 @@ function renderTreeNode(
 
 async function openNote(uri: string): Promise<void> {
   if (!payload) return;
+  showWorkspacePane('reader');
   const sequence = ++noteSequence;
   activeUri = uri;
   const file = payload.files.find(item => item.uri === uri);
@@ -504,21 +505,6 @@ function showEmptyDocument(message: string): void {
   markdownElement.textContent = message;
 }
 
-function convertWikiLinks(source: string): string {
-  return source.replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
-    const [targetWithHeading, customLabel] = inner.split('|');
-    const target = targetWithHeading.split('#')[0].trim();
-    const label = (customLabel ?? targetWithHeading).trim();
-    return `[${escapeMarkdownLabel(label)}](#vault-note=${encodeURIComponent(
-      target
-    )})`;
-  });
-}
-
-function escapeMarkdownLabel(label: string): string {
-  return label.replace(/[\\[\]]/g, character => `\\${character}`);
-}
-
 function renderBacklinks(
   backlinks: Array<{ uri: string; title: string }>
 ): void {
@@ -532,21 +518,6 @@ function renderBacklinks(
     button.addEventListener('click', () => void openNote(backlink.uri));
     backlinkListElement.append(button);
   }
-}
-
-function resolveWikiTarget(target: string): VaultFile | undefined {
-  if (!payload) return undefined;
-  const withoutExtension = (value: string) => value.replace(/\.md$/i, '');
-  const normalizedTarget = withoutExtension(target).toLocaleLowerCase();
-  return payload.files.find(file => {
-    const uri = withoutExtension(file.uri).toLocaleLowerCase();
-    const basename = uri.split('/').at(-1);
-    return (
-      uri === normalizedTarget ||
-      basename === normalizedTarget ||
-      file.title.toLocaleLowerCase() === normalizedTarget
-    );
-  });
 }
 
 async function updateSelectedNoteContext(uri: string): Promise<void> {
@@ -703,6 +674,51 @@ async function requestFullscreen(): Promise<void> {
   }
 }
 
+function showWorkspacePane(pane: 'reader' | 'graph'): void {
+  shellElement.classList.toggle('showing-graph', pane === 'graph');
+  shellElement.classList.remove('showing-files');
+  syncRibbonState();
+}
+
+function showFilesView(): void {
+  if (mobileMedia.matches) {
+    shellElement.classList.add('showing-files');
+  } else {
+    shellElement.classList.toggle('sidebar-hidden');
+  }
+  syncRibbonState();
+}
+
+function showGraphView(): void {
+  if (singlePaneMedia.matches) {
+    showWorkspacePane('graph');
+  } else {
+    shellElement.classList.toggle('graph-hidden');
+    syncRibbonState();
+  }
+}
+
+function syncRibbonState(): void {
+  const showingFiles = shellElement.classList.contains('showing-files');
+  const showingGraph = shellElement.classList.contains('showing-graph');
+  filesViewElement.classList.toggle(
+    'active',
+    mobileMedia.matches
+      ? showingFiles
+      : !shellElement.classList.contains('sidebar-hidden')
+  );
+  noteViewElement.classList.toggle(
+    'active',
+    singlePaneMedia.matches ? !showingFiles && !showingGraph : true
+  );
+  graphViewElement.classList.toggle(
+    'active',
+    singlePaneMedia.matches
+      ? !showingFiles && showingGraph
+      : !shellElement.classList.contains('graph-hidden')
+  );
+}
+
 searchElement.addEventListener('input', () => {
   window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(
@@ -718,7 +734,7 @@ markdownElement.addEventListener('click', event => {
   if (href.startsWith('#vault-note=')) {
     event.preventDefault();
     const target = decodeURIComponent(href.slice('#vault-note='.length));
-    const file = resolveWikiTarget(target);
+    const file = resolveWikiTarget(payload?.files ?? [], target);
     if (file) void openNote(file.uri);
     return;
   }
@@ -733,8 +749,9 @@ graphElement.addEventListener('node-click', event => {
   if (payload?.files.some(file => file.uri === uri)) void openNote(uri);
 });
 
-graphGlobalElement.addEventListener('click', () => setGraphMode('global'));
-graphLocalElement.addEventListener('click', () => setGraphMode('local'));
+graphLocalToggleElement.addEventListener('click', () =>
+  setGraphMode(graphMode === 'local' ? 'global' : 'local')
+);
 graphSettingsToggleElement.addEventListener('click', () =>
   setGraphSettingsOpen(graphSettingsElement.hidden)
 );
@@ -743,7 +760,9 @@ query<HTMLButtonElement>('#graph-settings-close').addEventListener(
   () => setGraphSettingsOpen(false)
 );
 for (const control of [
-  graphShowTagsElement,
+  graphFilterElement,
+  graphShowOrphansElement,
+  graphShowUnresolvedElement,
   graphTextFadeElement,
   graphNodeSizeElement,
   graphLinkWidthElement,
@@ -755,23 +774,18 @@ for (const control of [
 }
 query<HTMLButtonElement>('#graph-reset').addEventListener('click', () => {
   graphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
+  applyGraphFilters();
   applyGraphPreferences();
 });
 
 vaultSwitcherElement.addEventListener('click', toggleVaultMenu);
-query<HTMLButtonElement>('#toggle-sidebar').addEventListener('click', event => {
-  const hidden = shellElement.classList.toggle('sidebar-hidden');
-  (event.currentTarget as HTMLButtonElement).classList.toggle(
-    'active',
-    !hidden
-  );
-});
-query<HTMLButtonElement>('#toggle-graph').addEventListener('click', event => {
-  const hidden = shellElement.classList.toggle('graph-hidden');
-  (event.currentTarget as HTMLButtonElement).classList.toggle(
-    'active',
-    !hidden
-  );
+filesViewElement.addEventListener('click', showFilesView);
+noteViewElement.addEventListener('click', () => showWorkspacePane('reader'));
+graphViewElement.addEventListener('click', showGraphView);
+singlePaneMedia.addEventListener('change', syncRibbonState);
+mobileMedia.addEventListener('change', () => {
+  shellElement.classList.remove('showing-files');
+  syncRibbonState();
 });
 query<HTMLButtonElement>('#open-existing').addEventListener('click', () =>
   openVaultDialog('register')
@@ -801,6 +815,7 @@ app.ontoolresult = receiveToolResult;
 app.onhostcontextchanged = context => applyTheme(context.theme);
 
 applyTheme(undefined);
+syncRibbonState();
 void app.connect().then(() => {
   applyTheme(app.getHostContext()?.theme);
   void requestFullscreen();

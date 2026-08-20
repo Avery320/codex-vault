@@ -26,16 +26,25 @@ async function buildVaultExplorer() {
     path.join(packageDir, 'ui/vault-explorer.html'),
     'utf8'
   );
-  const marker = '/*__CODEX_VAULT_BUNDLE__*/';
-  if (!template.includes(marker)) {
-    throw new Error(`Missing bundle marker ${marker}.`);
+  const style = fs.readFileSync(
+    path.join(packageDir, 'ui/vault-explorer.css'),
+    'utf8'
+  );
+  const scriptMarker = '/*__CODEX_VAULT_BUNDLE__*/';
+  const styleMarker = '/*__CODEX_VAULT_STYLE__*/';
+  for (const marker of [scriptMarker, styleMarker]) {
+    if (!template.includes(marker)) {
+      throw new Error(`Missing bundle marker ${marker}.`);
+    }
   }
 
   const outputDir = path.join(packageDir, 'out/ui');
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(
     path.join(outputDir, 'vault-explorer.html'),
-    template.replace(marker, () => script.text)
+    template
+      .replace(styleMarker, () => style)
+      .replace(scriptMarker, () => script.text)
   );
 }
 

@@ -5,943 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Codex Vault</title>
     <style>
-      :root {
-        color-scheme: dark;
-        --background-primary: #202020;
-        --background-secondary: #262626;
-        --background-secondary-alt: #1b1b1b;
-        --background-modifier-hover: #333333;
-        --background-modifier-active: #3a3449;
-        --border: #3a3a3a;
-        --text-normal: #dcddde;
-        --text-muted: #9b9b9b;
-        --text-faint: #737373;
-        --interactive-accent: #8b6cef;
-        --interactive-accent-hover: #9d83f4;
-        --danger: #ef6b73;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      }
-
-      :root[data-theme='light'] {
-        color-scheme: light;
-        --background-primary: #ffffff;
-        --background-secondary: #f2f2f2;
-        --background-secondary-alt: #e8e8e8;
-        --background-modifier-hover: #e7e5e2;
-        --background-modifier-active: #e8e2f7;
-        --border: #d7d5d1;
-        --text-normal: #2e2e2e;
-        --text-muted: #6f6f6f;
-        --text-faint: #969696;
-        --interactive-accent: #7056c9;
-        --interactive-accent-hover: #6048b8;
-        --danger: #c83f49;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        overflow: hidden;
-        background: var(--background-primary);
-        color: var(--text-normal);
-      }
-
-      button,
-      input {
-        font: inherit;
-      }
-
-      button {
-        color: inherit;
-      }
-
-      button:focus-visible,
-      input:focus-visible {
-        outline: 2px solid var(--interactive-accent);
-        outline-offset: -1px;
-      }
-
-      .shell {
-        display: grid;
-        grid-template-columns: 44px 286px minmax(0, 1fr);
-        width: 100%;
-        height: 100%;
-        background: var(--background-primary);
-      }
-
-      .shell.sidebar-hidden {
-        grid-template-columns: 44px 0 minmax(0, 1fr);
-      }
-
-      .ribbon {
-        z-index: 3;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 5px;
-        border-right: 1px solid var(--border);
-        background: var(--background-secondary-alt);
-      }
-
-      .ribbon-button {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 5px;
-        background: transparent;
-        color: var(--text-muted);
-        cursor: pointer;
-      }
-
-      .ribbon-button:hover,
-      .ribbon-button.active {
-        background: var(--background-modifier-hover);
-        color: var(--text-normal);
-      }
-
-      .ribbon-button.active {
-        box-shadow: inset 2px 0 var(--interactive-accent);
-      }
-
-      .ribbon-button svg {
-        width: 19px;
-        height: 19px;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.7;
-      }
-
-      .sidebar {
-        position: relative;
-        z-index: 2;
-        display: grid;
-        grid-template-rows: 42px 42px minmax(0, 1fr) auto;
-        min-width: 0;
-        overflow: hidden;
-        border-right: 1px solid var(--border);
-        background: var(--background-secondary);
-      }
-
-      .sidebar-hidden .sidebar {
-        display: none;
-      }
-
-      .sidebar-header,
-      .tab-bar {
-        display: flex;
-        align-items: center;
-        min-width: 0;
-        height: 42px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .sidebar-header {
-        justify-content: space-between;
-        padding: 0 12px;
-        font-size: 12px;
-        font-weight: 650;
-      }
-
-      #file-count {
-        color: var(--text-faint);
-        font-size: 11px;
-        font-weight: 500;
-      }
-
-      .search-row {
-        position: relative;
-        display: flex;
-        align-items: center;
-        padding: 6px 9px;
-      }
-
-      .search-row svg {
-        position: absolute;
-        left: 18px;
-        width: 15px;
-        height: 15px;
-        fill: none;
-        stroke: var(--text-muted);
-        stroke-width: 1.8;
-      }
-
-      #search {
-        width: 100%;
-        height: 29px;
-        padding: 0 9px 0 31px;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        background: var(--background-primary);
-        color: var(--text-normal);
-        font-size: 12px;
-      }
-
-      #search::placeholder {
-        color: var(--text-faint);
-      }
-
-      .tree {
-        min-height: 0;
-        overflow: auto;
-        padding: 5px 7px 16px;
-        scrollbar-color: var(--border) transparent;
-      }
-
-      details > summary {
-        display: flex;
-        align-items: center;
-        min-height: 27px;
-        padding: 3px 6px;
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
-        list-style: none;
-        font-size: 12.5px;
-        font-weight: 600;
-      }
-
-      details > summary:hover {
-        background: var(--background-modifier-hover);
-      }
-
-      details > summary::-webkit-details-marker {
-        display: none;
-      }
-
-      details > summary::before {
-        content: '›';
-        width: 13px;
-        color: var(--text-faint);
-        transition: transform 100ms ease;
-      }
-
-      details[open] > summary::before {
-        transform: rotate(90deg);
-      }
-
-      .folder-content {
-        margin-left: 7px;
-        padding-left: 8px;
-        border-left: 1px solid var(--border);
-      }
-
-      .file {
-        position: relative;
-        display: block;
-        width: 100%;
-        min-height: 27px;
-        overflow: hidden;
-        padding: 4px 7px 4px 25px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        color: var(--text-normal);
-        text-align: left;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        cursor: pointer;
-        font-size: 12.5px;
-      }
-
-      .file::before {
-        position: absolute;
-        left: 8px;
-        content: '◇';
-        color: var(--text-faint);
-      }
-
-      .file:hover {
-        background: var(--background-modifier-hover);
-      }
-
-      .file.active {
-        background: var(--background-modifier-active);
-      }
-
-      .file.active::before {
-        color: var(--interactive-accent);
-      }
-
-      .tree-empty {
-        padding: 22px 12px;
-        color: var(--text-faint);
-        text-align: center;
-        font-size: 12px;
-      }
-
-      .vault-footer {
-        position: relative;
-        border-top: 1px solid var(--border);
-        background: var(--background-secondary-alt);
-      }
-
-      .vault-switcher {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        width: 100%;
-        min-height: 53px;
-        padding: 7px 10px;
-        border: 0;
-        background: transparent;
-        text-align: left;
-        cursor: pointer;
-      }
-
-      .vault-switcher:hover {
-        background: var(--background-modifier-hover);
-      }
-
-      .vault-meta {
-        display: grid;
-        min-width: 0;
-        gap: 2px;
-      }
-
-      #vault-name {
-        overflow: hidden;
-        font-size: 12.5px;
-        font-weight: 650;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      #vault-path {
-        overflow: hidden;
-        color: var(--text-faint);
-        font-size: 10px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .vault-menu {
-        position: absolute;
-        right: 7px;
-        bottom: 50px;
-        left: 7px;
-        z-index: 10;
-        max-height: min(420px, 60vh);
-        overflow: auto;
-        padding: 5px;
-        border: 1px solid var(--border);
-        border-radius: 7px;
-        background: var(--background-secondary-alt);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-      }
-
-      .vault-menu[hidden] {
-        display: none;
-      }
-
-      .vault-option,
-      .vault-action {
-        width: 100%;
-        padding: 7px 8px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        text-align: left;
-        cursor: pointer;
-      }
-
-      .vault-option {
-        display: grid;
-        gap: 2px;
-      }
-
-      .vault-option:hover,
-      .vault-action:hover,
-      .vault-option.active {
-        background: var(--background-modifier-hover);
-      }
-
-      .vault-option.active {
-        box-shadow: inset 2px 0 var(--interactive-accent);
-      }
-
-      .vault-option-name,
-      .vault-action {
-        font-size: 12px;
-      }
-
-      .vault-option-path {
-        overflow: hidden;
-        color: var(--text-faint);
-        font-size: 9.5px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .menu-divider {
-        height: 1px;
-        margin: 4px 2px;
-        background: var(--border);
-      }
-
-      .main {
-        position: relative;
-        display: grid;
-        grid-template-rows: minmax(0, 1fr) 24px;
-        min-width: 0;
-        min-height: 0;
-      }
-
-      .workspace {
-        display: grid;
-        grid-template-columns: minmax(360px, 1.08fr) minmax(340px, 0.92fr);
-        min-width: 0;
-        min-height: 0;
-      }
-
-      .graph-hidden .workspace {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .graph-hidden .graph-pane {
-        display: none;
-      }
-
-      .pane {
-        display: grid;
-        grid-template-rows: 42px minmax(0, 1fr);
-        min-width: 0;
-        min-height: 0;
-        background: var(--background-primary);
-      }
-
-      .reader {
-        border-right: 1px solid var(--border);
-      }
-
-      .graph-hidden .reader {
-        border-right: 0;
-      }
-
-      .tab-bar {
-        background: var(--background-secondary-alt);
-      }
-
-      .tab {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        min-width: 0;
-        height: 42px;
-        max-width: min(360px, 72%);
-        padding: 0 13px;
-        border-right: 1px solid var(--border);
-        background: var(--background-primary);
-        font-size: 12.5px;
-      }
-
-      .tab svg {
-        width: 15px;
-        height: 15px;
-        flex: 0 0 auto;
-        fill: none;
-        stroke: var(--text-muted);
-        stroke-width: 1.7;
-      }
-
-      #note-title,
-      .tab-title {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .tab-meta {
-        min-width: 0;
-        margin-left: auto;
-        padding: 0 11px;
-        overflow: hidden;
-        color: var(--text-faint);
-        font-size: 10px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .reader-scroll {
-        min-height: 0;
-        overflow: auto;
-        scrollbar-color: var(--border) transparent;
-      }
-
-      .document {
-        width: min(760px, 100%);
-        margin: 0 auto;
-        padding: 34px clamp(26px, 5vw, 72px) 80px;
-      }
-
-      #markdown {
-        font-size: 15px;
-        line-height: 1.72;
-      }
-
-      #markdown h1,
-      #markdown h2,
-      #markdown h3 {
-        line-height: 1.3;
-        letter-spacing: -0.018em;
-      }
-
-      #markdown h1 {
-        margin: 0 0 1.2rem;
-        font-size: 2em;
-      }
-
-      #markdown h2 {
-        margin-top: 2rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 1px solid var(--border);
-        font-size: 1.45em;
-      }
-
-      #markdown h3 {
-        margin-top: 1.7rem;
-        font-size: 1.18em;
-      }
-
-      #markdown a {
-        color: var(--interactive-accent-hover);
-        text-decoration: none;
-      }
-
-      #markdown a:hover {
-        text-decoration: underline;
-      }
-
-      #markdown code {
-        padding: 0.15em 0.35em;
-        border-radius: 4px;
-        background: var(--background-secondary);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.88em;
-      }
-
-      #markdown pre {
-        overflow: auto;
-        padding: 15px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--background-secondary-alt);
-      }
-
-      #markdown pre code {
-        padding: 0;
-        background: transparent;
-      }
-
-      #markdown blockquote {
-        margin-left: 0;
-        padding-left: 14px;
-        border-left: 3px solid var(--interactive-accent);
-        color: var(--text-muted);
-      }
-
-      #markdown img {
-        max-width: 100%;
-      }
-
-      #markdown.empty {
-        display: grid;
-        min-height: 45vh;
-        place-items: center;
-        color: var(--text-faint);
-        text-align: center;
-      }
-
-      .backlinks {
-        margin-top: 42px;
-        padding-top: 18px;
-        border-top: 1px solid var(--border);
-      }
-
-      .backlinks h3 {
-        margin: 0 0 10px;
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: 650;
-        text-transform: uppercase;
-      }
-
-      .backlink-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .backlink {
-        padding: 5px 8px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--background-secondary);
-        cursor: pointer;
-        font-size: 11.5px;
-      }
-
-      .backlink:hover {
-        border-color: var(--interactive-accent);
-      }
-
-      .graph-wrap {
-        position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 0;
-        min-height: 0;
-        overflow: hidden;
-        background: var(--background-primary);
-        transition: grid-template-columns 140ms ease;
-      }
-
-      .graph-wrap.settings-open {
-        grid-template-columns: minmax(0, 1fr) minmax(232px, 280px);
-      }
-
-      .graph-stage {
-        position: relative;
-        min-width: 0;
-        min-height: 0;
-      }
-
-      foam-graph {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-
-      .tab-actions {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        margin-left: auto;
-        padding: 0 7px;
-      }
-
-      .tab-action {
-        min-height: 27px;
-        padding: 0 8px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 11px;
-      }
-
-      .tab-action:hover,
-      .tab-action.active {
-        background: var(--background-modifier-hover);
-        color: var(--text-normal);
-      }
-
-      .tab-action:disabled {
-        opacity: 0.4;
-        cursor: default;
-      }
-
-      .icon-action {
-        display: grid;
-        width: 28px;
-        padding: 0;
-        place-items: center;
-      }
-
-      .icon-action svg {
-        width: 16px;
-        height: 16px;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.7;
-      }
-
-      .graph-settings {
-        min-width: 0;
-        overflow: auto;
-        border-left: 1px solid var(--border);
-        background: var(--background-secondary);
-        scrollbar-color: var(--border) transparent;
-      }
-
-      .graph-settings[hidden] {
-        display: none;
-      }
-
-      .graph-settings-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 42px;
-        padding: 0 9px 0 12px;
-        border-bottom: 1px solid var(--border);
-        font-size: 12px;
-        font-weight: 650;
-      }
-
-      .graph-settings details {
-        border-bottom: 1px solid var(--border);
-      }
-
-      .graph-settings summary {
-        min-height: 36px;
-        padding: 9px 12px;
-        color: var(--text-normal);
-        cursor: pointer;
-        font-size: 11.5px;
-        font-weight: 650;
-        list-style: none;
-      }
-
-      .graph-settings summary::before {
-        display: inline-block;
-        width: 14px;
-        content: '›';
-        color: var(--text-faint);
-        transition: transform 100ms ease;
-      }
-
-      .graph-settings details[open] summary::before {
-        transform: rotate(90deg);
-      }
-
-      .graph-settings-content {
-        display: grid;
-        gap: 11px;
-        padding: 2px 12px 13px;
-      }
-
-      .graph-check,
-      .graph-range {
-        color: var(--text-muted);
-        font-size: 11px;
-      }
-
-      .graph-check {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-      }
-
-      .graph-range {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 38px;
-        gap: 5px 8px;
-      }
-
-      .graph-range input {
-        grid-column: 1 / -1;
-        width: 100%;
-        accent-color: var(--interactive-accent);
-      }
-
-      .graph-value {
-        color: var(--text-faint);
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .graph-reset {
-        width: calc(100% - 24px);
-        min-height: 30px;
-        margin: 12px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: transparent;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 11px;
-      }
-
-      .graph-reset:hover {
-        background: var(--background-modifier-hover);
-        color: var(--text-normal);
-      }
-
-      .status-bar {
-        display: flex;
-        align-items: center;
-        min-width: 0;
-        padding: 0 9px;
-        border-top: 1px solid var(--border);
-        background: var(--background-secondary-alt);
-        color: var(--text-faint);
-        font-size: 10px;
-      }
-
-      #status {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      #status.error {
-        color: var(--danger);
-      }
-
-      .empty-vault {
-        position: absolute;
-        inset: 42px 0 24px;
-        z-index: 5;
-        display: grid;
-        place-items: center;
-        background: var(--background-primary);
-      }
-
-      .empty-vault[hidden] {
-        display: none;
-      }
-
-      .empty-vault-card {
-        width: min(430px, calc(100% - 40px));
-        text-align: center;
-      }
-
-      .empty-vault-card h1 {
-        margin: 0 0 8px;
-        font-size: 21px;
-      }
-
-      .empty-vault-card p {
-        margin: 0 0 20px;
-        color: var(--text-muted);
-        font-size: 13px;
-        line-height: 1.55;
-      }
-
-      .empty-actions,
-      .dialog-actions {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-      }
-
-      .primary,
-      .secondary {
-        min-height: 34px;
-        padding: 0 13px;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-
-      .primary {
-        border: 1px solid var(--interactive-accent);
-        background: var(--interactive-accent);
-        color: white;
-      }
-
-      .secondary {
-        border: 1px solid var(--border);
-        background: var(--background-secondary);
-        color: var(--text-normal);
-      }
-
-      dialog {
-        width: min(480px, calc(100% - 32px));
-        padding: 0;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--background-secondary);
-        color: var(--text-normal);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.48);
-      }
-
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.58);
-      }
-
-      .dialog-header {
-        padding: 16px 18px 12px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .dialog-header h2 {
-        margin: 0;
-        font-size: 16px;
-      }
-
-      .vault-form {
-        display: grid;
-        gap: 13px;
-        padding: 17px 18px 18px;
-      }
-
-      .field {
-        display: grid;
-        gap: 6px;
-        color: var(--text-muted);
-        font-size: 11.5px;
-      }
-
-      .field input {
-        width: 100%;
-        height: 34px;
-        padding: 0 9px;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        background: var(--background-primary);
-        color: var(--text-normal);
-        font-size: 12px;
-      }
-
-      .dialog-error {
-        min-height: 16px;
-        color: var(--danger);
-        font-size: 11px;
-      }
-
-      .dialog-actions {
-        justify-content: flex-end;
-      }
-
-      @media (max-width: 940px) {
-        .shell {
-          grid-template-columns: 42px 244px minmax(0, 1fr);
-        }
-
-        .workspace {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .graph-pane {
-          display: none;
-        }
-
-        .reader {
-          border-right: 0;
-        }
-      }
-
-      @media (max-width: 620px) {
-        .shell,
-        .shell.sidebar-hidden {
-          grid-template-columns: 40px minmax(0, 1fr);
-        }
-
-        .sidebar {
-          grid-column: 2;
-        }
-
-        .main {
-          display: none;
-        }
-
-        .sidebar-hidden .sidebar {
-          display: grid;
-        }
-      }
+      /*__CODEX_VAULT_STYLE__*/
     </style>
   </head>
   <body>
@@ -951,19 +15,31 @@
           id="toggle-sidebar"
           class="ribbon-button active"
           type="button"
-          title="切換檔案側欄"
-          aria-label="切換檔案側欄"
+          title="檔案"
+          aria-label="顯示或隱藏檔案"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 4h6l2 2h8v14H4z" />
+            <path d="M3.5 5.5h6l2 2h9v11h-17z" />
+          </svg>
+        </button>
+        <button
+          id="show-note"
+          class="ribbon-button active"
+          type="button"
+          title="目前筆記"
+          aria-label="顯示目前筆記"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3.5h9l3 3v14H6z" />
+            <path d="M15 3.5v4h4M9 12h6M9 16h6" />
           </svg>
         </button>
         <button
           id="toggle-graph"
           class="ribbon-button active"
           type="button"
-          title="切換知識圖譜"
-          aria-label="切換知識圖譜"
+          title="關聯圖檢視"
+          aria-label="顯示或隱藏關聯圖檢視"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="6" cy="6" r="2" />
@@ -977,7 +53,7 @@
       <aside class="sidebar">
         <header class="sidebar-header">
           <span>檔案</span>
-          <span id="file-count">0</span>
+          <span id="file-count" class="count">0</span>
         </header>
         <label class="search-row">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -998,7 +74,9 @@
               <span id="vault-name">載入知識庫…</span>
               <span id="vault-path"></span>
             </span>
-            <span aria-hidden="true">⌃</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m8 14 4-4 4 4" />
+            </svg>
           </button>
           <div id="vault-menu" class="vault-menu" hidden></div>
         </footer>
@@ -1008,14 +86,16 @@
         <div id="workspace" class="workspace">
           <section class="pane reader">
             <header class="tab-bar">
-              <div class="tab">
+              <div class="workspace-tab active">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 3h9l3 3v15H6z" />
-                  <path d="M15 3v4h4" />
+                  <path d="M6 3.5h9l3 3v14H6z" />
+                  <path d="M15 3.5v4h4" />
                 </svg>
                 <span id="note-title">Markdown</span>
               </div>
-              <span id="note-path" class="tab-meta">尚未選擇筆記</span>
+            </header>
+            <header class="view-header">
+              <span id="note-path">尚未選擇筆記</span>
             </header>
             <div class="reader-scroll">
               <article class="document">
@@ -1023,7 +103,7 @@
                   從檔案列表或圖譜選擇一則筆記。
                 </div>
                 <section id="backlinks" class="backlinks" hidden>
-                  <h3>反向連結</h3>
+                  <h2>反向連結</h2>
                   <div id="backlink-list" class="backlink-list"></div>
                 </section>
               </article>
@@ -1032,30 +112,29 @@
 
           <section class="pane graph-pane">
             <header class="tab-bar">
-              <div class="tab">
+              <div class="workspace-tab active">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <circle cx="6" cy="6" r="2" />
                   <circle cx="18" cy="7" r="2" />
                   <circle cx="12" cy="18" r="2" />
                   <path d="m8 7 8 0M7 8l4 8m6-7-4 7" />
                 </svg>
-                <span class="tab-title">關聯圖檢視</span>
+                <span>關聯圖檢視</span>
               </div>
               <div class="tab-actions" aria-label="圖譜模式與設定">
                 <button
-                  id="graph-global"
-                  class="tab-action active"
+                  id="graph-local-toggle"
+                  class="tab-action icon-action"
                   type="button"
-                >
-                  全域
-                </button>
-                <button
-                  id="graph-local"
-                  class="tab-action"
-                  type="button"
+                  title="聚焦目前筆記"
+                  aria-label="切換局部圖譜"
+                  aria-pressed="false"
                   disabled
                 >
-                  局部
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                  </svg>
                 </button>
                 <button
                   id="graph-settings-toggle"
@@ -1087,26 +166,40 @@
                     type="button"
                     aria-label="關閉圖譜設定"
                   >
-                    ×
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m6 6 12 12M18 6 6 18" />
+                    </svg>
                   </button>
                 </header>
+
                 <details open>
                   <summary>篩選</summary>
                   <div class="graph-settings-content">
+                    <label class="graph-search">
+                      <span>搜尋檔案</span>
+                      <input
+                        id="graph-filter"
+                        type="search"
+                        placeholder="輸入名稱或路徑…"
+                      />
+                    </label>
                     <label class="graph-check">
-                      <input id="graph-show-tags" type="checkbox" />
-                      <span>顯示標籤節點</span>
+                      <input id="graph-show-orphans" type="checkbox" checked />
+                      <span>孤立筆記</span>
+                    </label>
+                    <label class="graph-check">
+                      <input id="graph-show-unresolved" type="checkbox" />
+                      <span>未解析連結</span>
                     </label>
                   </div>
                 </details>
+
                 <details open>
                   <summary>顯示</summary>
                   <div class="graph-settings-content">
                     <label class="graph-range">
                       <span>文字淡化</span>
-                      <output id="graph-text-fade-value" class="graph-value"
-                        >0.0</output
-                      >
+                      <output id="graph-text-fade-value">0.0</output>
                       <input
                         id="graph-text-fade"
                         type="range"
@@ -1118,9 +211,7 @@
                     </label>
                     <label class="graph-range">
                       <span>節點大小</span>
-                      <output id="graph-node-size-value" class="graph-value"
-                        >1.5×</output
-                      >
+                      <output id="graph-node-size-value">1.5×</output>
                       <input
                         id="graph-node-size"
                         type="range"
@@ -1131,10 +222,8 @@
                       />
                     </label>
                     <label class="graph-range">
-                      <span>連線粗細</span>
-                      <output id="graph-link-width-value" class="graph-value"
-                        >1.0×</output
-                      >
+                      <span>連結粗細</span>
+                      <output id="graph-link-width-value">1.0×</output>
                       <input
                         id="graph-link-width"
                         type="range"
@@ -1146,14 +235,13 @@
                     </label>
                   </div>
                 </details>
+
                 <details>
                   <summary>作用力</summary>
                   <div class="graph-settings-content">
                     <label class="graph-range">
                       <span>排斥力</span>
-                      <output id="graph-repel-value" class="graph-value"
-                        >30</output
-                      >
+                      <output id="graph-repel-value">30</output>
                       <input
                         id="graph-repel"
                         type="range"
@@ -1164,10 +252,8 @@
                       />
                     </label>
                     <label class="graph-range">
-                      <span>連線距離</span>
-                      <output id="graph-link-distance-value" class="graph-value"
-                        >36</output
-                      >
+                      <span>連結距離</span>
+                      <output id="graph-link-distance-value">36</output>
                       <input
                         id="graph-link-distance"
                         type="range"
@@ -1177,11 +263,15 @@
                         value="36"
                       />
                     </label>
+                  </div>
+                </details>
+
+                <details open>
+                  <summary>局部圖譜</summary>
+                  <div class="graph-settings-content">
                     <label class="graph-range">
-                      <span>局部圖譜深度</span>
-                      <output id="graph-depth-value" class="graph-value"
-                        >1</output
-                      >
+                      <span>深度</span>
+                      <output id="graph-depth-value">1</output>
                       <input
                         id="graph-depth"
                         type="range"
@@ -1193,8 +283,9 @@
                     </label>
                   </div>
                 </details>
+
                 <button id="graph-reset" class="graph-reset" type="button">
-                  回復預設值
+                  還原預設值
                 </button>
               </aside>
             </div>
