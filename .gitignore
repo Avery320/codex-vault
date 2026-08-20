@@ -8,8 +8,6 @@ node_modules
 *.log
 out
 dist
-packages/foam-vscode/static/dataviz/
-packages/foam-vscode/src/features/panels/dataviz/graph-protocol.ts
 docs/_site
 docs/.sass-cache
 docs/.jekyll-metadata

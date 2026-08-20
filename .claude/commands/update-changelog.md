@@ -12,20 +12,18 @@ This command does NOT edit `CHANGELOG.md` and does NOT run `changeset version`.
 
 ## Parameters
 
-- `package` (optional): The package whose commits to scan — one of `foam-vscode`, `@foam/cli`, `@foam/core`. Use the workspace name exactly as it appears in the package's `package.json` `name` field (this is what changesets requires in fragment frontmatter). Note: `@foam/cli` is republished to npm under the name `foam-cli`, but for changesets always use the workspace name `@foam/cli`. **If omitted, scan all three packages and produce fragments for each.**
+- `package` (optional): The package whose commits to scan — one of `@foam/cli`, `@foam/core`. Use the workspace name exactly as it appears in the package's `package.json` `name` field (this is what changesets requires in fragment frontmatter). Note: `@foam/cli` is republished to npm under the name `foam-cli`, but for changesets always use the workspace name `@foam/cli`. **If omitted, scan both packages and produce fragments for each.**
 
 ## Description
 
 This command:
 
-0. If no `package` argument is given, run the steps below for each of `foam-vscode`, `@foam/cli`, `@foam/core` and produce a single combined summary at the end.
+0. If no `package` argument is given, run the steps below for each of `@foam/cli`, `@foam/core` and produce a single combined summary at the end.
 1. Identifies the last release tag for the target package. Conventions in this repo (per-package tags, unprefixed):
-   - `foam-vscode` → tags matching `vscode@*` (e.g. `vscode@0.40.3`)
    - `@foam/cli` → tags matching `cli@*` (e.g. `cli@0.40.3`)
    - `@foam/core` → tags matching `core@*` (e.g. `core@0.40.3`)
    - If no per-package tag exists yet, fall back to the most recent unprefixed `v*` tag (legacy convention) or ask the developer.
 2. Lists commits between that tag and `HEAD` that touched files relevant to the package:
-   - For `foam-vscode`: `packages/foam-vscode/**`
    - For `@foam/cli`: `packages/foam-cli/**`
    - For `@foam/core`: `packages/foam-core/**`
    - A commit may be relevant to multiple packages (e.g. a core change that the extension consumes) — surface it for each.
@@ -39,10 +37,10 @@ Each new fragment is a separate file in `.changeset/`. Use a short kebab-case fi
 
 ```markdown
 ---
-'foam-vscode': patch
+'@foam/core': patch
 ---
 
-Fix symlink support by augmenting file watcher with `onDidSaveTextDocument` (#1630)
+Fix symlink support in the workspace loader (#1630)
 ```
 
 Bump type rules:
@@ -55,7 +53,7 @@ If a commit affects multiple packages (e.g. a `@foam/core` change consumed by CL
 
 ## Style rules for the body
 
-Match the existing changelog style exactly (see `packages/foam-vscode/CHANGELOG.md` for reference):
+Match the existing changelog style exactly (see `packages/foam-core/CHANGELOG.md` for reference):
 
 - One bullet, one line, active voice, no file names
 - Format: `Description of change (#issue - thanks @contributor)`

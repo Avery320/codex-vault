@@ -9,8 +9,8 @@ Codex Vault 衍生自 [foambubble/foam](https://github.com/foambubble/foam)：
 與 graph component。本 fork 新增 Codex plugin、MCP App、多 vault、安全寫入與聊天
 註解。
 
-`@foam/*` 是暫時保留的內部名稱；`packages/foam-vscode` 是 legacy package，不是
-Codex Vault 介面。
+`@foam/*` 是暫時保留的內部名稱。原始 Foam VS Code extension 已從現行 source tree
+移除，仍可從 Git history 與上游 repository 追溯。
 
 ## 授權
 
@@ -22,7 +22,6 @@ MPL、BlueOak、CC0 等條款，不能簡化成「全部 MIT」。
 
 發布前仍須複核：
 
-- `buffers@0.1.1`：metadata 未宣告 SPDX license，來自 legacy VS Code 測試依賴。
 - `spawndamnit@3.0.1`：license 位於套件 LICENSE。
 - `gitconfiglocal@1.0.0`：只標示 `BSD`。
 

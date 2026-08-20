@@ -30,12 +30,11 @@ Read mode 不註冊 mutation tools。Read-write mode 使用 preview + SHA-256 co
 - 使用 Codex 私有註解資料模型。
 - 在既有 task 熱重載新版插件。
 
-`packages/foam-vscode` 是待移除的 legacy package；`@foam/*` 名稱暫時保留以避免
-不完整的跨套件改名。
+`@foam/*` 名稱暫時保留以避免不完整的跨套件改名。
 
-根目錄的 `build`、`test`、`lint`、`bench`、`clean` 與 `watch` 只執行上圖的
-Codex Vault packages。Legacy extension 仍暫時保留，僅供搬移 rich Markdown renderer
-時比對；它不屬於 Codex plugin 的 production build。
+根目錄的 `build`、`test`、`lint`、`bench` 與 `clean` 執行上圖的 Codex Vault
+packages。原始 Foam VS Code extension 不在現行 source tree 或 build graph 中；需要
+追溯尚未搬移的行為時，請查閱 Git history 與上游 Foam repository。
 
 ## Markdown renderer 遷移
 

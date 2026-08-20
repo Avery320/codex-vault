@@ -1,43 +1,6 @@
-// See https://go.microsoft.com/fwlink/?LinkId=733558
-// for the documentation about the tasks.json format
 {
   "version": "2.0.0",
   "tasks": [
-    {
-      "label": "watch: foam-vscode",
-      "type": "shell",
-      "command": "source ~/.nvm/nvm.sh && nvm use && yarn workspace foam-vscode watch",
-      "problemMatcher": {
-        "owner": "typescript",
-        "fileLocation": ["relative", "${workspaceFolder}"],
-        "pattern": [
-          {
-            "regexp": "^(.*?)\\((\\d+),(\\d+)\\):\\s+(.*)$",
-            "file": 1,
-            "line": 2,
-            "column": 3,
-            "message": 4
-          }
-        ],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": {
-            "regexp": ".*"
-          },
-          "endsPattern": {
-            "regexp": ".*"
-          }
-        }
-      },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always"
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
-    },
     {
       "label": "test: all packages",
       "type": "npm",

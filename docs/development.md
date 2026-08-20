@@ -11,8 +11,8 @@ yarn workspace @foam/graph-view lint
 yarn workspace @foam/graph-view test:unit
 ```
 
-需求為 Node.js 22+ 與 Yarn Classic 1.x。根目錄 build、lint 與 test 只涵蓋
-Codex Vault 的 core、graph、MCP 與 CLI；legacy `foam-vscode` 不在預設開發流程內。
+需求為 Node.js 22+ 與 Yarn Classic 1.x。根目錄 build、lint 與 test 涵蓋
+Codex Vault 的 core、graph、MCP 與 CLI。
 
 ## 更新本機插件
 
@@ -35,6 +35,6 @@ codex plugin list
 ## 文件原則
 
 - 現行文件只描述 Codex Vault。
-- Foam／VS Code 只用於 fork 歸屬、內部名稱或 legacy 邊界。
+- Foam／VS Code 只用於 fork 歸屬、內部名稱或歷史能力邊界。
 - 功能改變時同步更新 README、使用指南與能力邊界。
 - 來源或授權改變時同步更新 NOTICE 與授權文件。

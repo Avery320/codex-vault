@@ -1,5 +1,5 @@
 /**
- * Shared message types between the extension host and the graph webview.
+ * Shared message types between a host and the graph component.
  * This file must remain free of VS Code and Node.js imports.
  */
 
@@ -70,7 +70,6 @@ export interface BuiltinTypeConfig {
 
 /**
  * A named, pre-configured graph view.
- * Also used as raw command args for `foam-vscode.show-graph`.
  * Merge order: foam.graph.style → named view → inline config.
  */
 export interface GraphViewConfig {
@@ -90,13 +89,13 @@ export interface ShowGraphArgs {
   config?: GraphViewConfig;
 }
 
-// Extension → Webview
+// Host → graph component
 export type ExtensionMessage =
   | { type: 'didUpdateStyle'; payload: GraphStyle }
   | { type: 'didUpdateGraphData'; payload: GraphData }
   | { type: 'didSelectNote'; payload: string };
 
-// Webview → Extension
+// Graph component → host
 export type WebviewMessage =
   | { type: 'webviewDidLoad' }
   | { type: 'webviewDidSelectNode'; payload: string }

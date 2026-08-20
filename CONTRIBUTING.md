@@ -2,7 +2,7 @@
 
 請先閱讀 [README](README.md)、[架構](docs/architecture.md)與
 [開發指南](docs/development.md)。新功能應實作在 Codex plugin／MCP App 邊界，
-不要加入 `foam-vscode` 或複製 Codex 私有 UI。
+不要重新加入 VS Code extension host 或複製 Codex 私有 UI。
 
 ```sh
 yarn install

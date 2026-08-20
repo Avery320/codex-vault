@@ -17,16 +17,12 @@
   },
   "files": [
     "out/",
-    "src/",
-    "!src/main.ts",
-    "!src/main.css"
+    "src/"
   ],
   "scripts": {
     "build": "node build.cjs",
     "build:lib": "node build.cjs --lib",
-    "build:vscode": "node build.cjs --vscode",
     "clean": "rimraf out dist",
-    "watch": "node build.cjs --vscode --watch",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "echo 'No e2e tests for @foam/graph-view'",

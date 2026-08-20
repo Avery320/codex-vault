@@ -7,5 +7,3 @@ Vault Explorer 使用的 Foam-derived Lit graph component。它只負責呈現 g
 yarn workspace @foam/graph-view build
 yarn workspace @foam/graph-view test:unit
 ```
-
-VS Code bundle target 暫時保留供 legacy 相容；新 graph 邏輯應維持 host-neutral。
