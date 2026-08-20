@@ -87,6 +87,29 @@ describe('resource tools', () => {
       expect(unchanged.content).toBe(SEED['a.md']);
     }));
 
+  it('preview_resource_update emits separate hunks for distant changes', () =>
+    withMcpServer(
+      {
+        'long.md': Array.from(
+          { length: 20 },
+          (_, index) => `line ${index + 1}`
+        ).join('\n'),
+      },
+      async ctx => {
+        const content = Array.from({ length: 20 }, (_, index) =>
+          index === 1 || index === 18
+            ? `changed ${index + 1}`
+            : `line ${index + 1}`
+        ).join('\n');
+        const preview = await ctx.callToolJson<{ diff: string }>(
+          'preview_resource_update',
+          { uri: 'long.md', content }
+        );
+
+        expect(preview.diff.match(/^@@/gm)).toHaveLength(2);
+      }
+    ));
+
   it('update_resource applies content only with the previewed hash', () =>
     withMcpServer(SEED, async ctx => {
       const preview = await ctx.callToolJson<{

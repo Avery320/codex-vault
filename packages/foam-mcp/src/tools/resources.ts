@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
+import { createTwoFilesPatch } from 'diff';
 import { z } from 'zod';
 import {
   FoamError,
+  type IDataStore,
+  type URI,
   listNotes,
   noteShowData,
   noteCreate,
@@ -26,52 +29,39 @@ import {
 const sha256 = (content: string) =>
   createHash('sha256').update(content, 'utf8').digest('hex');
 
-const splitLines = (content: string) => content.split('\n');
-
 function createUnifiedDiff(
   uri: string,
   currentContent: string,
   nextContent: string
 ): string {
   if (currentContent === nextContent) return '';
+  return createTwoFilesPatch(
+    `a/${uri}`,
+    `b/${uri}`,
+    currentContent,
+    nextContent,
+    '',
+    '',
+    { context: 3 }
+  );
+}
 
-  const current = splitLines(currentContent);
-  const next = splitLines(nextContent);
-  let prefix = 0;
-  while (
-    prefix < current.length &&
-    prefix < next.length &&
-    current[prefix] === next[prefix]
-  ) {
-    prefix += 1;
+async function readRequiredResource(
+  dataStore: IDataStore,
+  uri: URI,
+  inputUri: string
+): Promise<string> {
+  const content = await dataStore.read(uri);
+  if (content === null) {
+    throw new FoamError(
+      'resource_not_found',
+      `Resource not found: ${inputUri}`,
+      {
+        uri: inputUri,
+      }
+    );
   }
-
-  let currentSuffix = current.length;
-  let nextSuffix = next.length;
-  while (
-    currentSuffix > prefix &&
-    nextSuffix > prefix &&
-    current[currentSuffix - 1] === next[nextSuffix - 1]
-  ) {
-    currentSuffix -= 1;
-    nextSuffix -= 1;
-  }
-
-  const contextStart = Math.max(0, prefix - 3);
-  const currentContextEnd = Math.min(current.length, currentSuffix + 3);
-  const nextContextEnd = Math.min(next.length, nextSuffix + 3);
-  const oldCount = currentContextEnd - contextStart;
-  const newCount = nextContextEnd - contextStart;
-  const lines = [
-    `--- a/${uri}`,
-    `+++ b/${uri}`,
-    `@@ -${contextStart + 1},${oldCount} +${contextStart + 1},${newCount} @@`,
-    ...current.slice(contextStart, prefix).map(line => ` ${line}`),
-    ...current.slice(prefix, currentSuffix).map(line => `-${line}`),
-    ...next.slice(prefix, nextSuffix).map(line => `+${line}`),
-    ...next.slice(nextSuffix, nextContextEnd).map(line => ` ${line}`),
-  ];
-  return `${lines.join('\n')}\n`;
+  return content;
 }
 
 function buildNextContent(
@@ -163,14 +153,7 @@ export function registerResourceTools(
     async args => {
       const { dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
-      const content = await dataStore.read(uri);
-      if (content === null) {
-        throw new FoamError(
-          'resource_not_found',
-          `Resource not found: ${args.uri}`,
-          { uri: args.uri }
-        );
-      }
+      const content = await readRequiredResource(dataStore, uri, args.uri);
       return json({
         uri: uriToOutputString(uri, rootUri),
         content,
@@ -201,14 +184,11 @@ export function registerResourceTools(
         );
       }
       const uri = parseUriInput(args.uri, rootUri);
-      const currentContent = await dataStore.read(uri);
-      if (currentContent === null) {
-        throw new FoamError(
-          'resource_not_found',
-          `Resource not found: ${args.uri}`,
-          { uri: args.uri }
-        );
-      }
+      const currentContent = await readRequiredResource(
+        dataStore,
+        uri,
+        args.uri
+      );
       const nextContent = buildNextContent(currentContent, args);
       const outputUri = uriToOutputString(uri, rootUri);
       return json({
@@ -319,14 +299,11 @@ export function registerResourceTools(
           'Provide `content` and/or `properties`.'
         );
       }
-      const currentContent = await dataStore.read(uri);
-      if (currentContent === null) {
-        throw new FoamError(
-          'resource_not_found',
-          `Resource not found: ${args.uri}`,
-          { uri: args.uri }
-        );
-      }
+      const currentContent = await readRequiredResource(
+        dataStore,
+        uri,
+        args.uri
+      );
       const currentHash = sha256(currentContent);
       if (currentHash !== args.expected_content_sha256) {
         throw new FoamError(

@@ -81,9 +81,7 @@ export class VaultRegistry {
       changed = true;
     }
     if (!this.data.active_vault_id && this.data.vaults.length > 0) {
-      this.data.active_vault_id = [...this.data.vaults].sort(
-        (left, right) => right.last_opened_at - left.last_opened_at
-      )[0].id;
+      this.data.active_vault_id = this.sortedVaults()[0].id;
       changed = true;
     }
 
@@ -93,9 +91,7 @@ export class VaultRegistry {
 
   list(): VaultRecord[] {
     this.assertInitialized();
-    return [...this.data.vaults]
-      .sort((left, right) => right.last_opened_at - left.last_opened_at)
-      .map(vault => ({ ...vault }));
+    return this.sortedVaults().map(vault => ({ ...vault }));
   }
 
   getActive(): VaultRecord | null {
@@ -161,11 +157,7 @@ export class VaultRegistry {
       if (mappedId === vaultId) delete this.data.project_vaults[projectPath];
     }
     if (this.data.active_vault_id === vaultId) {
-      this.data.active_vault_id = this.data.vaults.length
-        ? [...this.data.vaults].sort(
-            (left, right) => right.last_opened_at - left.last_opened_at
-          )[0].id
-        : undefined;
+      this.data.active_vault_id = this.sortedVaults()[0]?.id;
     }
     await this.save();
   }
@@ -229,7 +221,7 @@ export class VaultRegistry {
     try {
       value = (await fs.readFile(legacyPath, 'utf8')).split(/\r?\n/, 1)[0].trim();
     } catch (error) {
-      if (isMissingFile(error)) return false;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
       throw error;
     }
     if (!value) return false;
@@ -278,6 +270,12 @@ export class VaultRegistry {
   private find(vaultId: string | undefined): VaultRecord | null {
     if (!vaultId) return null;
     return this.data.vaults.find(vault => vault.id === vaultId) ?? null;
+  }
+
+  private sortedVaults(): VaultRecord[] {
+    return [...this.data.vaults].sort(
+      (left, right) => right.last_opened_at - left.last_opened_at
+    );
   }
 
   private async save(): Promise<void> {
@@ -334,7 +332,7 @@ async function readJsonFile(filePath: string): Promise<unknown | null> {
   try {
     return JSON.parse(await fs.readFile(filePath, 'utf8')) as unknown;
   } catch (error) {
-    if (isMissingFile(error)) return null;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
 }
@@ -375,13 +373,4 @@ function parseRegistry(value: unknown): VaultRegistryData {
     vaults,
     project_vaults: validProjectVaults,
   };
-}
-
-function isMissingFile(error: unknown): boolean {
-  return (
-    !!error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    error.code === 'ENOENT'
-  );
 }

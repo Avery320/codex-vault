@@ -140,11 +140,9 @@ export function computeNodeRadius(
   incomingReferenceCount: number,
   multiplier: number
 ): number {
-  const count = Number.isFinite(incomingReferenceCount)
-    ? Math.max(0, incomingReferenceCount)
-    : 0;
-  const scale = Number.isFinite(multiplier) ? Math.max(0, multiplier) : 1;
-  return Math.min(3.2, 0.8 + Math.sqrt(count) * 0.55) * scale;
+  return (
+    Math.min(3.2, 0.8 + Math.sqrt(incomingReferenceCount) * 0.55) * multiplier
+  );
 }
 
 @customElement('foam-graph-canvas')

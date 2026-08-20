@@ -199,19 +199,10 @@ async function findObsidianVaultRoot(
         return current;
       }
     } catch (error) {
-      if (!isMissingFile(error)) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     const parent = path.dirname(current);
     if (parent === current) return null;
     current = parent;
   }
-}
-
-function isMissingFile(error: unknown): boolean {
-  return (
-    !!error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    error.code === 'ENOENT'
-  );
 }

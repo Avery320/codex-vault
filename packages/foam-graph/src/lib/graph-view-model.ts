@@ -43,13 +43,11 @@ export function computeVisibleGraph(
     nodeInfo[id] = graphModel.nodeInfo[id];
     return { id };
   });
-  const links = graphModel.links
-    .filter(
-      link =>
-        nodeIds.has(GraphModelLink.getNodeId(link.source)) &&
-        nodeIds.has(GraphModelLink.getNodeId(link.target))
-    )
-    .map(link => ({ ...link }));
+  const links = graphModel.links.filter(
+    link =>
+      nodeIds.has(GraphModelLink.getNodeId(link.source)) &&
+      nodeIds.has(GraphModelLink.getNodeId(link.target))
+  );
 
   return { nodeInfo, nodes, links };
 }

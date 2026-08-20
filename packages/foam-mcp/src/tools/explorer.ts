@@ -2,11 +2,7 @@ import { z } from 'zod';
 import { buildGraphData, resolveNote } from '@foam/core';
 import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
-import {
-  FoamMcpWorkspaceProvider,
-  VaultManager,
-  VaultSummary,
-} from '../workspace-context';
+import { FoamMcpWorkspaceProvider, VaultManager } from '../workspace-context';
 
 export const VAULT_EXPLORER_RESOURCE_URI =
   'ui://codex-vault/vault-explorer.html';
@@ -32,9 +28,7 @@ export function registerExplorerTool(
         args.focus_uri
       );
       return {
-        content: [
-          { type: 'text' as const, text: JSON.stringify(state) },
-        ],
+        content: [{ type: 'text' as const, text: JSON.stringify(state) }],
         structuredContent: state,
       };
     }
@@ -95,8 +89,8 @@ async function buildExplorerState(
   const vaults = vaultManager
     ? await vaultManager.listVaults()
     : active
-      ? [{ ...active.vault, active: true }]
-      : [];
+    ? [{ ...active.vault, active: true }]
+    : [];
 
   if (!active) {
     return {
@@ -119,14 +113,10 @@ async function buildExplorerState(
   }
 
   const resources = foam.workspace.list();
-  const graph = buildGraphData(
-    resources,
-    foam.graph.getAllConnections(),
-    {
-      resourceToId: uri => uriToOutputString(uri, rootUri),
-      includePlaceholders: true,
-    }
-  );
+  const graph = buildGraphData(resources, foam.graph.getAllConnections(), {
+    resourceToId: uri => uriToOutputString(uri, rootUri),
+    includePlaceholders: true,
+  });
   for (const resource of resources) {
     if (resource.type !== 'note') continue;
     const id = uriToOutputString(resource.uri, rootUri);
@@ -141,14 +131,9 @@ async function buildExplorerState(
       tags: resource.tags.map(tag => tag.label),
     }))
     .sort((left, right) => left.uri.localeCompare(right.uri));
-  const activeVault: VaultSummary = {
-    ...active.vault,
-    active: true,
-  };
-
   return {
     focus_uri: focusUri,
-    active_vault: activeVault,
+    active_vault: { ...active.vault, active: true },
     vaults,
     files,
     graph,

@@ -17,9 +17,7 @@ async function buildVaultExplorer() {
       'process.env.NODE_ENV': '"production"',
     },
   });
-  const script = result.outputFiles.find(file =>
-    ['.js', '<stdout>'].some(suffix => file.path.endsWith(suffix))
-  );
+  const [script] = result.outputFiles;
   if (!script) throw new Error('Vault explorer bundle was not generated.');
 
   const template = fs.readFileSync(

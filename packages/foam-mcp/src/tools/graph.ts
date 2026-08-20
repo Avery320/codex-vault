@@ -6,7 +6,6 @@ import {
   listPlaceholders,
   resolveNote,
   traverseGraph,
-  listNotes,
 } from '@foam/core';
 import {
   parseUriInput,
@@ -214,8 +213,7 @@ export function registerGraphTools(
         orphan_count: listOrphans(foam.workspace, foam.graph).length,
         placeholder_count: foam.graph.placeholders.size,
         connection_count: foam.graph.getAllConnections().length,
-        // total resource count (notes + attachments)
-        resource_count: listNotes(foam.workspace, {}).length,
+        resource_count: all.length,
         read_only: readOnly,
       });
     }

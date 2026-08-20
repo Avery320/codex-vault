@@ -153,7 +153,7 @@ export class VaultFullTextIndex {
   }
 
   private remove(resource: Resource): void {
-    const id = this.documentId(resource);
+    const id = resource.uri.toString();
     if (this.cache.has(id)) {
       this.index.discard(id);
       this.cache.delete(id);
@@ -170,7 +170,7 @@ export class VaultFullTextIndex {
 
     return {
       indexed: {
-        id: this.documentId(resource),
+        id: resource.uri.toString(),
         title: resource.title,
         aliases: resource.aliases.map(alias => alias.title).join(' '),
         tags: resource.tags.map(tag => tag.label).join(' '),
@@ -179,10 +179,6 @@ export class VaultFullTextIndex {
       },
       cached: { resource, content },
     };
-  }
-
-  private documentId(resource: Resource): string {
-    return resource.uri.toString();
   }
 
   private toSearchMatch(
@@ -232,12 +228,9 @@ function findMatchingLine(
     return { line: termIndex + 1, text: lines[termIndex] };
   }
 
-  return { line: 1, text: `# ${cachedTitleFallback(content)}` };
-}
-
-function cachedTitleFallback(content: string): string {
-  const heading = content
-    .split(/\r?\n/)
-    .find(line => /^#\s+/.test(line.trim()));
-  return heading ? heading.trim().replace(/^#\s+/, '') : '';
+  const heading = lines.find(line => /^#\s+/.test(line.trim()));
+  return {
+    line: 1,
+    text: heading?.trim() ?? '# ',
+  };
 }

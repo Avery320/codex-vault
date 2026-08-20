@@ -79,19 +79,6 @@ type GraphMode = 'global' | 'local';
 type LayoutMode = 'desktop' | 'compact' | 'mobile';
 type WorkspacePane = 'files' | 'reader' | 'graph';
 
-const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
-  filterQuery: '',
-  showTags: true,
-  showAttachments: false,
-  showOrphans: true,
-  existingFilesOnly: true,
-  textFade: 0,
-  nodeSize: 1.5,
-  linkWidth: 1,
-  repel: 30,
-  linkDistance: 36,
-  localDepth: 1,
-};
 const workspaceLayout = {
   sidebarOpen: true,
   graphOpen: true,
@@ -143,7 +130,7 @@ const nameField = query<HTMLLabelElement>('#name-field');
 const nameInput = query<HTMLInputElement>('#vault-folder-name');
 const dialogErrorElement = query<HTMLDivElement>('#dialog-error');
 const vaultSwitcherElement = query<HTMLButtonElement>('#vault-switcher');
-const graphSettingsElement = query<HTMLElement>('#graph-settings');
+const graphSettingsElement = query<HTMLFormElement>('#graph-settings');
 const graphSettingsToggleElement = query<HTMLButtonElement>(
   '#graph-settings-toggle'
 );
@@ -171,13 +158,12 @@ const graphViewElement = query<HTMLButtonElement>('#toggle-graph');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
-let visibleFiles: VaultFile[] = [];
 let searchTimer: number | undefined;
 let searchSequence = 0;
 let noteSequence = 0;
 let dialogMode: VaultDialogMode = 'register';
 let graphMode: GraphMode = 'global';
-let graphPreferences: GraphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
+let graphPreferences: GraphPreferences;
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
 let displayedReaderWidth = workspaceLayout.readerWidth;
 
@@ -243,7 +229,6 @@ function applyGraphPreferences(): void {
     velocityDecay: 0.4,
   };
   applyGraphScope();
-  syncGraphSettingsControls();
 }
 
 function applyGraphScope(): void {
@@ -258,18 +243,7 @@ function applyGraphScope(): void {
   graphLocalToggleElement.title = local ? '顯示全域圖譜' : '聚焦目前筆記';
 }
 
-function syncGraphSettingsControls(): void {
-  graphFilterElement.value = graphPreferences.filterQuery;
-  graphShowTagsElement.checked = graphPreferences.showTags;
-  graphShowAttachmentsElement.checked = graphPreferences.showAttachments;
-  graphShowOrphansElement.checked = graphPreferences.showOrphans;
-  graphExistingFilesOnlyElement.checked = graphPreferences.existingFilesOnly;
-  graphTextFadeElement.value = String(graphPreferences.textFade);
-  graphNodeSizeElement.value = String(graphPreferences.nodeSize);
-  graphLinkWidthElement.value = String(graphPreferences.linkWidth);
-  graphRepelElement.value = String(graphPreferences.repel);
-  graphLinkDistanceElement.value = String(graphPreferences.linkDistance);
-  graphDepthElement.value = String(graphPreferences.localDepth);
+function updateGraphOutputs(): void {
   query<HTMLOutputElement>('#graph-text-fade-value').value =
     graphPreferences.textFade.toFixed(1);
   query<HTMLOutputElement>(
@@ -289,9 +263,8 @@ function syncGraphSettingsControls(): void {
   );
 }
 
-function readGraphSettingsControls(): void {
-  const previous = graphPreferences;
-  graphPreferences = {
+function readGraphPreferences(): GraphPreferences {
+  return {
     filterQuery: graphFilterElement.value,
     showTags: graphShowTagsElement.checked,
     showAttachments: graphShowAttachmentsElement.checked,
@@ -304,6 +277,11 @@ function readGraphSettingsControls(): void {
     linkDistance: Number(graphLinkDistanceElement.value),
     localDepth: Number(graphDepthElement.value),
   };
+}
+
+function updateGraphPreferences(): void {
+  const previous = graphPreferences;
+  graphPreferences = readGraphPreferences();
   if (
     previous.filterQuery !== graphPreferences.filterQuery ||
     previous.showOrphans !== graphPreferences.showOrphans ||
@@ -312,6 +290,7 @@ function readGraphSettingsControls(): void {
     applyGraphFilters();
   }
   applyGraphPreferences();
+  updateGraphOutputs();
 }
 
 function setGraphSettingsOpen(open: boolean): void {
@@ -424,7 +403,6 @@ function createMenuAction(
 }
 
 function renderFileTree(files: VaultFile[]): void {
-  visibleFiles = files;
   treeElement.replaceChildren();
   fileCountElement.textContent = String(files.length);
   renderTreeNode(createTree(files), treeElement, true);
@@ -474,6 +452,12 @@ function renderTreeNode(
   }
 }
 
+function selectActiveFile(uri: string): void {
+  for (const file of treeElement.querySelectorAll<HTMLButtonElement>('.file')) {
+    file.classList.toggle('active', file.dataset.uri === uri);
+  }
+}
+
 async function openNote(uri: string): Promise<void> {
   if (!payload) return;
   showWorkspacePane('reader');
@@ -483,7 +467,7 @@ async function openNote(uri: string): Promise<void> {
   noteTitleElement.textContent = file?.title ?? uri;
   notePathElement.textContent = uri;
   notePathElement.title = uri;
-  renderFileTree(visibleFiles);
+  selectActiveFile(uri);
   applyGraphScope();
   graphElement.clearSelection();
   showEmptyDocument('正在讀取筆記…');
@@ -850,25 +834,11 @@ query<HTMLButtonElement>('#graph-settings-close').addEventListener(
   'click',
   () => setGraphSettingsOpen(false)
 );
-for (const control of [
-  graphFilterElement,
-  graphShowTagsElement,
-  graphShowAttachmentsElement,
-  graphShowOrphansElement,
-  graphExistingFilesOnlyElement,
-  graphTextFadeElement,
-  graphNodeSizeElement,
-  graphLinkWidthElement,
-  graphRepelElement,
-  graphLinkDistanceElement,
-  graphDepthElement,
-]) {
-  control.addEventListener('input', readGraphSettingsControls);
-}
+graphSettingsElement.addEventListener('input', updateGraphPreferences);
+graphSettingsElement.addEventListener('submit', event => event.preventDefault());
 query<HTMLButtonElement>('#graph-reset').addEventListener('click', () => {
-  graphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
-  applyGraphFilters();
-  applyGraphPreferences();
+  graphSettingsElement.reset();
+  updateGraphPreferences();
 });
 
 vaultSwitcherElement.addEventListener('click', toggleVaultMenu);
@@ -909,6 +879,8 @@ document.addEventListener('click', event => {
 app.ontoolresult = receiveToolResult;
 app.onhostcontextchanged = context => applyTheme(context.theme);
 
+graphPreferences = readGraphPreferences();
+updateGraphOutputs();
 applyTheme(undefined);
 applyWorkspaceLayout();
 void app.connect().then(() => {
