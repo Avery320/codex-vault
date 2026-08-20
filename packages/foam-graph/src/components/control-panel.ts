@@ -2,7 +2,12 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import './autocomplete-input';
 import { getTypeColor } from '../lib/colors';
-import type { ResolvedStyle, Forces, Selection, GraphScope } from '../lib/types';
+import type {
+  ResolvedStyle,
+  Forces,
+  Selection,
+  GraphScope,
+} from '../lib/types';
 import type { GroupRule, GroupMatch } from '../protocol';
 
 export interface GroupDraft {
@@ -369,12 +374,6 @@ export class ControlPanel extends LitElement {
     return ControlPanel._SPECIAL_TYPES.filter(t => t in this.showNodesOfType);
   }
 
-  private get _noteTypes() {
-    return Object.keys(this.showNodesOfType)
-      .filter(t => !ControlPanel._SPECIAL_TYPES.includes(t))
-      .sort();
-  }
-
   render() {
     return html`
       <details open>
@@ -462,7 +461,8 @@ export class ControlPanel extends LitElement {
                 />
                 <span
                   style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                  >${group.label} (${this.groupMatchCounts[group.id] ?? 0})</span
+                  >${group.label}
+                  (${this.groupMatchCounts[group.id] ?? 0})</span
                 >
                 <span
                   class="group-dot"
@@ -786,7 +786,9 @@ export class ControlPanel extends LitElement {
                       depth: parseInt((e.target as HTMLInputElement).value),
                     })}
                 />
-                <span class="value">${(this.graphScope as { depth: number }).depth}</span>
+                <span class="value"
+                  >${(this.graphScope as { depth: number }).depth}</span
+                >
               </label>`
             : null}
         </div>

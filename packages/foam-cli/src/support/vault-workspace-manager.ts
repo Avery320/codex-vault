@@ -52,9 +52,7 @@ export class NodeVaultWorkspaceManager implements VaultManager {
     projectPath?: string;
   }): Promise<FoamMcpWorkspaceContext | null> {
     return this.enqueue(async () => {
-      let vault = options.vaultId
-        ? this.registry.get(options.vaultId)
-        : null;
+      let vault = options.vaultId ? this.registry.get(options.vaultId) : null;
       if (options.vaultId && !vault) {
         throw new Error(`Unknown vault: ${options.vaultId}`);
       }
@@ -70,14 +68,7 @@ export class NodeVaultWorkspaceManager implements VaultManager {
       }
       vault ??= this.registry.getActive();
       if (!vault) return null;
-
-      await this.activate(vault);
-      const selected = await this.registry.select(vault.id);
-      this.active!.context.vault.last_opened_at = selected.last_opened_at;
-      if (options.projectPath) {
-        await this.registry.bindProject(options.projectPath, vault.id);
-      }
-      return this.active!.context;
+      return this.selectWorkspace(vault, options.projectPath);
     });
   }
 
@@ -91,13 +82,7 @@ export class NodeVaultWorkspaceManager implements VaultManager {
         vaultPath: options.path,
         name: options.name,
       });
-      await this.activate(vault);
-      const selected = await this.registry.select(vault.id);
-      this.active!.context.vault.last_opened_at = selected.last_opened_at;
-      if (options.projectPath) {
-        await this.registry.bindProject(options.projectPath, vault.id);
-      }
-      return this.active!.context;
+      return this.selectWorkspace(vault, options.projectPath);
     });
   }
 
@@ -107,7 +92,10 @@ export class NodeVaultWorkspaceManager implements VaultManager {
     projectPath?: string;
   }): Promise<FoamMcpWorkspaceContext> {
     return this.enqueue(async () => {
-      const vault = await this.registry.create(options.parentPath, options.name);
+      const vault = await this.registry.create(
+        options.parentPath,
+        options.name
+      );
       await this.activate(vault);
       if (options.projectPath) {
         await this.registry.bindProject(options.projectPath, vault.id);
@@ -163,6 +151,18 @@ export class NodeVaultWorkspaceManager implements VaultManager {
       await watcher.dispose();
       throw error;
     }
+  }
+
+  private async selectWorkspace(
+    vault: VaultRecord,
+    projectPath?: string
+  ): Promise<FoamMcpWorkspaceContext> {
+    await this.activate(vault);
+    const selected = await this.registry.select(vault.id);
+    const context = this.active!.context;
+    context.vault.last_opened_at = selected.last_opened_at;
+    if (projectPath) await this.registry.bindProject(projectPath, vault.id);
+    return context;
   }
 
   private async disposeActive(): Promise<void> {

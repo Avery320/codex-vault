@@ -1,11 +1,8 @@
 import { FoamError } from '@foam/core';
 import { z } from 'zod';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import { VaultManager } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 export function registerVaultTools(
   register: ToolRegistrar,

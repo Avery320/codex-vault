@@ -31,7 +31,7 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
  * characters and bigrams keep partial note searches useful even when the
  * runtime dictionary segments a phrase differently from the author.
  */
-export function tokenizeVaultText(text: string): string[] {
+function tokenizeVaultText(text: string): string[] {
   const tokens = new Set<string>();
   const normalized = text.normalize('NFKC').toLocaleLowerCase();
 

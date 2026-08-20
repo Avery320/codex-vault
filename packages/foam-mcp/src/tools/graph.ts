@@ -17,14 +17,11 @@ import {
   uriToOutputString,
 } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import {
   FoamMcpWorkspaceProvider,
   requireWorkspace,
 } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 const MAX_TRAVERSAL_DEPTH = 5;
 
@@ -167,7 +164,9 @@ export function registerGraphTools(
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([uriPath, count]) => {
-          const resource = foam.workspace.list().find(r => r.uri.path === uriPath);
+          const resource = foam.workspace
+            .list()
+            .find(r => r.uri.path === uriPath);
           return resource
             ? {
                 uri: uriToOutputString(resource.uri, rootUri),

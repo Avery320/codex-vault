@@ -5,23 +5,15 @@ import {
   removeTagsFromFrontmatter,
   listTags,
   renameTag,
-  resolveNote,
   searchWorkspace,
 } from '@foam/core';
-import {
-  parseUriInput,
-  uriToOutputString,
-  serializeNoteItem,
-} from '../serializers';
+import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import {
   FoamMcpWorkspaceProvider,
   requireWorkspace,
 } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 export function registerTagTools(
   register: ToolRegistrar,
@@ -89,7 +81,7 @@ export function registerTagTools(
     'add_tags',
     {
       description:
-        'Add tags to a note\'s frontmatter (deduplicating). Returns the resulting tag list.',
+        "Add tags to a note's frontmatter (deduplicating). Returns the resulting tag list.",
       inputSchema: {
         uri: z.string(),
         tags: z.array(z.string()).min(1),
@@ -116,7 +108,7 @@ export function registerTagTools(
   register(
     'remove_tags',
     {
-      description: 'Remove tags from a note\'s frontmatter.',
+      description: "Remove tags from a note's frontmatter.",
       inputSchema: {
         uri: z.string(),
         tags: z.array(z.string()).min(1),

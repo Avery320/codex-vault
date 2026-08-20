@@ -1,20 +1,12 @@
 import { z } from 'zod';
-import {
-  FoamError,
-  QueryDescriptor,
-  URI,
-  executeQuery,
-} from '@foam/core';
+import { FoamError, QueryDescriptor, URI, executeQuery } from '@foam/core';
 import { uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import {
   FoamMcpWorkspaceProvider,
   requireWorkspace,
 } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 export function registerQueryTools(
   register: ToolRegistrar,
@@ -93,8 +85,7 @@ export function registerQueryTools(
       },
     },
     async args => {
-      const { foam, queryStore, rootUri } =
-        requireWorkspace(workspaceProvider);
+      const { foam, queryStore, rootUri } = requireWorkspace(workspaceProvider);
       if ((args.id && args.descriptor) || (!args.id && !args.descriptor)) {
         throw new FoamError(
           'invalid_input',
@@ -107,9 +98,9 @@ export function registerQueryTools(
         const loaded = await queryStore.load(queryStore.getFileUri(args.id));
         if (!loaded) {
           throw new FoamError(
-          'resource_not_found',
-          `Saved query "${args.id}" not found.`
-        );
+            'resource_not_found',
+            `Saved query "${args.id}" not found.`
+          );
         }
         descriptor = loaded.query.descriptor;
       } else {

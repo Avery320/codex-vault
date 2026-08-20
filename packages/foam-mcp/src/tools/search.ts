@@ -2,14 +2,11 @@ import { z } from 'zod';
 import { searchWorkspace } from '@foam/core';
 import { serializeSearchMatch } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import {
   FoamMcpWorkspaceProvider,
   requireWorkspace,
 } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 export function registerSearchTools(
   register: ToolRegistrar,
@@ -67,5 +64,4 @@ export function registerSearchTools(
       return json(matches.map(m => serializeSearchMatch(m, rootUri)));
     }
   );
-
 }

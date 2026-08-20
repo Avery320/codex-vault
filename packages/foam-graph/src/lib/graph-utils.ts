@@ -62,13 +62,14 @@ export function createGraphModel(graph: GraphData): GraphModel {
   return model;
 }
 
-export function getNeighbors(
-  nodeId: string,
+function collectNeighbors(
+  origins: Iterable<string>,
   depth: number,
-  nodeInfo: Record<string, GraphModelNode>
+  nodeInfo: Record<string, GraphModelNode>,
+  skipTags = false
 ): Set<string> {
-  const visited = new Set([nodeId]);
-  const queue = [{ id: nodeId, distance: 0 }];
+  const visited = new Set(origins);
+  const queue = [...visited].map(id => ({ id, distance: 0 }));
   const maxDepth = Number.isFinite(depth) ? Math.max(0, Math.floor(depth)) : 0;
 
   for (let index = 0; index < queue.length; index++) {
@@ -79,7 +80,14 @@ export function getNeighbors(
     if (!node) continue;
 
     for (const neighborId of node.neighbors) {
-      if (visited.has(neighborId)) continue;
+      const neighbor = nodeInfo[neighborId];
+      if (
+        !neighbor ||
+        visited.has(neighborId) ||
+        (skipTags && neighbor.type === 'tag')
+      ) {
+        continue;
+      }
       visited.add(neighborId);
       queue.push({ id: neighborId, distance: current.distance + 1 });
     }
@@ -88,92 +96,14 @@ export function getNeighbors(
   return visited;
 }
 
-export function computeFocusSets(
-  selectedNodes: Set<string>,
-  hoverNode: string | null,
-  neighborDepth: number,
-  nodeInfo: Record<string, GraphModelNode>,
-  links: GraphModelLink[]
-): { focusNodes: Set<string>; focusLinks: Set<GraphModelLink> } {
-  const focusNodes = new Set<string>();
-  const focusLinks = new Set<GraphModelLink>();
-
-  const originNodes = [...selectedNodes, hoverNode].filter(Boolean) as string[];
-
-  for (const nodeId of originNodes) {
-    const neighbors = getNeighbors(nodeId, neighborDepth, nodeInfo);
-    for (const n of neighbors) focusNodes.add(n);
-  }
-
-  const originSet = new Set(originNodes);
-  for (const link of links) {
-    const src = GraphModelLink.getNodeId(link.source);
-    const tgt = GraphModelLink.getNodeId(link.target);
-    if (originSet.has(src) || originSet.has(tgt)) {
-      focusLinks.add(link);
-    }
-  }
-
-  return { focusNodes, focusLinks };
-}
-
-export function getNodeState(
-  nodeId: string,
-  selectedNodes: Set<string>,
-  hoverNode: string | null,
-  focusNodes: Set<string>
-): 'regular' | 'highlighted' | 'lessened' {
-  if (selectedNodes.has(nodeId) || hoverNode === nodeId) return 'highlighted';
-  if (focusNodes.size === 0 || focusNodes.has(nodeId)) return 'regular';
-  return 'lessened';
-}
-
-export function getLinkState(
-  link: GraphModelLink,
-  focusNodes: Set<string>,
-  focusLinks: Set<GraphModelLink>
-): 'regular' | 'highlighted' | 'lessened' {
-  if (focusNodes.size === 0) return 'regular';
-  const src = GraphModelLink.getNodeId(link.source);
-  const tgt = GraphModelLink.getNodeId(link.target);
-  for (const fl of focusLinks) {
-    if (
-      GraphModelLink.getNodeId(fl.source) === src &&
-      GraphModelLink.getNodeId(fl.target) === tgt
-    ) {
-      return 'highlighted';
-    }
-  }
-  return 'lessened';
-}
-
 export function getFocusSubset(
   graphModel: GraphModel,
   focusNodeId: string,
   focusDepth: number
 ): Set<string> {
   const nodeInfo = graphModel.nodeInfo;
-  const visited = new Set([focusNodeId]);
-  const queue = [{ id: focusNodeId, distance: 0 }];
-  const maxDepth = Number.isFinite(focusDepth)
-    ? Math.max(0, Math.floor(focusDepth))
-    : 0;
-
-  // Local depth follows note links only. Tags are displayed for the notes in
-  // scope, but never become shortcuts between otherwise unrelated notes.
-  for (let index = 0; index < queue.length; index++) {
-    const current = queue[index];
-    if (current.distance >= maxDepth) continue;
-
-    for (const neighborId of nodeInfo[current.id]?.neighbors ?? []) {
-      const neighbor = nodeInfo[neighborId];
-      if (!neighbor || neighbor.type === 'tag' || visited.has(neighborId)) {
-        continue;
-      }
-      visited.add(neighborId);
-      queue.push({ id: neighborId, distance: current.distance + 1 });
-    }
-  }
+  // Tags remain visible but do not become traversal shortcuts.
+  const visited = collectNeighbors([focusNodeId], focusDepth, nodeInfo, true);
 
   for (const nodeId of visited) {
     for (const neighborId of nodeInfo[nodeId]?.neighbors ?? []) {
@@ -190,33 +120,39 @@ export function computeGraphStates(
   hoverNode: string | null,
   neighborDepth: number
 ): GraphStates {
-  const { focusNodes, focusLinks } = computeFocusSets(
-    selectedNodes,
-    hoverNode,
+  const origins = new Set(selectedNodes);
+  if (hoverNode) origins.add(hoverNode);
+  const focusNodes = collectNeighbors(
+    origins,
     neighborDepth,
-    graphModel.nodeInfo,
-    graphModel.links
+    graphModel.nodeInfo
   );
 
   const nodeStates = new Map<string, NodeState>();
   for (const id of Object.keys(graphModel.nodeInfo)) {
-    nodeStates.set(id, getNodeState(id, selectedNodes, hoverNode, focusNodes));
+    nodeStates.set(
+      id,
+      origins.has(id)
+        ? 'highlighted'
+        : focusNodes.size === 0 || focusNodes.has(id)
+        ? 'regular'
+        : 'lessened'
+    );
   }
 
-  const highlightedLinks = new Set(
-    [...focusLinks].map(link => GraphModelLink.getKey(link))
-  );
   const linkStates = new Map<string, LinkState>();
   for (const link of graphModel.links) {
     const key = GraphModelLink.getKey(link);
-    if (focusNodes.size === 0) {
-      linkStates.set(key, 'regular');
-    } else {
-      linkStates.set(
-        key,
-        highlightedLinks.has(key) ? 'highlighted' : 'lessened'
-      );
-    }
+    const source = GraphModelLink.getNodeId(link.source);
+    const target = GraphModelLink.getNodeId(link.target);
+    linkStates.set(
+      key,
+      focusNodes.size === 0
+        ? 'regular'
+        : origins.has(source) || origins.has(target)
+        ? 'highlighted'
+        : 'lessened'
+    );
   }
 
   return { nodeStates, linkStates };

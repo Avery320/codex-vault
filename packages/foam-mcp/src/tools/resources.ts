@@ -17,14 +17,11 @@ import {
   serializeNoteDetail,
 } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import {
   FoamMcpWorkspaceProvider,
   requireWorkspace,
 } from '../workspace-context';
-
-const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
-});
 
 const sha256 = (content: string) =>
   createHash('sha256').update(content, 'utf8').digest('hex');
@@ -243,8 +240,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } =
-        requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       if (args.path) {
         const uri = parseUriInput(args.path, rootUri);
         if (!uri.path.toLocaleLowerCase().endsWith('.md')) {
@@ -315,8 +311,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } =
-        requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       if (args.content === undefined && args.properties === undefined) {
         throw new FoamError(
@@ -368,8 +363,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } =
-        requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       if (args.confirm !== true) {
         throw new FoamError(
           'invalid_input',
@@ -401,8 +395,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } =
-        requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const oldUri = parseUriInput(args.uri, rootUri);
       const newUri = parseUriInput(args.new_path, rootUri);
       const resource = resolveNote(foam.workspace, { uri: oldUri });

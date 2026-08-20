@@ -79,9 +79,7 @@ export function filterGraphData(
     nodeInfo: Object.fromEntries(
       Object.entries(graph.nodeInfo).filter(([id]) => visibleIds.has(id))
     ),
-    links: links.filter(
-      link => visibleIds.has(link.source) && visibleIds.has(link.target)
-    ),
+    links,
   };
 }
 
