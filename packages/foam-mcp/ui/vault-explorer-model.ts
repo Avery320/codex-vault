@@ -83,17 +83,6 @@ export function filterGraphData(
   };
 }
 
-export function convertWikiLinks(source: string): string {
-  return source.replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
-    const [targetWithHeading, customLabel] = inner.split('|');
-    const target = targetWithHeading.split('#')[0].trim();
-    const label = (customLabel ?? targetWithHeading).trim();
-    return `[${escapeMarkdownLabel(label)}](#vault-note=${encodeURIComponent(
-      target
-    )})`;
-  });
-}
-
 export function resolveWikiTarget(
   files: VaultFile[],
   target: string
@@ -109,8 +98,4 @@ export function resolveWikiTarget(
       file.title.toLocaleLowerCase() === normalizedTarget
     );
   });
-}
-
-function escapeMarkdownLabel(label: string): string {
-  return label.replace(/[\\[\]]/g, character => `\\${character}`);
 }

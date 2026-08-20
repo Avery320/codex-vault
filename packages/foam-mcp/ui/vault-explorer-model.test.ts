@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  convertWikiLinks,
   createTree,
   filterGraphData,
   resolveWikiTarget,
@@ -104,10 +103,7 @@ describe('vault explorer model', () => {
     ).toEqual(['folder/child.md']);
   });
 
-  it('converts and resolves Obsidian wikilinks', () => {
-    expect(convertWikiLinks('See [[folder/child|Child note]].')).toBe(
-      'See [Child note](#vault-note=folder%2Fchild).'
-    );
+  it('resolves Obsidian wikilink targets', () => {
     expect(resolveWikiTarget(files, 'child')?.uri).toBe('folder/child.md');
   });
 });

@@ -1,8 +1,6 @@
 import { App } from '@modelcontextprotocol/ext-apps';
-import MarkdownIt from 'markdown-it';
 import '@foam/graph-view';
 import {
-  convertWikiLinks,
   createTree,
   filterGraphData,
   resolveWikiTarget,
@@ -10,6 +8,18 @@ import {
   type TreeNode,
   type VaultFile,
 } from './vault-explorer-model';
+import {
+  createNoteSelection,
+  sourceLineRange,
+  type NoteSelection,
+} from './note-selection';
+import {
+  annotationsFromModelContextHostState,
+  createSelectionModelContext,
+  MODEL_CONTEXT_HOST_STATE_KEY,
+  type NoteAnnotation,
+} from './note-chat-context';
+import { createVaultMarkdownRenderer } from './vault-markdown';
 
 interface VaultSummary {
   id: string;
@@ -92,11 +102,7 @@ const app = new App(
   {},
   { autoResize: false }
 );
-const markdown = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true,
-});
+const markdown = createVaultMarkdownRenderer();
 
 const query = <T extends Element>(selector: string): T => {
   const element = document.querySelector<T>(selector);
@@ -110,6 +116,7 @@ const workspaceResizerElement = query<HTMLElement>('#workspace-resizer');
 const graphElement = query<FoamGraphElement>('#graph');
 const treeElement = query<HTMLDivElement>('#tree');
 const markdownElement = query<HTMLDivElement>('#markdown');
+const readerScrollElement = query<HTMLDivElement>('.reader-scroll');
 const backlinksElement = query<HTMLElement>('#backlinks');
 const backlinkListElement = query<HTMLDivElement>('#backlink-list');
 const noteTitleElement = query<HTMLSpanElement>('#note-title');
@@ -155,12 +162,27 @@ const graphDepthElement = query<HTMLInputElement>('#graph-depth');
 const filesViewElement = query<HTMLButtonElement>('#toggle-sidebar');
 const noteViewElement = query<HTMLButtonElement>('#show-note');
 const graphViewElement = query<HTMLButtonElement>('#toggle-graph');
+const selectionMenuElement = query<HTMLElement>('#selection-menu');
+const addSelectionElement = query<HTMLButtonElement>('#add-selection');
+const annotationFormElement = query<HTMLFormElement>('#annotation-form');
+const annotationCommentElement = query<HTMLTextAreaElement>(
+  '#annotation-comment'
+);
+const annotationCancelElement = query<HTMLButtonElement>('#annotation-cancel');
+const annotationSubmitElement = query<HTMLButtonElement>('#annotation-submit');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
+let activeNoteSource = '';
+let pendingSelection: NoteSelection | null = null;
+let pendingSelectionRect: DOMRect | null = null;
+let attachedAnnotations: NoteAnnotation[] = [];
+let annotationSubmitInFlight = false;
 let searchTimer: number | undefined;
 let searchSequence = 0;
 let noteSequence = 0;
+let addSelectionPointerArmed = false;
+let selectionMenuAcceptPointerAfter = 0;
 let dialogMode: VaultDialogMode = 'register';
 let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences;
@@ -193,8 +215,7 @@ function applyGraphFilters(): void {
 
 function applyGraphPreferences(): void {
   const theme = getComputedStyle(document.documentElement);
-  const color = (name: string): string =>
-    theme.getPropertyValue(name).trim();
+  const color = (name: string): string => theme.getPropertyValue(name).trim();
   graphElement.graphStyle = {
     colorMode: 'type',
     showNodesOfType: {
@@ -334,6 +355,8 @@ function setExplorerPayload(next: ExplorerPayload): void {
 
   if (vaultChanged) {
     activeUri = null;
+    activeNoteSource = '';
+    dismissSelectionCandidate(true);
     searchElement.value = '';
     searchSequence += 1;
   }
@@ -353,6 +376,8 @@ function setExplorerPayload(next: ExplorerPayload): void {
     void openNote(next.files[0].uri);
   } else if (activeUri && !next.files.some(file => file.uri === activeUri)) {
     activeUri = null;
+    activeNoteSource = '';
+    dismissSelectionCandidate(true);
     showEmptyDocument('從檔案列表或圖譜選擇一則筆記。');
   }
 }
@@ -463,6 +488,8 @@ async function openNote(uri: string): Promise<void> {
   showWorkspacePane('reader');
   const sequence = ++noteSequence;
   activeUri = uri;
+  activeNoteSource = '';
+  dismissSelectionCandidate(true);
   const file = payload.files.find(item => item.uri === uri);
   noteTitleElement.textContent = file?.title ?? uri;
   notePathElement.textContent = uri;
@@ -486,11 +513,13 @@ async function openNote(uri: string): Promise<void> {
     const connections = parseToolJson<{
       backlinks: Array<{ uri: string; title: string }>;
     }>(connectionResult);
+    activeNoteSource = resource.content;
     renderMarkdown(resource.content);
     renderBacklinks(connections.backlinks);
-    await updateSelectedNoteContext(uri);
   } catch (error) {
     if (sequence !== noteSequence) return;
+    activeNoteSource = '';
+    dismissSelectionCandidate(true);
     showEmptyDocument(errorMessage(error));
   }
 }
@@ -505,7 +534,7 @@ function parseToolJson<T>(result: ToolResultLike): T {
 
 function renderMarkdown(source: string): void {
   markdownElement.classList.remove('empty');
-  markdownElement.innerHTML = markdown.render(convertWikiLinks(source));
+  markdownElement.innerHTML = markdown.render(source);
 }
 
 function showEmptyDocument(message: string): void {
@@ -528,24 +557,128 @@ function renderBacklinks(
   }
 }
 
-async function updateSelectedNoteContext(uri: string): Promise<void> {
+function captureNoteSelection(): void {
+  const browserSelection = window.getSelection();
+  if (
+    !activeUri ||
+    !activeNoteSource ||
+    !browserSelection ||
+    browserSelection.rangeCount !== 1 ||
+    browserSelection.isCollapsed
+  ) {
+    dismissSelectionCandidate();
+    return;
+  }
+
+  const sourceRange = sourceLineRange(browserSelection, markdownElement);
+  if (!sourceRange) {
+    dismissSelectionCandidate();
+    return;
+  }
+
+  const selection = createNoteSelection({
+    vaultId: payload?.active_vault?.id,
+    vaultName: payload?.active_vault?.name ?? 'Vault',
+    noteUri: activeUri,
+    source: activeNoteSource,
+    quote: browserSelection.toString(),
+    startLine: sourceRange.startLine,
+    endLine: sourceRange.endLine,
+  });
+  if (!selection) {
+    dismissSelectionCandidate();
+    return;
+  }
+
+  pendingSelection = selection;
+  showSelectionMenu(browserSelection.getRangeAt(0));
+}
+
+function showSelectionMenu(range: Range): void {
+  selectionMenuElement.hidden = false;
+  resetAnnotationEditor();
+  selectionMenuAcceptPointerAfter = performance.now() + 250;
+  const rect = range.getBoundingClientRect();
+  pendingSelectionRect = rect;
+  positionSelectionMenu(rect);
+}
+
+function positionSelectionMenu(rect: DOMRect): void {
+  const menuWidth = selectionMenuElement.offsetWidth;
+  const menuHeight = selectionMenuElement.offsetHeight;
+  const margin = 8;
+  const left = clamp(
+    rect.left + rect.width / 2 - menuWidth / 2,
+    margin,
+    Math.max(margin, window.innerWidth - menuWidth - margin)
+  );
+  const below = rect.bottom + margin;
+  const top =
+    below + menuHeight <= window.innerHeight - margin
+      ? below
+      : Math.max(margin, rect.top - menuHeight - margin);
+  selectionMenuElement.style.left = `${left}px`;
+  selectionMenuElement.style.top = `${top}px`;
+}
+
+function showAnnotationEditor(): void {
+  if (!pendingSelection || !pendingSelectionRect) return;
+  addSelectionElement.hidden = true;
+  annotationFormElement.hidden = false;
+  selectionMenuElement.classList.add('editing');
+  positionSelectionMenu(pendingSelectionRect);
+  annotationCommentElement.focus();
+}
+
+function resetAnnotationEditor(): void {
+  annotationFormElement.reset();
+  annotationFormElement.hidden = true;
+  addSelectionElement.hidden = false;
+  annotationSubmitElement.disabled = false;
+  annotationSubmitInFlight = false;
+  selectionMenuElement.classList.remove('editing');
+}
+
+function dismissSelectionCandidate(clearBrowserSelection = false): void {
+  pendingSelection = null;
+  pendingSelectionRect = null;
+  selectionMenuElement.hidden = true;
+  resetAnnotationEditor();
+  if (clearBrowserSelection) window.getSelection()?.removeAllRanges();
+}
+
+async function attachSelectionToChat(): Promise<void> {
+  const selection = pendingSelection;
+  if (!selection || annotationSubmitInFlight) return;
+  const comment = annotationCommentElement.value.replace(/\r\n?/g, '\n').trim();
+  const annotation: NoteAnnotation = {
+    ...selection,
+    comment: comment || undefined,
+  };
+  const nextAnnotations = [...attachedAnnotations, annotation];
+  annotationSubmitInFlight = true;
+  annotationSubmitElement.disabled = true;
+
+  if (await updateSelectionModelContext(nextAnnotations)) {
+    attachedAnnotations = nextAnnotations;
+    dismissSelectionCandidate(true);
+    setStatus(`已加入 Codex 聊天輸入框（${nextAnnotations.length} 則註解）`);
+    return;
+  }
+
+  annotationSubmitInFlight = false;
+  annotationSubmitElement.disabled = false;
+  setStatus('無法加入聊天上下文，請再試一次。', true);
+}
+
+async function updateSelectionModelContext(
+  annotations: readonly NoteAnnotation[]
+): Promise<boolean> {
   try {
-    await app.updateModelContext({
-      content: [
-        {
-          type: 'text',
-          text: `Codex Vault 目前在「${
-            payload?.active_vault?.name ?? 'Vault'
-          }」選取的筆記：${uri}`,
-        },
-      ],
-      structuredContent: {
-        selected_vault_id: payload?.active_vault?.id,
-        selected_vault_note: uri,
-      },
-    });
+    await app.updateModelContext(createSelectionModelContext(annotations));
+    return true;
   } catch {
-    // Host context updates are optional; note reading remains available.
+    return false;
   }
 }
 
@@ -818,6 +951,39 @@ markdownElement.addEventListener('click', event => {
     void app.openLink({ url: anchor.href });
   }
 });
+markdownElement.addEventListener('pointerdown', () =>
+  dismissSelectionCandidate()
+);
+markdownElement.addEventListener('pointerup', captureNoteSelection);
+markdownElement.addEventListener('keyup', captureNoteSelection);
+readerScrollElement.addEventListener('scroll', () =>
+  dismissSelectionCandidate()
+);
+selectionMenuElement.addEventListener('pointerdown', event => {
+  event.stopPropagation();
+});
+addSelectionElement.addEventListener('pointerdown', () => {
+  addSelectionPointerArmed = true;
+});
+addSelectionElement.addEventListener('pointercancel', () => {
+  addSelectionPointerArmed = false;
+});
+addSelectionElement.addEventListener('click', event => {
+  const keyboardActivation = event.detail === 0;
+  const pointerActivationReady =
+    addSelectionPointerArmed &&
+    performance.now() >= selectionMenuAcceptPointerAfter;
+  addSelectionPointerArmed = false;
+  if (!keyboardActivation && !pointerActivationReady) return;
+  showAnnotationEditor();
+});
+annotationCancelElement.addEventListener('click', () =>
+  dismissSelectionCandidate(true)
+);
+annotationFormElement.addEventListener('submit', event => {
+  event.preventDefault();
+  void attachSelectionToChat();
+});
 
 graphElement.addEventListener('node-click', event => {
   const uri = (event as CustomEvent<string>).detail;
@@ -835,7 +1001,9 @@ query<HTMLButtonElement>('#graph-settings-close').addEventListener(
   () => setGraphSettingsOpen(false)
 );
 graphSettingsElement.addEventListener('input', updateGraphPreferences);
-graphSettingsElement.addEventListener('submit', event => event.preventDefault());
+graphSettingsElement.addEventListener('submit', event =>
+  event.preventDefault()
+);
 query<HTMLButtonElement>('#graph-reset').addEventListener('click', () => {
   graphSettingsElement.reset();
   updateGraphPreferences();
@@ -869,6 +1037,12 @@ vaultForm.addEventListener('submit', event => {
 document.addEventListener('click', event => {
   const target = event.target as Node;
   if (
+    !selectionMenuElement.contains(target) &&
+    !markdownElement.contains(target)
+  ) {
+    dismissSelectionCandidate();
+  }
+  if (
     !vaultMenuElement.contains(target) &&
     !vaultSwitcherElement.contains(target)
   ) {
@@ -877,13 +1051,20 @@ document.addEventListener('click', event => {
 });
 
 app.ontoolresult = receiveToolResult;
-app.onhostcontextchanged = context => applyTheme(context.theme);
+app.onhostcontextchanged = context => {
+  if (context.theme !== undefined) applyTheme(context.theme);
+  if (MODEL_CONTEXT_HOST_STATE_KEY in context) {
+    attachedAnnotations = annotationsFromModelContextHostState(context);
+  }
+};
 
 graphPreferences = readGraphPreferences();
 updateGraphOutputs();
 applyTheme(undefined);
 applyWorkspaceLayout();
 void app.connect().then(() => {
-  applyTheme(app.getHostContext()?.theme);
+  const hostContext = app.getHostContext();
+  applyTheme(hostContext?.theme);
+  attachedAnnotations = annotationsFromModelContextHostState(hostContext);
   void requestFullscreen();
 });

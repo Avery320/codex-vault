@@ -66,10 +66,11 @@ function copyGraphBundle() {
 function copyMcpAppBundle() {
   const src = path.join(__dirname, '../foam-mcp/out/ui/vault-explorer.html');
   const dest = path.join(__dirname, 'out/ui/vault-explorer.html');
-  if (fs.existsSync(src)) {
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
+  if (!fs.existsSync(src)) {
+    throw new Error(`Missing MCP App bundle: ${src}`);
   }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
 }
 
 function copyAssets() {

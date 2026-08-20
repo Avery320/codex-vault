@@ -24,6 +24,7 @@
     "@types/markdown-it": "14.1.2",
     "@types/node": "^18.0.0",
     "esbuild": "^0.28.1",
+    "happy-dom": "^20.0.0",
     "lit": "^3.0.0",
     "oxlint": "^1.57.0",
     "rimraf": "^3.0.2",

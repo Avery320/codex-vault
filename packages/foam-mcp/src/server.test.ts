@@ -64,13 +64,19 @@ describe('FoamMcpServer lifecycle', () => {
       const tool = list.tools.find(item => item.name === 'show_vault_explorer');
 
       expect(tool?._meta).toMatchObject({
-        ui: { resourceUri: 'ui://codex-vault/vault-explorer.html' },
+        ui: { resourceUri: 'ui://codex-vault/v3/vault-explorer.html' },
+      });
+      expect(tool?.annotations).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
       });
       const resources = await ctx.client.listResources();
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://codex-vault/vault-explorer.html',
+            uri: 'ui://codex-vault/v3/vault-explorer.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ])
@@ -93,7 +99,7 @@ describe('FoamMcpServer lifecycle', () => {
 
       const result = (await ctx.client.callTool({
         name: 'show_vault_explorer',
-        arguments: { focus_uri: 'a.md' },
+        arguments: {},
       })) as {
         structuredContent: {
           focus_uri: string;
@@ -107,7 +113,7 @@ describe('FoamMcpServer lifecycle', () => {
         };
       };
 
-      expect(result.structuredContent.focus_uri).toBe('a.md');
+      expect(result.structuredContent.focus_uri).toBeUndefined();
       expect(result.structuredContent.active_vault).toMatchObject({
         active: true,
       });

@@ -66,8 +66,9 @@ async function withCliMcpArgs<T>(
   );
   await client.connect(transport);
 
-  const stderrStream = (transport as unknown as { stderr?: NodeJS.ReadableStream })
-    .stderr;
+  const stderrStream = (
+    transport as unknown as { stderr?: NodeJS.ReadableStream }
+  ).stderr;
   stderrStream?.on('data', (chunk: Buffer) => {
     stderrChunks.push(chunk.toString('utf8'));
   });
@@ -87,157 +88,227 @@ async function withCliMcpArgs<T>(
 }
 
 describe('foam mcp (CLI e2e)', () => {
-  it('lists tools and calls list_resources against a real workspace', () =>
-    withTmpDir(
-      {
-        'a.md': '# Note A\n\nLinks to [[b]].\n',
-        'b.md': '# Note B\n',
-      },
-      workspaceDir =>
+  it(
+    'serves per-selection comments without legacy selection actions',
+    () =>
+      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
         withCliMcpServer(workspaceDir, [], async ctx => {
           const list = await ctx.client.listTools();
-          const names = list.tools.map(t => t.name);
-          expect(names).toContain('list_resources');
-          expect(names).toContain('get_workspace_info');
+          const explorer = list.tools.find(
+            tool => tool.name === 'show_vault_explorer'
+          );
+          const resourceUri = 'ui://codex-vault/v3/vault-explorer.html';
 
-          const result = (await ctx.client.callTool({
-            name: 'list_resources',
-            arguments: {},
-          })) as { content: Array<{ text: string }> };
-          const items = JSON.parse(result.content[0].text) as Array<{
-            uri: string;
-          }>;
-          expect(items.map(i => i.uri).sort()).toEqual(['a.md', 'b.md']);
+          expect(explorer?._meta).toMatchObject({
+            ui: { resourceUri },
+          });
+          expect(explorer?.annotations).toMatchObject({
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+          });
+
+          const resource = await ctx.client.readResource({ uri: resourceUri });
+          const html = resource.contents.find(
+            content => 'text' in content
+          )?.text;
+
+          expect(html).toContain('id="markdown"');
+          expect(html).not.toContain('id="selection-bar"');
+          expect(html).toContain('id="selection-menu"');
+          expect(html).toContain('id="add-selection"');
+          expect(html).toContain('id="annotation-comment"');
+          expect(html).toContain('新增選填留言');
+          expect(html).not.toContain('id="context-attachment"');
+          expect(html).toContain('composerAttachmentLayout');
+          expect(html).toContain(String.raw`\u5247\u8A3B\u89E3`);
+          expect(html).toContain(String.raw`\u4F7F\u7528\u8005\u7559\u8A00`);
+          expect(html).toContain('openai/modelContext');
+          expect(html).not.toContain('source_excerpt');
+          expect(html).not.toContain('詢問 Codex');
+          expect(html).not.toContain('改善這段');
+          expect(html).not.toContain('建立相關筆記');
         })
-    ), 30000);
+      ),
+    30000
+  );
 
-  it('detects newly-created files via the watcher (long-running session)', () =>
-    withTmpDir({ 'existing.md': '# Existing\n' }, workspaceDir =>
-      withCliMcpServer(workspaceDir, [], async ctx => {
-        const before = (await ctx.client.callTool({
-          name: 'get_workspace_info',
-          arguments: {},
-        })) as { content: Array<{ text: string }> };
-        expect(JSON.parse(before.content[0].text).note_count).toBe(1);
+  it(
+    'lists tools and calls list_resources against a real workspace',
+    () =>
+      withTmpDir(
+        {
+          'a.md': '# Note A\n\nLinks to [[b]].\n',
+          'b.md': '# Note B\n',
+        },
+        workspaceDir =>
+          withCliMcpServer(workspaceDir, [], async ctx => {
+            const list = await ctx.client.listTools();
+            const names = list.tools.map(t => t.name);
+            expect(names).toContain('list_resources');
+            expect(names).toContain('get_workspace_info');
 
-        // Add a file mid-session; chokidar should pick it up and the
-        // graph should reflect it on the next tool call.
-        writeFileSync(path.join(workspaceDir, 'fresh.md'), '# Fresh\n');
+            const result = (await ctx.client.callTool({
+              name: 'list_resources',
+              arguments: {},
+            })) as { content: Array<{ text: string }> };
+            const items = JSON.parse(result.content[0].text) as Array<{
+              uri: string;
+            }>;
+            expect(items.map(i => i.uri).sort()).toEqual(['a.md', 'b.md']);
+          })
+      ),
+    30000
+  );
 
-        // Wait for the watcher debounce (100ms) plus chokidar's
-        // awaitWriteFinish (50ms) plus filesystem latency. Poll up to 3s
-        // rather than guessing one fixed delay.
-        let after: { note_count: number } | null = null;
-        const deadline = Date.now() + 3000;
-        while (Date.now() < deadline) {
-          await wait(150);
-          const result = (await ctx.client.callTool({
+  it(
+    'detects newly-created files via the watcher (long-running session)',
+    () =>
+      withTmpDir({ 'existing.md': '# Existing\n' }, workspaceDir =>
+        withCliMcpServer(workspaceDir, [], async ctx => {
+          const before = (await ctx.client.callTool({
             name: 'get_workspace_info',
             arguments: {},
           })) as { content: Array<{ text: string }> };
-          const parsed = JSON.parse(result.content[0].text);
-          if (parsed.note_count === 2) {
-            after = parsed;
-            break;
+          expect(JSON.parse(before.content[0].text).note_count).toBe(1);
+
+          // Add a file mid-session; chokidar should pick it up and the
+          // graph should reflect it on the next tool call.
+          writeFileSync(path.join(workspaceDir, 'fresh.md'), '# Fresh\n');
+
+          // Wait for the watcher debounce (100ms) plus chokidar's
+          // awaitWriteFinish (50ms) plus filesystem latency. Poll up to 3s
+          // rather than guessing one fixed delay.
+          let after: { note_count: number } | null = null;
+          const deadline = Date.now() + 3000;
+          while (Date.now() < deadline) {
+            await wait(150);
+            const result = (await ctx.client.callTool({
+              name: 'get_workspace_info',
+              arguments: {},
+            })) as { content: Array<{ text: string }> };
+            const parsed = JSON.parse(result.content[0].text);
+            if (parsed.note_count === 2) {
+              after = parsed;
+              break;
+            }
           }
-        }
-        expect(after?.note_count).toBe(2);
-      })
-    ), 30000);
+          expect(after?.note_count).toBe(2);
+        })
+      ),
+    30000
+  );
 
-  it('routes its own logs to stderr (stdout reserved for the MCP transport)', () =>
-    withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
-      withCliMcpServer(workspaceDir, [], async ctx => {
-        // Round-trip a request to be sure the server printed startup logs.
-        await ctx.client.listTools();
-        await wait(100);
-        const combined = ctx.stderr();
-        expect(combined).toContain('[foam-mcp]');
-        expect(combined).toContain('Loading workspace');
-      })
-    ), 30000);
+  it(
+    'routes its own logs to stderr (stdout reserved for the MCP transport)',
+    () =>
+      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
+        withCliMcpServer(workspaceDir, [], async ctx => {
+          // Round-trip a request to be sure the server printed startup logs.
+          await ctx.client.listTools();
+          await wait(100);
+          const combined = ctx.stderr();
+          expect(combined).toContain('[foam-mcp]');
+          expect(combined).toContain('Loading workspace');
+        })
+      ),
+    30000
+  );
 
-  it('defaults to read-only — no write tools without --allow-writes', () =>
-    withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
-      withCliMcpServer(workspaceDir, [], async ctx => {
-        const list = await ctx.client.listTools();
-        const names = list.tools.map(t => t.name);
-        expect(names).not.toContain('update_resource');
-        expect(names).not.toContain('delete_resource');
-        expect(names).toContain('list_resources');
+  it(
+    'defaults to read-only — no write tools without --allow-writes',
+    () =>
+      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
+        withCliMcpServer(workspaceDir, [], async ctx => {
+          const list = await ctx.client.listTools();
+          const names = list.tools.map(t => t.name);
+          expect(names).not.toContain('update_resource');
+          expect(names).not.toContain('delete_resource');
+          expect(names).toContain('list_resources');
 
-        // The mode is advertised in initialize.instructions and via
-        // get_workspace_info.read_only.
-        expect(ctx.client.getInstructions()).toContain('read-only');
-        const info = (await ctx.client.callTool({
-          name: 'get_workspace_info',
-          arguments: {},
-        })) as { content: Array<{ text: string }> };
-        expect(JSON.parse(info.content[0].text).read_only).toBe(true);
-      })
-    ), 30000);
+          // The mode is advertised in initialize.instructions and via
+          // get_workspace_info.read_only.
+          expect(ctx.client.getInstructions()).toContain('read-only');
+          const info = (await ctx.client.callTool({
+            name: 'get_workspace_info',
+            arguments: {},
+          })) as { content: Array<{ text: string }> };
+          expect(JSON.parse(info.content[0].text).read_only).toBe(true);
+        })
+      ),
+    30000
+  );
 
-  it('--allow-writes registers write tools and disables read-only advertisement', () =>
-    withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
-      withCliMcpServer(workspaceDir, ['--allow-writes'], async ctx => {
-        const list = await ctx.client.listTools();
-        const names = list.tools.map(t => t.name);
-        expect(names).toContain('update_resource');
-        expect(names).toContain('delete_resource');
+  it(
+    '--allow-writes registers write tools and disables read-only advertisement',
+    () =>
+      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
+        withCliMcpServer(workspaceDir, ['--allow-writes'], async ctx => {
+          const list = await ctx.client.listTools();
+          const names = list.tools.map(t => t.name);
+          expect(names).toContain('update_resource');
+          expect(names).toContain('delete_resource');
 
-        expect(ctx.client.getInstructions()).toBeUndefined();
-        const info = (await ctx.client.callTool({
-          name: 'get_workspace_info',
-          arguments: {},
-        })) as { content: Array<{ text: string }> };
-        expect(JSON.parse(info.content[0].text).read_only).toBe(false);
-      })
-    ), 30000);
+          expect(ctx.client.getInstructions()).toBeUndefined();
+          const info = (await ctx.client.callTool({
+            name: 'get_workspace_info',
+            arguments: {},
+          })) as { content: Array<{ text: string }> };
+          expect(JSON.parse(info.content[0].text).read_only).toBe(false);
+        })
+      ),
+    30000
+  );
 
-  it('loads and switches vaults through the persistent registry mode', () =>
-    withTmpDir(
-      {
-        'Alpha/alpha.md': '# Alpha\n',
-        'Alpha/.obsidian/app.json': '{}',
-        'Beta/beta.md': '# Beta\n',
-        'Beta/.obsidian/app.json': '{}',
-      },
-      async rootDir => {
-        const obsidianRegistry = path.join(rootDir, 'obsidian.json');
-        const registryPath = path.join(rootDir, 'config', 'vaults.json');
-        writeFileSync(
-          obsidianRegistry,
-          JSON.stringify({
-            vaults: {
-              alpha: {
-                path: path.join(rootDir, 'Alpha'),
-                ts: 20,
-                open: true,
-              },
-              beta: { path: path.join(rootDir, 'Beta'), ts: 10 },
-            },
-          })
-        );
-
-        await withCliMcpArgs(
-          [
-            '--vault-registry',
-            registryPath,
-            '--obsidian-registry',
+  it(
+    'loads and switches vaults through the persistent registry mode',
+    () =>
+      withTmpDir(
+        {
+          'Alpha/alpha.md': '# Alpha\n',
+          'Alpha/.obsidian/app.json': '{}',
+          'Beta/beta.md': '# Beta\n',
+          'Beta/.obsidian/app.json': '{}',
+        },
+        async rootDir => {
+          const obsidianRegistry = path.join(rootDir, 'obsidian.json');
+          const registryPath = path.join(rootDir, 'config', 'vaults.json');
+          writeFileSync(
             obsidianRegistry,
-          ],
-          rootDir,
-          async ctx => {
-            expect(await listResourceUris(ctx.client)).toEqual(['alpha.md']);
-            await ctx.client.callTool({
-              name: 'select_vault',
-              arguments: { vault_id: 'beta' },
-            });
-            expect(await listResourceUris(ctx.client)).toEqual(['beta.md']);
-          }
-        );
-      }
-    ), 30000);
+            JSON.stringify({
+              vaults: {
+                alpha: {
+                  path: path.join(rootDir, 'Alpha'),
+                  ts: 20,
+                  open: true,
+                },
+                beta: { path: path.join(rootDir, 'Beta'), ts: 10 },
+              },
+            })
+          );
+
+          await withCliMcpArgs(
+            [
+              '--vault-registry',
+              registryPath,
+              '--obsidian-registry',
+              obsidianRegistry,
+            ],
+            rootDir,
+            async ctx => {
+              expect(await listResourceUris(ctx.client)).toEqual(['alpha.md']);
+              await ctx.client.callTool({
+                name: 'select_vault',
+                arguments: { vault_id: 'beta' },
+              });
+              expect(await listResourceUris(ctx.client)).toEqual(['beta.md']);
+            }
+          );
+        }
+      ),
+    30000
+  );
 });
 
 async function listResourceUris(client: Client): Promise<string[]> {

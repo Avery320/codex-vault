@@ -116,6 +116,30 @@
                 </section>
               </article>
             </div>
+            <div id="selection-menu" class="selection-menu" hidden>
+              <button id="add-selection" type="button">加入聊天</button>
+              <form id="annotation-form" class="annotation-form" hidden>
+                <textarea
+                  id="annotation-comment"
+                  rows="3"
+                  maxlength="4000"
+                  placeholder="新增選填留言…"
+                  aria-label="這段選取內容的留言"
+                ></textarea>
+                <div class="annotation-actions">
+                  <button
+                    id="annotation-cancel"
+                    class="secondary"
+                    type="button"
+                  >
+                    取消
+                  </button>
+                  <button id="annotation-submit" class="primary" type="submit">
+                    加入聊天
+                  </button>
+                </div>
+              </form>
+            </div>
           </section>
 
           <div

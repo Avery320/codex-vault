@@ -57,7 +57,7 @@ describe('NodeVaultWorkspaceManager', () => {
       );
       expect(await listResourceUris(client)).toEqual(['alpha.md']);
       await client.callTool({
-        name: 'show_vault_explorer',
+        name: 'select_vault',
         arguments: { vault_id: beta.vault.id },
       });
       expect(await listResourceUris(client)).toEqual(['beta.md']);

@@ -4,8 +4,9 @@ import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
 import { FoamMcpWorkspaceProvider, VaultManager } from '../workspace-context';
 
+// MCP App hosts cache UI by URI; bump this path when the bundled UI changes.
 export const VAULT_EXPLORER_RESOURCE_URI =
-  'ui://codex-vault/vault-explorer.html';
+  'ui://codex-vault/v3/vault-explorer.html';
 
 export function registerExplorerTool(
   register: ToolRegistrar,
@@ -40,10 +41,12 @@ export function registerExplorerTool(
       title: '開啟知識庫',
       description:
         'Open the interactive Codex Vault explorer with file navigation, Markdown reading, search, backlinks, and a knowledge graph.',
-      inputSchema: {
-        focus_uri: z.string().optional(),
-        project_path: z.string().optional(),
-        vault_id: z.string().optional(),
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
       },
       _meta: {
         ui: { resourceUri: VAULT_EXPLORER_RESOURCE_URI },
@@ -52,17 +55,11 @@ export function registerExplorerTool(
         'openai/toolInvocation/invoked': '知識庫已開啟',
       },
     },
-    async args => {
-      if (vaultManager) {
-        await vaultManager.openVault({
-          vaultId: args.vault_id,
-          projectPath: args.project_path,
-        });
-      }
+    async () => {
       const state = await buildExplorerState(
         workspaceProvider,
         vaultManager,
-        args.focus_uri
+        undefined
       );
 
       return {
