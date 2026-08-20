@@ -254,6 +254,12 @@ export class FoamGraph extends LitElement {
     }
   }
 
+  clearSelection() {
+    this.selectedNodeIds = new Set();
+    this._recomputeGraphStates();
+    this._recomputeVisibleGraphIfSelectionAffectsScope();
+  }
+
   private _onCanvasNodeClick(detail: { nodeId: string; append: boolean }) {
     this._selectNode(detail.nodeId, detail.append);
     this.dispatchEvent(
@@ -267,9 +273,7 @@ export class FoamGraph extends LitElement {
 
   private _onCanvasBackgroundClick(detail: { append: boolean }) {
     if (!detail.append) {
-      this.selectedNodeIds = new Set();
-      this._recomputeGraphStates();
-      this._recomputeVisibleGraphIfSelectionAffectsScope();
+      this.clearSelection();
     }
   }
 

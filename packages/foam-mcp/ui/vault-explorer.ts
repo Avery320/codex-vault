@@ -51,7 +51,7 @@ interface FoamGraphElement extends HTMLElement {
     centerOnSelect: boolean;
     zoomOnSelect: boolean;
   };
-  selectNote(noteId: string): void;
+  clearSelection(): void;
 }
 
 interface ToolResultLike {
@@ -485,7 +485,7 @@ async function openNote(uri: string): Promise<void> {
   notePathElement.title = uri;
   renderFileTree(visibleFiles);
   applyGraphScope();
-  graphElement.selectNote(uri);
+  graphElement.clearSelection();
   showEmptyDocument('正在讀取筆記…');
   backlinksElement.hidden = true;
 

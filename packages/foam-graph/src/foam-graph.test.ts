@@ -165,6 +165,15 @@ describe('foam-graph', () => {
     expect(detail).toBe('note-a');
   });
 
+  it('clears a persistent graph selection', () => {
+    const element = new FoamGraph();
+    (element as any)._onCanvasNodeClick({ nodeId: 'note-a', append: false });
+
+    element.clearSelection();
+
+    expect((element as any).selectedNodeIds.size).toBe(0);
+  });
+
   it('replaces groups when a new graph style provides groups', () => {
     const element = new FoamGraph();
     (element as any).groups = [
