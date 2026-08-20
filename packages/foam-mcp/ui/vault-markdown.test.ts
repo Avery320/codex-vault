@@ -23,6 +23,25 @@ describe('vault markdown renderer', () => {
     );
   });
 
+  it('keeps wikilink aliases inside one table cell', () => {
+    const html = renderer.render(
+      '| Note |\n| --- |\n| [[folder/child|Child note]] |'
+    );
+
+    expect(html.match(/<td/g)).toHaveLength(1);
+    expect(html).toContain(
+      '<a href="#vault-note=folder%2Fchild" data-vault-note="folder/child">Child note</a>'
+    );
+  });
+
+  it('renders Obsidian block ids without showing their marker', () => {
+    const html = renderer.render('Anchored paragraph ^details');
+
+    expect(html).toContain('<p id="__details"');
+    expect(html).toContain('>Anchored paragraph</p>');
+    expect(html).not.toContain('^details');
+  });
+
   it('leaves incomplete and embedded wikilinks as text', () => {
     expect(renderer.render('See [[unfinished.')).toContain('[[unfinished.');
     expect(renderer.render('Embed ![[image.png]].')).toContain(

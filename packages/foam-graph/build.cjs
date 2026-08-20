@@ -7,10 +7,9 @@ const dir = __dirname;
 const packageOutDir = path.join(dir, 'out');
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
-const libOnly = process.argv.includes('--lib');
 const vscodeOnly = process.argv.includes('--vscode');
 const buildLib = !vscodeOnly;
-const buildVscode = !libOnly;
+const buildVscode = vscodeOnly;
 
 const esbuildProblemMatcherPlugin = {
   name: 'esbuild-problem-matcher',

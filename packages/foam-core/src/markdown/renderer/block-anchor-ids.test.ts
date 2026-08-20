@@ -3,7 +3,7 @@ import { markdownItBlockAnchorIds } from './block-anchor-ids';
 
 const md = markdownItBlockAnchorIds(MarkdownIt());
 
-describe('block anchor id injection', () => {
+describe('shared block anchor id injection', () => {
   describe('id attribute on block elements', () => {
     it('adds id to a paragraph with a block anchor', () => {
       // id uses bare blockId (no '^') so CSS querySelector doesn't throw

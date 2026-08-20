@@ -22,7 +22,7 @@ const aliasRenderingPlugin = (md: MarkdownIt) =>
     },
   });
 
-describe('escape-wikilink-pipes plugin', () => {
+describe('shared escape-wikilink-pipes plugin', () => {
   it('should render table with wikilink alias correctly', () => {
     const md = MarkdownIt();
     escapeWikilinkPipes(md);

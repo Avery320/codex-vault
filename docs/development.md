@@ -11,8 +11,8 @@ yarn workspace @foam/graph-view lint
 yarn workspace @foam/graph-view test:unit
 ```
 
-需求為 Node.js 22+ 與 Yarn Classic 1.x。根目錄 lint/test 仍涵蓋 legacy
-`foam-vscode`，既有 warning 應與新 error 分開處理。
+需求為 Node.js 22+ 與 Yarn Classic 1.x。根目錄 build、lint 與 test 只涵蓋
+Codex Vault 的 core、graph、MCP 與 CLI；legacy `foam-vscode` 不在預設開發流程內。
 
 ## 更新本機插件
 

@@ -1,4 +1,7 @@
-/*global markdownit:readonly*/
+import type MarkdownIt from 'markdown-it';
+
+type StateCore = MarkdownIt.StateCore;
+type Token = MarkdownIt.Token;
 
 /**
  * markdown-it plugin that adds HTML `id` attributes to block elements
@@ -49,8 +52,8 @@ const TRAILING_OWN_LINE_ANCHOR_RE = /\n\^([a-zA-Z0-9-]+)$/;
 
 /** Insert an `<a id>` anchor token before position `idx`. */
 function insertAnchor(
-  state: any,
-  tokens: any[],
+  state: StateCore,
+  tokens: Token[],
   idx: number,
   blockId: string
 ): void {
@@ -64,7 +67,7 @@ function insertAnchor(
  * given types, accounting for nesting depth.
  */
 function findMatchingOpen(
-  tokens: any[],
+  tokens: Token[],
   startIdx: number,
   openType: string,
   closeType: string
@@ -83,7 +86,7 @@ function findMatchingOpen(
   return -1;
 }
 
-export const markdownItBlockAnchorIds = (md: markdownit) => {
+export const markdownItBlockAnchorIds = (md: MarkdownIt) => {
   md.core.ruler.push('block-anchor-ids', state => {
     const tokens = state.tokens;
 

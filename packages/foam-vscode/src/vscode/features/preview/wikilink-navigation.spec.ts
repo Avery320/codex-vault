@@ -6,7 +6,7 @@ import { getUriInWorkspace } from '../../../test/test-utils-vscode';
 import { markdownItWikilinkNavigation } from './wikilink-navigation';
 import { createVsCodeLinkResolver } from './link-resolvers';
 import { default as markdownItRemoveLinkReferences } from './remove-wikilink-references';
-import { default as escapeWikilinkPipes } from './escape-wikilink-pipes';
+import { escapeWikilinkPipes } from '@foam/core/markdown-renderer';
 
 describe('Link generation in preview', () => {
   const noteA = createTestNote({

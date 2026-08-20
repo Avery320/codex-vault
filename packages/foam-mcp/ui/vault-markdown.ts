@@ -1,5 +1,9 @@
 import MarkdownIt from 'markdown-it';
 import type StateInline from 'markdown-it/lib/rules_inline/state_inline.mjs';
+import {
+  escapeWikilinkPipes,
+  markdownItBlockAnchorIds,
+} from '@foam/core/markdown-renderer';
 
 export interface VaultMarkdownRenderer {
   render(source: string): string;
@@ -23,7 +27,9 @@ export function createVaultMarkdownRenderer(): VaultMarkdownRenderer {
     typographer: true,
   });
 
+  escapeWikilinkPipes(markdown);
   markdown.inline.ruler.before('link', 'vault-wikilink', parseWikiLink);
+  markdownItBlockAnchorIds(markdown);
   markdown.core.ruler.push('vault-source-lines', state => {
     for (const token of state.tokens) {
       if (!token.map || !token.tag || token.nesting < 0) continue;

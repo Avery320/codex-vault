@@ -1,6 +1,6 @@
 /**
  * Shared performance-gate logic, used by every package's `perf-regression.test.ts`
- * (foam-core, foam-vscode, ...). Both packages produce the same `vitest bench`
+ * (foam-core and other active packages). Packages produce the same `vitest bench`
  * JSON shape, so the comparison logic lives here once.
  *
  * Two independent checks run off a SINGLE bench run (the JSON already contains

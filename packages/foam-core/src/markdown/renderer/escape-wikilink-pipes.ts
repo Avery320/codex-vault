@@ -1,4 +1,4 @@
-/*global markdownit:readonly*/
+import type MarkdownIt from 'markdown-it';
 
 /**
  * Markdown-it plugin to handle wikilink aliases in tables.
@@ -60,10 +60,10 @@ function decodePipesInWikilinks(text: string): string {
   return text.split(PIPE_PLACEHOLDER).join('|');
 }
 
-export const escapeWikilinkPipes = (md: markdownit) => {
+export const escapeWikilinkPipes = (md: MarkdownIt) => {
   // ENCODE once, before block parsing sees the source. The table parser then
   // never splits a piped wikilink across cells. O(docSize), once per render.
-  md.core.ruler.before('block', 'foam_encode_wikilink_pipes', state => {
+  md.core.ruler.before('block', 'vault_encode_wikilink_pipes', state => {
     state.src = encodePipesInWikilinks(state.src);
     return false;
   });
@@ -74,7 +74,7 @@ export const escapeWikilinkPipes = (md: markdownit) => {
   // `[[note|alias]]`, not the placeholder — while the already-built table cells
   // stay intact. Doing it here rather than after `inline` is what keeps aliases
   // working outside tables too.
-  md.core.ruler.after('block', 'foam_decode_wikilink_pipes', state => {
+  md.core.ruler.after('block', 'vault_decode_wikilink_pipes', state => {
     for (const token of state.tokens) {
       if (token.type === 'inline' && token.content) {
         token.content = decodePipesInWikilinks(token.content);

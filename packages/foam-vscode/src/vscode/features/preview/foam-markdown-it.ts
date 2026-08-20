@@ -3,6 +3,10 @@
 import MarkdownIt from 'markdown-it';
 import markdownItFootnote from 'markdown-it-footnote';
 import {
+  escapeWikilinkPipes,
+  markdownItBlockAnchorIds,
+} from '@foam/core/markdown-renderer';
+import {
   FoamQueryRenderEvent,
   FoamWorkspace,
   FoamGraph,
@@ -17,8 +21,6 @@ import { default as markdownItFoamTags } from './tag-highlight';
 import { default as markdownItWikilinkNavigation } from './wikilink-navigation';
 import { default as markdownItRemoveLinkReferences } from './remove-wikilink-references';
 import { default as markdownItWikilinkEmbed } from './wikilink-embed';
-import { default as escapeWikilinkPipes } from './escape-wikilink-pipes';
-import { default as markdownItBlockAnchorIds } from './block-anchor-ids';
 import { default as markdownItFoamQuery } from './foam-query-renderer';
 import { LinkResolver } from './wikilink-navigation';
 

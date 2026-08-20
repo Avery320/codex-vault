@@ -13,6 +13,10 @@
     "./test": {
       "types": "./out/test/test-utils.d.ts",
       "default": "./out/test/test-utils.js"
+    },
+    "./markdown-renderer": {
+      "types": "./out/src/markdown/renderer/index.d.ts",
+      "default": "./out/src/markdown/renderer/index.js"
     }
   },
   "scripts": {
@@ -29,7 +33,10 @@
     "lint": "oxlint src"
   },
   "devDependencies": {
+    "@types/markdown-it": "14.1.2",
     "@types/jexl": "^2.3.4",
+    "markdown-it": "14.3.0",
+    "markdown-it-regex": "^0.2.0",
     "oxlint": "^1.57.0",
     "rimraf": "^3.0.2",
     "typescript": "^5.8.0",

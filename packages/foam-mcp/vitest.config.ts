@@ -8,6 +8,10 @@ export default defineConfig({
       // subpath export shares module identity with the main entry.
       // Without this `instanceof URI` checks fail across module boundaries.
       // Order matters: longer prefix first.
+      '@foam/core/markdown-renderer': path.join(
+        __dirname,
+        '../foam-core/src/markdown/renderer/index.ts'
+      ),
       '@foam/core/test': path.join(
         __dirname,
         '../foam-core/test/test-utils.ts'
