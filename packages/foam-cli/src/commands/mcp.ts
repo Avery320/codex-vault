@@ -6,12 +6,9 @@ import {
   StaticWorkspaceProvider,
   StdioServerTransport,
   VaultManager,
+  VaultFilePolicy,
 } from '@foam/mcp';
-import {
-  ITelemetryReporter,
-  Logger,
-  NoopTelemetryReporter,
-} from '@foam/core';
+import { ITelemetryReporter, Logger, NoopTelemetryReporter } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
 import { createNodeQueryStore } from '../support/node-query-store';
 import { NodeWatcher } from '../support/watcher';
@@ -93,12 +90,13 @@ export async function runMcpCommand(
 ): Promise<number> {
   // The MCP transport owns stdout — anything written there is interpreted
   // as protocol messages. Send our own logs to stderr only.
-  const logLevel = (process.env.FOAM_LOG_LEVEL as
-    | 'debug'
-    | 'info'
-    | 'warn'
-    | 'error'
-    | undefined) ?? 'error';
+  const logLevel =
+    (process.env.FOAM_LOG_LEVEL as
+      | 'debug'
+      | 'info'
+      | 'warn'
+      | 'error'
+      | undefined) ?? 'error';
   Logger.setLevel(logLevel);
 
   let workspaceProvider: FoamMcpWorkspaceProvider;
@@ -122,22 +120,26 @@ export async function runMcpCommand(
     const active = manager.getActive();
     logger.error(
       active
-        ? `[foam-mcp] Active vault: ${active.vault.path} (${active.foam.workspace.list().length} resources)`
+        ? `[foam-mcp] Active vault: ${active.vault.path} (${
+            active.foam.workspace.list().length
+          } resources)`
         : '[foam-mcp] No active vault. Waiting for vault selection.'
     );
   } else {
     const rootDir = path.resolve(args.workspaceDir ?? process.cwd());
     logger.error(`[foam-mcp] Loading workspace: ${rootDir}`);
+    const filePolicy = new VaultFilePolicy();
     staticWatcher = new NodeWatcher(rootDir, {
-      ignored: [/(^|[\\/])\../, /node_modules/],
+      ignored: filePath => filePolicy.isIgnored(filePath),
     });
     const { foam, rootUri } = await loadWorkspaceFromDirectory(rootDir, {
       watcher: staticWatcher,
+      filePolicy,
     });
     logger.error(
-      `[foam-mcp] Workspace loaded: ${foam.workspace.list().length} resources, ${
-        foam.graph.getAllConnections().length
-      } connections`
+      `[foam-mcp] Workspace loaded: ${
+        foam.workspace.list().length
+      } resources, ${foam.graph.getAllConnections().length} connections`
     );
     workspaceProvider = new StaticWorkspaceProvider(
       createWorkspaceContext({

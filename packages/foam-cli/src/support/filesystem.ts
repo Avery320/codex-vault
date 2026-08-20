@@ -5,25 +5,19 @@ import micromatch from 'micromatch';
 import {
   URI,
   AttachmentResourceProvider,
+  defaultAttachmentExtensions,
   IDataStore,
   IMatcher,
   IWatcher,
   createMarkdownParser,
   MarkdownResourceProvider,
   bootstrap,
-  Config,
-  DefaultFoamConfig,
-  cascadeFoamConfig,
 } from '@foam/core';
-import { readFoamConfig } from './config';
-import { GlobMatcher } from './glob-matcher';
-
-const DEFAULT_EXCLUDED_DIR_NAMES = new Set([
-  '.astro',
-  '.git',
-  'node_modules',
-  '.yarn',
-]);
+import {
+  VAULT_DEFAULT_NOTE_EXTENSION,
+  VAULT_NOTE_EXTENSIONS,
+  VaultFilePolicy,
+} from '@foam/mcp';
 
 const isWithinPath = (candidate: string, parent: string) => {
   const relative = path.relative(parent, candidate);
@@ -37,16 +31,25 @@ export class NodeFileDataStore implements IDataStore {
   constructor(
     private readonly rootDir: string,
     private readonly excludedPaths: string[],
-    private readonly matcher: IMatcher
+    private readonly matcher: IMatcher,
+    private readonly isPathIgnored: (fsPath: string) => boolean = () => false
   ) {}
 
   async list(pattern?: string) {
     const files: string[] = [];
-    await collectFiles(this.rootDir, files, this.excludedPaths);
+    await collectFiles(
+      this.rootDir,
+      files,
+      this.excludedPaths,
+      this.isPathIgnored
+    );
     let uris = files.map(file => URI.file(file));
     if (pattern) {
       const absoluteGlob = path.posix.join(this.rootDir, pattern);
-      const matched = micromatch(uris.map(u => u.toFsPath()), [absoluteGlob]);
+      const matched = micromatch(
+        uris.map(u => u.toFsPath()),
+        [absoluteGlob]
+      );
       const matchedSet = new Set(matched);
       uris = uris.filter(u => matchedSet.has(u.toFsPath()));
     }
@@ -94,7 +97,8 @@ export class NodeFileDataStore implements IDataStore {
 async function collectFiles(
   dir: string,
   files: string[],
-  excludedPaths: string[]
+  excludedPaths: string[],
+  isPathIgnored: (fsPath: string) => boolean
 ) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
 
@@ -108,11 +112,11 @@ async function collectFiles(
     }
 
     if (entry.isDirectory()) {
-      if (DEFAULT_EXCLUDED_DIR_NAMES.has(entry.name)) {
+      if (isPathIgnored(fullPath)) {
         continue;
       }
 
-      await collectFiles(fullPath, files, excludedPaths);
+      await collectFiles(fullPath, files, excludedPaths, isPathIgnored);
       continue;
     }
 
@@ -122,7 +126,7 @@ async function collectFiles(
 
 export interface LoadWorkspaceOptions {
   excludedPaths?: string[];
-  noteExtensions?: string[];
+  filePolicy?: VaultFilePolicy;
 }
 
 export async function loadWorkspaceFromDirectory(
@@ -138,23 +142,7 @@ export async function loadWorkspaceFromDirectory(
 ) {
   const rootDir = path.resolve(workspaceDir);
   const rootUri = URI.file(rootDir);
-
-  // Cascade: workspace settings beat built-in defaults. The fallback must be
-  // a fully-resolved config so every getter has a final answer. User-level
-  // and env-level cascade layers don't exist today; the only env-driven
-  // config is the telemetry opt-out, which is read directly in resolveCliReporter.
-  const workspaceSource = readFoamConfig(rootDir);
-  const foamConfig = cascadeFoamConfig(
-    [workspaceSource],
-    new DefaultFoamConfig()
-  );
-  Config.setDefaultConfig(foamConfig);
-
-  const matcher = new GlobMatcher(
-    Config.getFilesInclude(),
-    Config.getFilesExclude(),
-    rootUri
-  );
+  const filePolicy = options.filePolicy ?? new VaultFilePolicy();
 
   const dataStore = new NodeFileDataStore(
     rootDir,
@@ -165,24 +153,24 @@ export async function loadWorkspaceFromDirectory(
         )
       ),
     ],
-    matcher
+    filePolicy,
+    fsPath => filePolicy.isIgnored(fsPath)
   );
 
-  const noteExtensions = options.noteExtensions ?? Config.getNotesExtensions();
   const parser = createMarkdownParser();
   const providers = [
-    new MarkdownResourceProvider(dataStore, parser, noteExtensions),
-    new AttachmentResourceProvider(Config.getAttachmentExtensions()),
+    new MarkdownResourceProvider(dataStore, parser, VAULT_NOTE_EXTENSIONS),
+    new AttachmentResourceProvider(defaultAttachmentExtensions),
   ];
 
   const foam = await bootstrap(
     [rootUri],
-    matcher,
+    filePolicy,
     options.watcher,
     dataStore,
     parser,
     providers,
-    Config.getDefaultNoteExtension(),
+    VAULT_DEFAULT_NOTE_EXTENSION,
     options.watcher ? 'info' : 'debug'
   );
 

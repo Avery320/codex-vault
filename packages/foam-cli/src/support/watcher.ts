@@ -3,6 +3,8 @@ import { Emitter, IDisposable, IWatcher, URI } from '@foam/core';
 
 const DEBOUNCE_MS = 100;
 
+type IgnoredPath = string | RegExp | ((path: string) => boolean);
+
 /**
  * Node-side counterpart to VsCodeWatcher: turns chokidar events into the
  * IWatcher contract that bootstrap() expects, with a small debounce on
@@ -20,11 +22,14 @@ export class NodeWatcher implements IWatcher, IDisposable {
   onDidDelete = this.onDidDeleteEmitter.event;
 
   private readonly fsWatcher: FSWatcher;
-  private readonly changeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly changeTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
   constructor(
     paths: string[] | string,
-    options: { ignored?: (string | RegExp)[] } = {}
+    options: { ignored?: IgnoredPath | IgnoredPath[] } = {}
   ) {
     this.fsWatcher = chokidar.watch(paths, {
       ignored: options.ignored,

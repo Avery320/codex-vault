@@ -17,7 +17,7 @@ async function main() {
     entryPoints: ['src/index.ts'],
     bundle: true,
     platform: 'node',
-    // Prefer the ESM build of packages that ship both UMD and ESM (e.g. jsonc-parser).
+    // Prefer ESM when packages publish both module formats.
     // esbuild defaults to 'main' for platform:node, which picks up UMD builds whose
     // internal relative requires are not statically traceable by esbuild.
     mainFields: ['module', 'main'],

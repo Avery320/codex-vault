@@ -5,6 +5,7 @@ import {
   FoamMcpWorkspaceContext,
   VaultManager,
   VaultSummary,
+  VaultFilePolicy,
 } from '@foam/mcp';
 import { loadWorkspaceFromDirectory } from './filesystem';
 import { createNodeQueryStore } from './node-query-store';
@@ -128,12 +129,14 @@ export class NodeVaultWorkspaceManager implements VaultManager {
       return;
     }
 
+    const filePolicy = new VaultFilePolicy();
     const watcher = new NodeWatcher(vault.path, {
-      ignored: [/(^|[\\/])\../, /node_modules/],
+      ignored: filePath => filePolicy.isIgnored(filePath),
     });
     try {
       const { foam, rootUri } = await loadWorkspaceFromDirectory(vault.path, {
         watcher,
+        filePolicy,
       });
       const next: ActiveWorkspace = {
         context: createWorkspaceContext({

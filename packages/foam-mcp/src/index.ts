@@ -18,6 +18,11 @@ export type {
 export { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 export type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 export {
+  VAULT_DEFAULT_NOTE_EXTENSION,
+  VAULT_NOTE_EXTENSIONS,
+  VaultFilePolicy,
+} from './node/vault-file-policy';
+export {
   parseUriInput,
   uriToOutputString,
   serializeNoteItem,

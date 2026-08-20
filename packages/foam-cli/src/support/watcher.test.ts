@@ -1,7 +1,14 @@
-import { mkdtempSync, writeFileSync, rmSync, unlinkSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  writeFileSync,
+  rmSync,
+  unlinkSync,
+} from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { URI } from '@foam/core';
+import { VaultFilePolicy } from '@foam/mcp';
 import { NodeWatcher } from './watcher';
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -66,9 +73,7 @@ describe('NodeWatcher', () => {
       writeFileSync(file, '# v2');
       writeFileSync(file, '# v3');
       await wait(400);
-      const matchingChanges = events.changed.filter(
-        u => u.toFsPath() === file
-      );
+      const matchingChanges = events.changed.filter(u => u.toFsPath() === file);
       expect(matchingChanges.length).toBeGreaterThanOrEqual(1);
       expect(matchingChanges.length).toBeLessThanOrEqual(2);
     } finally {
@@ -85,6 +90,30 @@ describe('NodeWatcher', () => {
       const events = collect(watcher);
       await wait(300);
       expect(events.created).toEqual([]);
+    } finally {
+      await watcher.dispose();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the vault policy to ignore excluded directories', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'foam-watcher-policy-'));
+    const policy = new VaultFilePolicy();
+    const watcher = new NodeWatcher(dir, {
+      ignored: filePath => policy.isIgnored(filePath),
+    });
+    try {
+      const events = collect(watcher);
+      await wait(150);
+      mkdirSync(path.join(dir, '.trash'), { recursive: true });
+      writeFileSync(path.join(dir, '.trash', 'ignored.md'), '# Ignored');
+      const visible = path.join(dir, 'visible.md');
+      writeFileSync(visible, '# Visible');
+      await wait(300);
+      expect(events.created.map(u => u.toFsPath())).toContain(visible);
+      expect(events.created.every(u => !u.toFsPath().includes('.trash'))).toBe(
+        true
+      );
     } finally {
       await watcher.dispose();
       rmSync(dir, { recursive: true, force: true });

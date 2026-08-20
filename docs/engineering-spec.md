@@ -202,20 +202,21 @@ await host.replaceModelContext(serialize(next))
 
 修改：
 
-- `packages/foam-mcp/src/node/filesystem.ts`
-- 新增最小 `vault-file-policy.ts`
-- 刪除 `packages/foam-mcp/src/node/config.ts` 與測試
-- 縮減 `foam-core/src/config.ts`；沒有 production import 後刪除
+- `packages/foam-cli/src/support/filesystem.ts`
+- `packages/foam-cli/src/support/watcher.ts`
+- 接上 `packages/foam-mcp/src/node/vault-file-policy.ts`
+- 刪除 CLI 的舊 config parser、glob matcher 與對應測試
 
 固定 policy：note extension `.md`；排除 `.git`、`.obsidian`、`.trash`、
-`node_modules`；attachment extension 沿用目前已驗證清單。此階段不新增設定 UI。
+`node_modules`，並保留既有的 `.astro`、`.yarn` 排除規則；attachment
+extension 沿用目前已驗證清單。此階段不新增設定 UI。
 
 驗收：
 
 - Vault 中的 `.vscode/settings.json` 不改變索引結果。
 - `.obsidian`、`.trash` 不進入 workspace。
 - watcher 與 initial scan 使用同一套 policy。
-- Node bundle metafile 不含 `node/config` 與 `foam-core/config`。
+- Node bundle 不含舊 CLI config parser、glob matcher 與 `jsonc-parser` runtime。
 
 ### CV-CORE-02：移除 Foam template note creation
 

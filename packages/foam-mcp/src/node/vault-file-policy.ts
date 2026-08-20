@@ -3,9 +3,11 @@ import { IMatcher, URI } from '@foam/core';
 export const VAULT_NOTE_EXTENSIONS = ['.md'];
 export const VAULT_DEFAULT_NOTE_EXTENSION = '.md';
 export const VAULT_EXCLUDED_DIRECTORY_NAMES = [
+  '.astro',
   '.git',
   '.obsidian',
   '.trash',
+  '.yarn',
   'node_modules',
 ];
 
