@@ -82,6 +82,13 @@ describe('FoamMcpServer lifecycle', () => {
       expect(html).toEqual(expect.stringContaining('id="vault-switcher"'));
       expect(html).toEqual(expect.stringContaining('id="markdown"'));
       expect(html).toEqual(expect.stringContaining('id="graph"'));
+      expect(html).toEqual(expect.stringContaining('id="graph-settings"'));
+      expect(html).toEqual(
+        expect.stringContaining('id="graph-settings-toggle"')
+      );
+      expect(html).not.toEqual(
+        expect.stringContaining('id="selection-dialog"')
+      );
       expect(html).not.toEqual(expect.stringContaining('id="analyze"'));
 
       const result = (await ctx.client.callTool({

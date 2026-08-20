@@ -46,7 +46,18 @@ interface FoamGraphElement extends HTMLElement {
   graphStyle: Record<string, unknown> | null;
   showControls: boolean;
   maxFitZoom: number | null;
+  graphScope: 'full' | { depth: number };
+  focusNodeId: string | null;
   labels: { fade: number };
+  forces: {
+    collide: number;
+    repel: number;
+    link: number;
+    velocityDecay: number;
+  };
+  nodeSizeMultiplier: number;
+  linkWidthMultiplier: number;
+  animateLinks: 'forward' | 'off' | 'reverse';
   selection: {
     neighborDepth: number;
     centerOnSelect: boolean;
@@ -66,7 +77,28 @@ interface TreeNode {
   files: VaultFile[];
 }
 
+interface GraphPreferences {
+  showTags: boolean;
+  textFade: number;
+  nodeSize: number;
+  linkWidth: number;
+  repel: number;
+  linkDistance: number;
+  localDepth: number;
+}
+
 type VaultDialogMode = 'register' | 'create';
+type GraphMode = 'global' | 'local';
+
+const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
+  showTags: false,
+  textFade: 0,
+  nodeSize: 1.5,
+  linkWidth: 1,
+  repel: 30,
+  linkDistance: 36,
+  localDepth: 1,
+};
 
 const app = new App(
   { name: 'Codex Vault Explorer', version: '0.1.0' },
@@ -109,6 +141,22 @@ const nameField = query<HTMLLabelElement>('#name-field');
 const nameInput = query<HTMLInputElement>('#vault-folder-name');
 const dialogErrorElement = query<HTMLDivElement>('#dialog-error');
 const vaultSwitcherElement = query<HTMLButtonElement>('#vault-switcher');
+const graphWrapElement = query<HTMLDivElement>('#graph-wrap');
+const graphSettingsElement = query<HTMLElement>('#graph-settings');
+const graphSettingsToggleElement = query<HTMLButtonElement>(
+  '#graph-settings-toggle'
+);
+const graphGlobalElement = query<HTMLButtonElement>('#graph-global');
+const graphLocalElement = query<HTMLButtonElement>('#graph-local');
+const graphShowTagsElement = query<HTMLInputElement>('#graph-show-tags');
+const graphTextFadeElement = query<HTMLInputElement>('#graph-text-fade');
+const graphNodeSizeElement = query<HTMLInputElement>('#graph-node-size');
+const graphLinkWidthElement = query<HTMLInputElement>('#graph-link-width');
+const graphRepelElement = query<HTMLInputElement>('#graph-repel');
+const graphLinkDistanceElement = query<HTMLInputElement>(
+  '#graph-link-distance'
+);
+const graphDepthElement = query<HTMLInputElement>('#graph-depth');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
@@ -117,34 +165,128 @@ let searchTimer: number | undefined;
 let searchSequence = 0;
 let noteSequence = 0;
 let dialogMode: VaultDialogMode = 'register';
+let currentTheme = 'dark';
+let graphMode: GraphMode = 'global';
+let graphPreferences: GraphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
 
-graphElement.showControls = true;
+graphElement.showControls = false;
 graphElement.maxFitZoom = 2.2;
-graphElement.labels = { fade: 0.15 };
 graphElement.selection = {
   neighborDepth: 1,
-  centerOnSelect: true,
-  zoomOnSelect: true,
+  centerOnSelect: false,
+  zoomOnSelect: false,
 };
 
 function applyTheme(theme: string | undefined): void {
   const resolved = theme === 'light' ? 'light' : 'dark';
+  currentTheme = resolved;
   document.documentElement.dataset.theme = resolved;
-  const dark = resolved === 'dark';
+  applyGraphPreferences();
+}
+
+function applyGraphPreferences(): void {
+  const dark = currentTheme === 'dark';
   graphElement.graphStyle = {
-    colorMode: 'directory',
+    colorMode: 'none',
+    showNodesOfType: {
+      note: true,
+      tag: graphPreferences.showTags,
+      placeholder: false,
+      image: false,
+      attachment: false,
+    },
     style: {
       background: 'transparent',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      lineColor: dark ? '#4a4a4a' : '#c7c4bd',
-      highlightedForeground: dark ? '#f3f3f3' : '#1d1d1f',
+      lineColor: dark ? '#565656' : '#b9b7b2',
+      highlightedForeground: dark ? '#e3e3e3' : '#3f3f3f',
       node: {
-        note: dark ? '#a68af9' : '#7056c9',
-        placeholder: dark ? '#77736f' : '#aaa59e',
-        tag: dark ? '#54d987' : '#2f9d61',
+        note: dark ? '#a8a8a8' : '#707070',
+        placeholder: dark ? '#686868' : '#aaa8a3',
+        tag: dark ? '#6fbd8c' : '#3e865b',
       },
     },
   };
+  graphElement.labels = { fade: graphPreferences.textFade };
+  graphElement.nodeSizeMultiplier = graphPreferences.nodeSize;
+  graphElement.linkWidthMultiplier = graphPreferences.linkWidth;
+  graphElement.animateLinks = 'off';
+  graphElement.forces = {
+    collide: 1,
+    repel: graphPreferences.repel,
+    link: graphPreferences.linkDistance,
+    velocityDecay: 0.4,
+  };
+  applyGraphScope();
+  syncGraphSettingsControls();
+}
+
+function applyGraphScope(): void {
+  const local = graphMode === 'local' && activeUri !== null;
+  graphElement.focusNodeId = local ? activeUri : null;
+  graphElement.graphScope = local
+    ? { depth: graphPreferences.localDepth }
+    : 'full';
+  graphGlobalElement.classList.toggle('active', !local);
+  graphLocalElement.classList.toggle('active', local);
+  graphLocalElement.disabled = activeUri === null;
+}
+
+function syncGraphSettingsControls(): void {
+  graphShowTagsElement.checked = graphPreferences.showTags;
+  graphTextFadeElement.value = String(graphPreferences.textFade);
+  graphNodeSizeElement.value = String(graphPreferences.nodeSize);
+  graphLinkWidthElement.value = String(graphPreferences.linkWidth);
+  graphRepelElement.value = String(graphPreferences.repel);
+  graphLinkDistanceElement.value = String(graphPreferences.linkDistance);
+  graphDepthElement.value = String(graphPreferences.localDepth);
+  query<HTMLOutputElement>('#graph-text-fade-value').value =
+    graphPreferences.textFade.toFixed(1);
+  query<HTMLOutputElement>(
+    '#graph-node-size-value'
+  ).value = `${graphPreferences.nodeSize.toFixed(1)}×`;
+  query<HTMLOutputElement>(
+    '#graph-link-width-value'
+  ).value = `${graphPreferences.linkWidth.toFixed(1)}×`;
+  query<HTMLOutputElement>('#graph-repel-value').value = String(
+    graphPreferences.repel
+  );
+  query<HTMLOutputElement>('#graph-link-distance-value').value = String(
+    graphPreferences.linkDistance
+  );
+  query<HTMLOutputElement>('#graph-depth-value').value = String(
+    graphPreferences.localDepth
+  );
+}
+
+function readGraphSettingsControls(): void {
+  graphPreferences = {
+    showTags: graphShowTagsElement.checked,
+    textFade: Number(graphTextFadeElement.value),
+    nodeSize: Number(graphNodeSizeElement.value),
+    linkWidth: Number(graphLinkWidthElement.value),
+    repel: Number(graphRepelElement.value),
+    linkDistance: Number(graphLinkDistanceElement.value),
+    localDepth: Number(graphDepthElement.value),
+  };
+  applyGraphPreferences();
+}
+
+function setGraphSettingsOpen(open: boolean): void {
+  graphSettingsElement.hidden = !open;
+  graphWrapElement.classList.toggle('settings-open', open);
+  graphSettingsToggleElement.classList.toggle('active', open);
+  graphSettingsToggleElement.setAttribute('aria-expanded', String(open));
+  graphSettingsToggleElement.setAttribute(
+    'aria-label',
+    open ? '關閉圖譜設定' : '開啟圖譜設定'
+  );
+}
+
+function setGraphMode(mode: GraphMode): void {
+  if (mode === 'local' && activeUri === null) return;
+  graphMode = mode;
+  applyGraphScope();
 }
 
 function isExplorerPayload(value: unknown): value is ExplorerPayload {
@@ -317,6 +459,7 @@ async function openNote(uri: string): Promise<void> {
   notePathElement.textContent = uri;
   notePathElement.title = uri;
   renderFileTree(visibleFiles);
+  applyGraphScope();
   graphElement.selectNote(uri);
   showEmptyDocument('正在讀取筆記…');
   backlinksElement.hidden = true;
@@ -588,6 +731,31 @@ markdownElement.addEventListener('click', event => {
 graphElement.addEventListener('node-click', event => {
   const uri = (event as CustomEvent<string>).detail;
   if (payload?.files.some(file => file.uri === uri)) void openNote(uri);
+});
+
+graphGlobalElement.addEventListener('click', () => setGraphMode('global'));
+graphLocalElement.addEventListener('click', () => setGraphMode('local'));
+graphSettingsToggleElement.addEventListener('click', () =>
+  setGraphSettingsOpen(graphSettingsElement.hidden)
+);
+query<HTMLButtonElement>('#graph-settings-close').addEventListener(
+  'click',
+  () => setGraphSettingsOpen(false)
+);
+for (const control of [
+  graphShowTagsElement,
+  graphTextFadeElement,
+  graphNodeSizeElement,
+  graphLinkWidthElement,
+  graphRepelElement,
+  graphLinkDistanceElement,
+  graphDepthElement,
+]) {
+  control.addEventListener('input', readGraphSettingsControls);
+}
+query<HTMLButtonElement>('#graph-reset').addEventListener('click', () => {
+  graphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
+  applyGraphPreferences();
 });
 
 vaultSwitcherElement.addEventListener('click', toggleVaultMenu);

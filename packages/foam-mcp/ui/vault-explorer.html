@@ -596,15 +596,178 @@
       }
 
       .graph-wrap {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 0;
         min-height: 0;
         overflow: hidden;
         background: var(--background-primary);
+        transition: grid-template-columns 140ms ease;
+      }
+
+      .graph-wrap.settings-open {
+        grid-template-columns: minmax(0, 1fr) minmax(232px, 280px);
+      }
+
+      .graph-stage {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
       }
 
       foam-graph {
         display: block;
         width: 100%;
         height: 100%;
+      }
+
+      .tab-actions {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+        padding: 0 7px;
+      }
+
+      .tab-action {
+        min-height: 27px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 11px;
+      }
+
+      .tab-action:hover,
+      .tab-action.active {
+        background: var(--background-modifier-hover);
+        color: var(--text-normal);
+      }
+
+      .tab-action:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .icon-action {
+        display: grid;
+        width: 28px;
+        padding: 0;
+        place-items: center;
+      }
+
+      .icon-action svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+
+      .graph-settings {
+        min-width: 0;
+        overflow: auto;
+        border-left: 1px solid var(--border);
+        background: var(--background-secondary);
+        scrollbar-color: var(--border) transparent;
+      }
+
+      .graph-settings[hidden] {
+        display: none;
+      }
+
+      .graph-settings-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 9px 0 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .graph-settings details {
+        border-bottom: 1px solid var(--border);
+      }
+
+      .graph-settings summary {
+        min-height: 36px;
+        padding: 9px 12px;
+        color: var(--text-normal);
+        cursor: pointer;
+        font-size: 11.5px;
+        font-weight: 650;
+        list-style: none;
+      }
+
+      .graph-settings summary::before {
+        display: inline-block;
+        width: 14px;
+        content: '›';
+        color: var(--text-faint);
+        transition: transform 100ms ease;
+      }
+
+      .graph-settings details[open] summary::before {
+        transform: rotate(90deg);
+      }
+
+      .graph-settings-content {
+        display: grid;
+        gap: 11px;
+        padding: 2px 12px 13px;
+      }
+
+      .graph-check,
+      .graph-range {
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .graph-check {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .graph-range {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 38px;
+        gap: 5px 8px;
+      }
+
+      .graph-range input {
+        grid-column: 1 / -1;
+        width: 100%;
+        accent-color: var(--interactive-accent);
+      }
+
+      .graph-value {
+        color: var(--text-faint);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .graph-reset {
+        width: calc(100% - 24px);
+        min-height: 30px;
+        margin: 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 11px;
+      }
+
+      .graph-reset:hover {
+        background: var(--background-modifier-hover);
+        color: var(--text-normal);
       }
 
       .status-bar {
@@ -878,10 +1041,162 @@
                 </svg>
                 <span class="tab-title">關聯圖檢視</span>
               </div>
-              <span class="tab-meta">拖曳 · 縮放 · 點選</span>
+              <div class="tab-actions" aria-label="圖譜模式與設定">
+                <button
+                  id="graph-global"
+                  class="tab-action active"
+                  type="button"
+                >
+                  全域
+                </button>
+                <button
+                  id="graph-local"
+                  class="tab-action"
+                  type="button"
+                  disabled
+                >
+                  局部
+                </button>
+                <button
+                  id="graph-settings-toggle"
+                  class="tab-action icon-action"
+                  type="button"
+                  title="圖譜設定"
+                  aria-label="開啟圖譜設定"
+                  aria-expanded="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                      d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 3.1a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L6 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 3.1h4l.4-3.1a7 7 0 0 0 1.7-1l2.4 1 2-3.4L19 13a7 7 0 0 0 .1-1Z"
+                    />
+                  </svg>
+                </button>
+              </div>
             </header>
-            <div class="graph-wrap">
-              <foam-graph id="graph"></foam-graph>
+            <div id="graph-wrap" class="graph-wrap">
+              <div class="graph-stage">
+                <foam-graph id="graph"></foam-graph>
+              </div>
+              <aside id="graph-settings" class="graph-settings" hidden>
+                <header class="graph-settings-header">
+                  <span>圖譜設定</span>
+                  <button
+                    id="graph-settings-close"
+                    class="tab-action icon-action"
+                    type="button"
+                    aria-label="關閉圖譜設定"
+                  >
+                    ×
+                  </button>
+                </header>
+                <details open>
+                  <summary>篩選</summary>
+                  <div class="graph-settings-content">
+                    <label class="graph-check">
+                      <input id="graph-show-tags" type="checkbox" />
+                      <span>顯示標籤節點</span>
+                    </label>
+                  </div>
+                </details>
+                <details open>
+                  <summary>顯示</summary>
+                  <div class="graph-settings-content">
+                    <label class="graph-range">
+                      <span>文字淡化</span>
+                      <output id="graph-text-fade-value" class="graph-value"
+                        >0.0</output
+                      >
+                      <input
+                        id="graph-text-fade"
+                        type="range"
+                        min="-1"
+                        max="1"
+                        step="0.1"
+                        value="0"
+                      />
+                    </label>
+                    <label class="graph-range">
+                      <span>節點大小</span>
+                      <output id="graph-node-size-value" class="graph-value"
+                        >1.5×</output
+                      >
+                      <input
+                        id="graph-node-size"
+                        type="range"
+                        min="0.8"
+                        max="2.5"
+                        step="0.1"
+                        value="1.5"
+                      />
+                    </label>
+                    <label class="graph-range">
+                      <span>連線粗細</span>
+                      <output id="graph-link-width-value" class="graph-value"
+                        >1.0×</output
+                      >
+                      <input
+                        id="graph-link-width"
+                        type="range"
+                        min="0.5"
+                        max="2"
+                        step="0.1"
+                        value="1"
+                      />
+                    </label>
+                  </div>
+                </details>
+                <details>
+                  <summary>作用力</summary>
+                  <div class="graph-settings-content">
+                    <label class="graph-range">
+                      <span>排斥力</span>
+                      <output id="graph-repel-value" class="graph-value"
+                        >30</output
+                      >
+                      <input
+                        id="graph-repel"
+                        type="range"
+                        min="5"
+                        max="80"
+                        step="1"
+                        value="30"
+                      />
+                    </label>
+                    <label class="graph-range">
+                      <span>連線距離</span>
+                      <output id="graph-link-distance-value" class="graph-value"
+                        >36</output
+                      >
+                      <input
+                        id="graph-link-distance"
+                        type="range"
+                        min="15"
+                        max="100"
+                        step="1"
+                        value="36"
+                      />
+                    </label>
+                    <label class="graph-range">
+                      <span>局部圖譜深度</span>
+                      <output id="graph-depth-value" class="graph-value"
+                        >1</output
+                      >
+                      <input
+                        id="graph-depth"
+                        type="range"
+                        min="1"
+                        max="4"
+                        step="1"
+                        value="1"
+                      />
+                    </label>
+                  </div>
+                </details>
+                <button id="graph-reset" class="graph-reset" type="button">
+                  回復預設值
+                </button>
+              </aside>
             </div>
           </section>
         </div>
