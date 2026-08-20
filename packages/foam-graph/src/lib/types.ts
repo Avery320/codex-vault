@@ -10,17 +10,17 @@ export interface GraphModelLink {
   target: string | GraphModelNode;
 }
 
-export abstract class GraphModelLink {
-  static getNodeId(endpoint: GraphModelLink['source']): string {
+export const GraphModelLink = {
+  getNodeId(endpoint: GraphModelLink['source']): string {
     return typeof endpoint === 'object' ? endpoint.id : endpoint;
-  }
+  },
 
-  static getKey(link: GraphModelLink): string {
-    return `${GraphModelLink.getNodeId(link.source)}->${GraphModelLink.getNodeId(
-      link.target
-    )}`;
-  }
-}
+  getKey(link: GraphModelLink): string {
+    return `${GraphModelLink.getNodeId(
+      link.source
+    )}->${GraphModelLink.getNodeId(link.target)}`;
+  },
+};
 
 export interface GraphModel {
   nodeInfo: Record<string, GraphModelNode>;

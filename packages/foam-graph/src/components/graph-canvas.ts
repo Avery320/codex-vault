@@ -113,6 +113,40 @@ export function computeFitZoom(
   return maxZoom == null ? fitZoom : Math.min(fitZoom, maxZoom);
 }
 
+export function computeIncomingReferenceCounts(
+  graph: VisibleGraph
+): Map<string, number> {
+  const counts = new Map(graph.nodes.map(node => [node.id, 0]));
+
+  for (const link of graph.links) {
+    const sourceId = GraphModelLink.getNodeId(link.source);
+    const targetId = GraphModelLink.getNodeId(link.target);
+    const source = graph.nodeInfo[sourceId];
+    const target = graph.nodeInfo[targetId];
+    if (
+      sourceId === targetId ||
+      source?.type !== 'note' ||
+      (target?.type !== 'note' && target?.type !== 'placeholder')
+    ) {
+      continue;
+    }
+    counts.set(targetId, (counts.get(targetId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+export function computeNodeRadius(
+  incomingReferenceCount: number,
+  multiplier: number
+): number {
+  const count = Number.isFinite(incomingReferenceCount)
+    ? Math.max(0, incomingReferenceCount)
+    : 0;
+  const scale = Number.isFinite(multiplier) ? Math.max(0, multiplier) : 1;
+  return Math.min(3.2, 0.8 + Math.sqrt(count) * 0.55) * scale;
+}
+
 @customElement('foam-graph-canvas')
 export class GraphCanvas extends LitElement {
   static styles = css`
@@ -162,12 +196,9 @@ export class GraphCanvas extends LitElement {
     animateLinks: 'forward' as LinkAnimation,
     colorMode: 'type' as 'none' | 'directory' | 'type',
     groups: [] as GroupRule[],
+    incomingReferenceCounts: new Map<string, number>(),
   };
 
-  private readonly getNodeSize = scaleLinear()
-    .domain([0, 30])
-    .range([0.6, 3])
-    .clamp(true);
   private readonly getNodeLabelOpacity = scaleLinear()
     .domain([1.2, 2.0])
     .range([0, 1])
@@ -228,9 +259,10 @@ export class GraphCanvas extends LitElement {
           const info = this.rs.nodeInfo[node.id];
           if (!info) return;
 
-          const size =
-            this.getNodeSize(info.neighbors.length) *
-            this.rs.nodeSizeMultiplier;
+          const size = computeNodeRadius(
+            this.rs.incomingReferenceCounts.get(node.id) ?? 0,
+            this.rs.nodeSizeMultiplier
+          );
           const state =
             this.rs.graphStates?.nodeStates.get(node.id) ?? 'regular';
           const { fill, border } = getNodeFillAndBorder(
@@ -300,9 +332,10 @@ export class GraphCanvas extends LitElement {
         (node: any, color: string, ctx: CanvasRenderingContext2D) => {
           const info = this.rs.nodeInfo[node.id];
           if (!info) return;
-          const size =
-            this.getNodeSize(info.neighbors.length) *
-            this.rs.nodeSizeMultiplier;
+          const size = computeNodeRadius(
+            this.rs.incomingReferenceCounts.get(node.id) ?? 0,
+            this.rs.nodeSizeMultiplier
+          );
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
@@ -410,6 +443,8 @@ export class GraphCanvas extends LitElement {
         links: [],
       };
       this.rs.nodeInfo = nextGraph.nodeInfo;
+      this.rs.incomingReferenceCounts =
+        computeIncomingReferenceCounts(nextGraph);
       this._updateGraphData(nextGraph);
 
       if (this.visibleGraph && this.firstGraphLoad && this.graphInstance) {

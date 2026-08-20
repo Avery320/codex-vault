@@ -75,20 +75,25 @@ export function getNeighbors(
   depth: number,
   nodeInfo: Record<string, GraphModelNode>
 ): Set<string> {
-  let neighbors = new Set([nodeId]);
-  for (let i = 0; i < depth; i++) {
-    const newNeighbors = new Set<string>();
-    for (const id of neighbors) {
-      const node = nodeInfo[id];
-      if (node) {
-        for (const n of node.neighbors) newNeighbors.add(n);
-      } else {
-        console.debug(`getNeighbors: node '${id}' not found in nodeInfo, skipping.`);
-      }
+  const visited = new Set([nodeId]);
+  const queue = [{ id: nodeId, distance: 0 }];
+  const maxDepth = Number.isFinite(depth) ? Math.max(0, Math.floor(depth)) : 0;
+
+  for (let index = 0; index < queue.length; index++) {
+    const current = queue[index];
+    if (current.distance >= maxDepth) continue;
+
+    const node = nodeInfo[current.id];
+    if (!node) continue;
+
+    for (const neighborId of node.neighbors) {
+      if (visited.has(neighborId)) continue;
+      visited.add(neighborId);
+      queue.push({ id: neighborId, distance: current.distance + 1 });
     }
-    for (const n of newNeighbors) neighbors.add(n);
   }
-  return neighbors;
+
+  return visited;
 }
 
 export function computeFocusSets(
@@ -186,7 +191,10 @@ export function computeGraphStates(
     if (focusNodes.size === 0) {
       linkStates.set(key, 'regular');
     } else {
-      linkStates.set(key, highlightedLinks.has(key) ? 'highlighted' : 'lessened');
+      linkStates.set(
+        key,
+        highlightedLinks.has(key) ? 'highlighted' : 'lessened'
+      );
     }
   }
 

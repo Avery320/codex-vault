@@ -13,7 +13,7 @@ import {
 } from './lib/graph-view-model';
 import { mergeStyles, resolveStyle } from './lib/style';
 import { hashString, hashToHSL } from './lib/colors';
-import type { GraphData, GraphStyle, GroupMatch, GroupRule } from './protocol';
+import type { GraphData, GraphStyle, GroupRule } from './protocol';
 import type {
   GraphModel,
   ResolvedStyle,
@@ -184,8 +184,7 @@ export class FoamGraph extends LitElement {
         .maxFitZoom=${this.maxFitZoom}
         @canvas-node-click=${(e: CustomEvent) =>
           this._onCanvasNodeClick(e.detail)}
-        @canvas-node-hover=${(e: CustomEvent) =>
-          (this.hoverNodeId = e.detail)}
+        @canvas-node-hover=${(e: CustomEvent) => (this.hoverNodeId = e.detail)}
         @canvas-background-click=${(e: CustomEvent) =>
           this._onCanvasBackgroundClick(e.detail)}
       ></foam-graph-canvas>
@@ -224,7 +223,8 @@ export class FoamGraph extends LitElement {
               (this.groupDraft = { ...this.groupDraft, active: false })}
             @draft-change=${(e: CustomEvent) => (this.groupDraft = e.detail)}
             @add-group=${() => this._onAddGroup()}
-            @text-fade-change=${(e: CustomEvent) => (this.labels = { fade: e.detail })}
+            @text-fade-change=${(e: CustomEvent) =>
+              (this.labels = { fade: e.detail })}
             @font-size-multiplier-change=${(e: CustomEvent) =>
               (this.nodeFontSizeMultiplier = e.detail)}
             @node-size-multiplier-change=${(e: CustomEvent) =>
@@ -234,8 +234,7 @@ export class FoamGraph extends LitElement {
             @animate-links-change=${(e: CustomEvent) =>
               (this.animateLinks = e.detail)}
             @forces-change=${(e: CustomEvent) => (this.forces = e.detail)}
-            @selection-change=${(e: CustomEvent) =>
-              (this.selection = e.detail)}
+            @selection-change=${(e: CustomEvent) => (this.selection = e.detail)}
           ></foam-control-panel>`
         : null}
     `;
