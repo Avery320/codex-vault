@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { rgb } from 'd3-color';
-import { getTypeColor, getDirectoryColor, getNodeFillAndBorder } from './colors';
+import {
+  getTypeColor,
+  getDirectoryColor,
+  getNodeFillAndBorder,
+  getNodeLabelColor,
+  getLinkColor,
+} from './colors';
 import { makeStyle, makeNode, fillOf } from '../test-utils';
 
 // A small graph with nodes of various types and directories
@@ -158,5 +164,20 @@ describe('color generation', () => {
 
   it('getDirectoryColor is deterministic', () => {
     expect(getDirectoryColor('/work/note.md')).toBe(getDirectoryColor('/work/note.md'));
+  });
+});
+
+describe('graph contrast', () => {
+  it('uses the highlighted foreground for highlighted labels', () => {
+    const style = makeStyle();
+    const color = getNodeLabelColor(rgb('#777777'), 'highlighted', 1, style);
+
+    expect(color.toString()).toBe(rgb(style.highlightedForeground).toString());
+  });
+
+  it('does not add transparency to regular links', () => {
+    const style = makeStyle();
+
+    expect(getLinkColor('regular', style)).toBe(style.lineColor);
   });
 });

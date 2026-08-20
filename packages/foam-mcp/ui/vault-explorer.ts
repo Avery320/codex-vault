@@ -176,7 +176,6 @@ let searchTimer: number | undefined;
 let searchSequence = 0;
 let noteSequence = 0;
 let dialogMode: VaultDialogMode = 'register';
-let currentTheme = 'dark';
 let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
@@ -192,7 +191,6 @@ graphElement.selection = {
 
 function applyTheme(theme: string | undefined): void {
   const resolved = theme === 'light' ? 'light' : 'dark';
-  currentTheme = resolved;
   document.documentElement.dataset.theme = resolved;
   applyGraphPreferences();
 }
@@ -208,7 +206,9 @@ function applyGraphFilters(): void {
 }
 
 function applyGraphPreferences(): void {
-  const dark = currentTheme === 'dark';
+  const theme = getComputedStyle(document.documentElement);
+  const color = (name: string): string =>
+    theme.getPropertyValue(name).trim();
   graphElement.graphStyle = {
     colorMode: 'type',
     showNodesOfType: {
@@ -220,15 +220,15 @@ function applyGraphPreferences(): void {
     },
     style: {
       background: 'transparent',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      lineColor: dark ? '#565656' : '#b9b7b2',
-      highlightedForeground: dark ? '#e3e3e3' : '#3f3f3f',
+      fontFamily: color('--font-interface'),
+      lineColor: color('--background-modifier-border-hover'),
+      highlightedForeground: color('--text-normal'),
       node: {
-        note: dark ? '#a8a8a8' : '#707070',
-        image: dark ? '#a8a8a8' : '#707070',
-        attachment: dark ? '#a8a8a8' : '#707070',
-        placeholder: dark ? '#686868' : '#aaa8a3',
-        tag: dark ? '#6fbd8c' : '#3e865b',
+        note: color('--text-muted'),
+        image: color('--text-muted'),
+        attachment: color('--text-muted'),
+        placeholder: color('--text-faint'),
+        tag: color('--color-green'),
       },
     },
   };

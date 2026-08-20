@@ -4,10 +4,6 @@ import type { GraphModelNode, ResolvedStyle } from './types';
 import type { GroupRule } from '../protocol';
 import { resolveGroupColor } from './groups';
 
-export function getNodeTypeColor(type: string, style: ResolvedStyle): string {
-  return style.node[type] ?? style.node['note'];
-}
-
 export function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -87,22 +83,19 @@ export function getNodeLabelColor(
   opacity: number,
   style: ResolvedStyle
 ): RGBColor {
-  if (state === 'highlighted') return rgb(style.lineColor).copy({ opacity }) as RGBColor;
+  if (state === 'highlighted') {
+    return rgb(style.highlightedForeground).copy({ opacity }) as RGBColor;
+  }
   return fill.copy({ opacity }) as RGBColor;
 }
 
 export function getLinkColor(
   linkState: 'regular' | 'highlighted' | 'lessened',
-  sourceType: string,
-  targetType: string,
   style: ResolvedStyle
 ): string {
   switch (linkState) {
     case 'regular':
-      if (sourceType === 'tag' && targetType === 'tag') {
-        return hsl(getNodeTypeColor('tag', style)).copy({ opacity: 0.4 }).toString();
-      }
-      return hsl(style.lineColor).copy({ opacity: 0.4 }).toString();
+      return style.lineColor;
     case 'highlighted':
       return style.highlightedForeground;
     case 'lessened':

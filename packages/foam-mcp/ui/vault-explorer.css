@@ -10,8 +10,9 @@
   --background-modifier-border-hover: #474747;
   --text-normal: #dadada;
   --text-muted: #b3b3b3;
-  --text-faint: #707070;
+  --text-faint: #999999;
   --text-on-accent: #ffffff;
+  --color-green: #44cf6e;
   --interactive-accent: #7f6df2;
   --interactive-accent-hover: #8b7af5;
   --danger: #fb6a70;
@@ -39,7 +40,8 @@
   --background-modifier-border-hover: #c4c6ca;
   --text-normal: #2e3338;
   --text-muted: #5c626b;
-  --text-faint: #8a9099;
+  --text-faint: #707070;
+  --color-green: #08b94e;
   --interactive-accent: #6c5dd3;
   --interactive-accent-hover: #5d4fc2;
   --danger: #d14d54;

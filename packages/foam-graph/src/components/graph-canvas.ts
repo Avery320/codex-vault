@@ -317,16 +317,7 @@ export class GraphCanvas extends LitElement {
         const graphLink = link as GraphModelLink;
         const key = GraphModelLink.getKey(graphLink);
         const state = this.rs.graphStates?.linkStates.get(key) ?? 'regular';
-        const srcInfo =
-          this.rs.nodeInfo[GraphModelLink.getNodeId(graphLink.source)];
-        const tgtInfo =
-          this.rs.nodeInfo[GraphModelLink.getNodeId(graphLink.target)];
-        return getLinkColor(
-          state,
-          srcInfo?.type ?? 'note',
-          tgtInfo?.type ?? 'note',
-          this.rs.style
-        );
+        return getLinkColor(state, this.rs.style);
       })
       .nodePointerAreaPaint(
         (node: any, color: string, ctx: CanvasRenderingContext2D) => {
