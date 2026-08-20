@@ -19,28 +19,20 @@ export function createGraphModel(graph: GraphData): GraphModel {
   // Copy links
   model.links = graph.links.map(l => ({ ...l }));
 
-  // Process tags: create tag nodes and hierarchy links
+  // Process tags: each explicit tag is one node connected to its note.
   for (const node of Object.values(model.nodeInfo)) {
     if (!node.tags?.length) continue;
     for (const tag of node.tags) {
-      const subtags = tag.label.split('/');
-      for (let i = 0; i < subtags.length; i++) {
-        const label = subtags.slice(0, i + 1).join('/');
-        if (!model.nodeInfo[label]) {
-          model.nodeInfo[label] = {
-            id: label,
-            title: '#' + label,
-            type: 'tag',
-            properties: {},
-            tags: [],
-            neighbors: [],
-            links: [],
-          };
-        }
-        if (i > 0) {
-          const parent = subtags.slice(0, i).join('/');
-          model.links.push({ source: parent, target: label });
-        }
+      if (!model.nodeInfo[tag.label]) {
+        model.nodeInfo[tag.label] = {
+          id: tag.label,
+          title: '#' + tag.label,
+          type: 'tag',
+          properties: {},
+          tags: [],
+          neighbors: [],
+          links: [],
+        };
       }
       model.links.push({ source: tag.label, target: node.id });
     }
@@ -160,7 +152,36 @@ export function getFocusSubset(
   focusNodeId: string,
   focusDepth: number
 ): Set<string> {
-  return getNeighbors(focusNodeId, focusDepth, graphModel.nodeInfo);
+  const nodeInfo = graphModel.nodeInfo;
+  const visited = new Set([focusNodeId]);
+  const queue = [{ id: focusNodeId, distance: 0 }];
+  const maxDepth = Number.isFinite(focusDepth)
+    ? Math.max(0, Math.floor(focusDepth))
+    : 0;
+
+  // Local depth follows note links only. Tags are displayed for the notes in
+  // scope, but never become shortcuts between otherwise unrelated notes.
+  for (let index = 0; index < queue.length; index++) {
+    const current = queue[index];
+    if (current.distance >= maxDepth) continue;
+
+    for (const neighborId of nodeInfo[current.id]?.neighbors ?? []) {
+      const neighbor = nodeInfo[neighborId];
+      if (!neighbor || neighbor.type === 'tag' || visited.has(neighborId)) {
+        continue;
+      }
+      visited.add(neighborId);
+      queue.push({ id: neighborId, distance: current.distance + 1 });
+    }
+  }
+
+  for (const nodeId of visited) {
+    for (const neighborId of nodeInfo[nodeId]?.neighbors ?? []) {
+      if (nodeInfo[neighborId]?.type === 'tag') visited.add(neighborId);
+    }
+  }
+
+  return visited;
 }
 
 export function computeGraphStates(

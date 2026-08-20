@@ -132,6 +132,35 @@ describe('FoamMcpServer lifecycle', () => {
       );
     }));
 
+  it('treats frontmatter types as note metadata in the explorer graph', () =>
+    withMcpServer(
+      {
+        'typed.md': '---\ntype: moc\ntags:\n  - topic\n---\n# Typed',
+      },
+      async ctx => {
+        const result = (await ctx.client.callTool({
+          name: 'get_vault_explorer_state',
+          arguments: {},
+        })) as {
+          structuredContent: {
+            graph: {
+              nodeInfo: Record<
+                string,
+                { type: string; properties: Record<string, unknown> }
+              >;
+            };
+          };
+        };
+
+        expect(
+          result.structuredContent.graph.nodeInfo['typed.md']
+        ).toMatchObject({
+          type: 'note',
+          properties: { type: 'moc' },
+        });
+      }
+    ));
+
   it('every registered tool advertises a description', () =>
     withMcpServer(SEED, async ctx => {
       const list = await ctx.client.listTools();

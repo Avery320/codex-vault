@@ -62,8 +62,10 @@ interface ToolResultLike {
 
 interface GraphPreferences {
   filterQuery: string;
+  showTags: boolean;
+  showAttachments: boolean;
   showOrphans: boolean;
-  showUnresolved: boolean;
+  existingFilesOnly: boolean;
   textFade: number;
   nodeSize: number;
   linkWidth: number;
@@ -79,8 +81,10 @@ type WorkspacePane = 'files' | 'reader' | 'graph';
 
 const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
   filterQuery: '',
+  showTags: true,
+  showAttachments: false,
   showOrphans: true,
-  showUnresolved: false,
+  existingFilesOnly: true,
   textFade: 0,
   nodeSize: 1.5,
   linkWidth: 1,
@@ -145,9 +149,13 @@ const graphSettingsToggleElement = query<HTMLButtonElement>(
 );
 const graphLocalToggleElement = query<HTMLButtonElement>('#graph-local-toggle');
 const graphFilterElement = query<HTMLInputElement>('#graph-filter');
+const graphShowTagsElement = query<HTMLInputElement>('#graph-show-tags');
+const graphShowAttachmentsElement = query<HTMLInputElement>(
+  '#graph-show-attachments'
+);
 const graphShowOrphansElement = query<HTMLInputElement>('#graph-show-orphans');
-const graphShowUnresolvedElement = query<HTMLInputElement>(
-  '#graph-show-unresolved'
+const graphExistingFilesOnlyElement = query<HTMLInputElement>(
+  '#graph-existing-files-only'
 );
 const graphTextFadeElement = query<HTMLInputElement>('#graph-text-fade');
 const graphNodeSizeElement = query<HTMLInputElement>('#graph-node-size');
@@ -194,7 +202,7 @@ function applyGraphFilters(): void {
     ? filterGraphData(payload.graph, {
         query: graphPreferences.filterQuery,
         showOrphans: graphPreferences.showOrphans,
-        showUnresolved: graphPreferences.showUnresolved,
+        showUnresolved: !graphPreferences.existingFilesOnly,
       })
     : null;
 }
@@ -202,12 +210,13 @@ function applyGraphFilters(): void {
 function applyGraphPreferences(): void {
   const dark = currentTheme === 'dark';
   graphElement.graphStyle = {
-    colorMode: 'none',
+    colorMode: 'type',
     showNodesOfType: {
       note: true,
-      placeholder: graphPreferences.showUnresolved,
-      image: false,
-      attachment: false,
+      tag: graphPreferences.showTags,
+      placeholder: !graphPreferences.existingFilesOnly,
+      image: graphPreferences.showAttachments,
+      attachment: graphPreferences.showAttachments,
     },
     style: {
       background: 'transparent',
@@ -216,6 +225,8 @@ function applyGraphPreferences(): void {
       highlightedForeground: dark ? '#e3e3e3' : '#3f3f3f',
       node: {
         note: dark ? '#a8a8a8' : '#707070',
+        image: dark ? '#a8a8a8' : '#707070',
+        attachment: dark ? '#a8a8a8' : '#707070',
         placeholder: dark ? '#686868' : '#aaa8a3',
         tag: dark ? '#6fbd8c' : '#3e865b',
       },
@@ -249,8 +260,10 @@ function applyGraphScope(): void {
 
 function syncGraphSettingsControls(): void {
   graphFilterElement.value = graphPreferences.filterQuery;
+  graphShowTagsElement.checked = graphPreferences.showTags;
+  graphShowAttachmentsElement.checked = graphPreferences.showAttachments;
   graphShowOrphansElement.checked = graphPreferences.showOrphans;
-  graphShowUnresolvedElement.checked = graphPreferences.showUnresolved;
+  graphExistingFilesOnlyElement.checked = graphPreferences.existingFilesOnly;
   graphTextFadeElement.value = String(graphPreferences.textFade);
   graphNodeSizeElement.value = String(graphPreferences.nodeSize);
   graphLinkWidthElement.value = String(graphPreferences.linkWidth);
@@ -280,8 +293,10 @@ function readGraphSettingsControls(): void {
   const previous = graphPreferences;
   graphPreferences = {
     filterQuery: graphFilterElement.value,
+    showTags: graphShowTagsElement.checked,
+    showAttachments: graphShowAttachmentsElement.checked,
     showOrphans: graphShowOrphansElement.checked,
-    showUnresolved: graphShowUnresolvedElement.checked,
+    existingFilesOnly: graphExistingFilesOnlyElement.checked,
     textFade: Number(graphTextFadeElement.value),
     nodeSize: Number(graphNodeSizeElement.value),
     linkWidth: Number(graphLinkWidthElement.value),
@@ -292,7 +307,7 @@ function readGraphSettingsControls(): void {
   if (
     previous.filterQuery !== graphPreferences.filterQuery ||
     previous.showOrphans !== graphPreferences.showOrphans ||
-    previous.showUnresolved !== graphPreferences.showUnresolved
+    previous.existingFilesOnly !== graphPreferences.existingFilesOnly
   ) {
     applyGraphFilters();
   }
@@ -837,8 +852,10 @@ query<HTMLButtonElement>('#graph-settings-close').addEventListener(
 );
 for (const control of [
   graphFilterElement,
+  graphShowTagsElement,
+  graphShowAttachmentsElement,
   graphShowOrphansElement,
-  graphShowUnresolvedElement,
+  graphExistingFilesOnlyElement,
   graphTextFadeElement,
   graphNodeSizeElement,
   graphLinkWidthElement,

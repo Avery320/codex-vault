@@ -56,7 +56,6 @@ describe('createGraphModel', () => {
     });
     const graphModel = createGraphModel(graph);
     expect(graphModel.nodeInfo['my-tag'].title).toBe('#my-tag');
-    expect(graphModel.nodeInfo['parent'].title).toBe('#parent');
     expect(graphModel.nodeInfo['parent/child'].title).toBe('#parent/child');
   });
 
@@ -96,7 +95,7 @@ describe('createGraphModel', () => {
     expect(graphModelTypes.has('tag')).toBe(true); // tag present after model creation
   });
 
-  it('should create intermediate nodes for hierarchical tags', () => {
+  it('should keep hierarchical tags as one explicit tag node', () => {
     const graph = makeGraph({
       nodeInfo: {
         'note-1': {
@@ -108,10 +107,13 @@ describe('createGraphModel', () => {
 
     const graphModel = createGraphModel(graph);
 
-    expect(graphModel.nodeInfo['parent']).toBeDefined();
-    expect(graphModel.nodeInfo['parent'].type).toBe('tag');
+    expect(graphModel.nodeInfo['parent']).toBeUndefined();
     expect(graphModel.nodeInfo['parent/child']).toBeDefined();
     expect(graphModel.nodeInfo['parent/child'].type).toBe('tag');
+    expect(graphModel.links).toContainEqual({
+      source: 'parent/child',
+      target: 'note-1',
+    });
   });
 
   it('should create a link from tag to note', () => {
@@ -350,5 +352,24 @@ describe('getFocusSubset', () => {
     expect(subset.has('note-2')).toBe(true);
     expect(subset.has('note-3')).toBe(true);  // depth-2
     expect(subset.has('note-4')).toBe(false); // unreachable
+  });
+
+  it('should show tags without traversing through them to unrelated notes', () => {
+    const graph = createGraphModel(makeGraph({
+      nodeInfo: {
+        'note-1': {
+          id: 'note-1', type: 'note', title: 'Note 1', properties: {},
+          tags: [{ label: 'shared' }],
+        },
+        'note-2': {
+          id: 'note-2', type: 'note', title: 'Note 2', properties: {},
+          tags: [{ label: 'shared' }],
+        },
+      },
+    }));
+
+    const subset = getFocusSubset(graph, 'note-1', 2);
+
+    expect([...subset].sort()).toEqual(['note-1', 'shared']);
   });
 });
