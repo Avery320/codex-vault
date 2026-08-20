@@ -1,24 +1,21 @@
 {
-  "name": "foam",
-  "version": "0.2.0",
-  "description": "Foam",
-  "repository": "git@github.com:foambubble/foam.git",
+  "name": "codex-vault",
+  "version": "0.1.0",
+  "description": "A local Codex plugin for exploring and annotating Obsidian-compatible Markdown vaults.",
+  "repository": "https://github.com/Avery320/codex-vault.git",
+  "homepage": "https://github.com/Avery320/codex-vault#readme",
+  "bugs": {
+    "url": "https://github.com/Avery320/codex-vault/issues"
+  },
+  "author": "Avery Tsai",
   "license": "MIT",
-  "private": "true",
+  "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "tag-release": "node scripts/tag-release.js",
-    "package-extension": "yarn workspace foam-vscode package",
-    "install-extension": "yarn workspace foam-vscode install-extension",
-    "release-extension": "yarn workspace foam-vscode release",
-    "release-cli": "yarn workspace @foam/cli release",
-    "release-core": "yarn workspace @foam/core release",
-    "release": "npm login && yarn release-core && yarn release-cli && yarn release-extension && yarn tag-release",
-    "publish:docs-site": "yarn build && node packages/foam-cli/out/index.js export ./docs --out ./.tmp/foam-docs-site --title \"Foam\" --description \"Using Foam\" --content-root user --site-url https://docs.foam.md",
     "reset": "yarn && yarn clean && yarn build",
     "clean": "lerna run clean",
     "build": "lerna run build",
@@ -29,7 +26,7 @@
     "lint": "lerna run lint",
     "format": "prettier --write \"**/*.ts\"",
     "watch": "lerna run watch --concurrency 20",
-    "foam": "yarn workspace @foam/cli foam",
+    "mcp": "./scripts/launch_codex_vault_mcp",
     "prepare": "husky"
   },
   "devDependencies": {

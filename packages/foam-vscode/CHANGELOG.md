@@ -1,5 +1,8 @@
 # Change Log
 
+> Historical upstream changelog for the legacy VS Code extension package.
+> This package is not the Codex Vault runtime or user interface.
+
 ## 0.44.5
 
 ### Patch Changes

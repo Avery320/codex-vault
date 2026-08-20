@@ -1,5 +1,8 @@
 # Change Log
 
+> Historical upstream package changelog. It is retained for fork provenance;
+> current Codex Vault behavior is documented in the repository README.
+
 ## 0.46.0
 
 ### Minor Changes

@@ -1,5 +1,8 @@
 # Change Log
 
+> Historical upstream package changelog. It is retained for fork provenance
+> and does not describe the current Codex Vault product surface.
+
 ## 0.46.1
 
 ### Patch Changes

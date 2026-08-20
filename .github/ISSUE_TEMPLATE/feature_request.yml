@@ -1,42 +1,41 @@
 name: Feature request
-description: Suggest an idea for the `Foam` project
+description: Propose an improvement to Codex Vault
 body:
-  - type: markdown
-    attributes:
-      value: |
-        This issue form is for requesting features only!
-        If you want to report a bug, please use the [bug report](https://github.com/foambubble/foam/issues/new?assignees=&labels=&template=bug_report.yml) form.
   - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user workflow that is difficult today.
     validations:
       required: true
-    attributes:
-      label: Is your feature request related to a problem? Please describe.
-      description: A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
   - type: textarea
+    id: behavior
+    attributes:
+      label: Expected behavior
+      description: Describe the smallest observable result that would solve it.
     validations:
       required: true
+  - type: dropdown
+    id: boundary
     attributes:
-      label: Describe the solution you'd like
-      description: A clear and concise description of what you want to happen.
-      placeholder: |
-        As a user, I expected ___ behavior but ___ ...
-        
-        Ideal Steps I would like to see:
-        1. Go to '...'
-        2. Click on '....'
-        3. ....
-  - type: textarea
+      label: Area
+      options:
+        - Vault Explorer UI
+        - Markdown reading or search
+        - Chat context annotations
+        - Backlinks or knowledge graph
+        - Note write workflow
+        - Vault management
+        - Plugin installation or startup
+        - Other
     validations:
       required: true
-    attributes:
-      label: Describe alternatives you've considered
-      description: A clear and concise description of any alternative solutions or features you've considered.
   - type: textarea
+    id: alternatives
     attributes:
-      label: Screenshots or Videos
-      description: |
-        If applicable, add screenshots or a video to help explain your problem.
-        For more information on the supported file image/file types and the file size limits, please refer
-        to the following link: https://docs.github.com/en/github/writing-on-github/working-with-advanced-formatting/attaching-files
-      placeholder: |
-        You can drag your video or image files inside of this editor ↓
+      label: Alternatives considered
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context or mockups
+      description: Do not include private vault content.
