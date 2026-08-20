@@ -67,14 +67,13 @@ export function filterGraphData(
   const links = graph.links.filter(
     link => candidateIds.has(link.source) && candidateIds.has(link.target)
   );
-  const degree = new Map<string, number>([...candidateIds].map(id => [id, 0]));
-  for (const link of links) {
-    degree.set(link.source, (degree.get(link.source) ?? 0) + 1);
-    degree.set(link.target, (degree.get(link.target) ?? 0) + 1);
+  const visibleIds = filters.showOrphans ? candidateIds : new Set<string>();
+  if (!filters.showOrphans) {
+    for (const link of links) {
+      visibleIds.add(link.source);
+      visibleIds.add(link.target);
+    }
   }
-  const visibleIds = filters.showOrphans
-    ? candidateIds
-    : new Set([...candidateIds].filter(id => (degree.get(id) ?? 0) > 0));
 
   return {
     nodeInfo: Object.fromEntries(

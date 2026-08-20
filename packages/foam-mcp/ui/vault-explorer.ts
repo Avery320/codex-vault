@@ -74,6 +74,8 @@ interface GraphPreferences {
 
 type VaultDialogMode = 'register' | 'create';
 type GraphMode = 'global' | 'local';
+type LayoutMode = 'desktop' | 'compact' | 'mobile';
+type WorkspacePane = 'files' | 'reader' | 'graph';
 
 const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
   filterQuery: '',
@@ -85,6 +87,13 @@ const DEFAULT_GRAPH_PREFERENCES: GraphPreferences = {
   repel: 30,
   linkDistance: 36,
   localDepth: 1,
+};
+const workspaceLayout = {
+  sidebarOpen: true,
+  graphOpen: true,
+  activePane: 'reader' as WorkspacePane,
+  sidebarWidth: 300,
+  readerWidth: 520,
 };
 
 const app = new App(
@@ -105,6 +114,8 @@ const query = <T extends Element>(selector: string): T => {
 };
 
 const shellElement = query<HTMLElement>('#shell');
+const sidebarResizerElement = query<HTMLElement>('#sidebar-resizer');
+const workspaceResizerElement = query<HTMLElement>('#workspace-resizer');
 const graphElement = query<FoamGraphElement>('#graph');
 const treeElement = query<HTMLDivElement>('#tree');
 const markdownElement = query<HTMLDivElement>('#markdown');
@@ -128,7 +139,6 @@ const nameField = query<HTMLLabelElement>('#name-field');
 const nameInput = query<HTMLInputElement>('#vault-folder-name');
 const dialogErrorElement = query<HTMLDivElement>('#dialog-error');
 const vaultSwitcherElement = query<HTMLButtonElement>('#vault-switcher');
-const graphWrapElement = query<HTMLDivElement>('#graph-wrap');
 const graphSettingsElement = query<HTMLElement>('#graph-settings');
 const graphSettingsToggleElement = query<HTMLButtonElement>(
   '#graph-settings-toggle'
@@ -161,8 +171,8 @@ let dialogMode: VaultDialogMode = 'register';
 let currentTheme = 'dark';
 let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences = { ...DEFAULT_GRAPH_PREFERENCES };
-const singlePaneMedia = window.matchMedia('(max-width: 1000px)');
-const mobileMedia = window.matchMedia('(max-width: 680px)');
+let displayedSidebarWidth = workspaceLayout.sidebarWidth;
+let displayedReaderWidth = workspaceLayout.readerWidth;
 
 graphElement.showControls = false;
 graphElement.maxFitZoom = 2.2;
@@ -291,7 +301,6 @@ function readGraphSettingsControls(): void {
 
 function setGraphSettingsOpen(open: boolean): void {
   graphSettingsElement.hidden = !open;
-  graphWrapElement.classList.toggle('settings-open', open);
   graphSettingsToggleElement.classList.toggle('active', open);
   graphSettingsToggleElement.setAttribute('aria-expanded', String(open));
   graphSettingsToggleElement.setAttribute(
@@ -674,49 +683,116 @@ async function requestFullscreen(): Promise<void> {
   }
 }
 
-function showWorkspacePane(pane: 'reader' | 'graph'): void {
-  shellElement.classList.toggle('showing-graph', pane === 'graph');
-  shellElement.classList.remove('showing-files');
-  syncRibbonState();
+function layoutMode(): LayoutMode {
+  const width = shellElement.clientWidth || window.innerWidth;
+  return width <= 680 ? 'mobile' : width <= 1000 ? 'compact' : 'desktop';
 }
 
-function showFilesView(): void {
-  if (mobileMedia.matches) {
-    shellElement.classList.add('showing-files');
-  } else {
-    shellElement.classList.toggle('sidebar-hidden');
+function showWorkspacePane(pane: WorkspacePane): void {
+  const mode = layoutMode();
+  if (mode === 'mobile') workspaceLayout.activePane = pane;
+  else if (pane === 'files')
+    workspaceLayout.sidebarOpen = !workspaceLayout.sidebarOpen;
+  else if (mode === 'compact') workspaceLayout.activePane = pane;
+  else if (pane === 'graph')
+    workspaceLayout.graphOpen = !workspaceLayout.graphOpen;
+  else workspaceLayout.activePane = 'reader';
+
+  if (pane === 'graph' && mode !== 'desktop') workspaceLayout.graphOpen = true;
+  if (pane === 'files' && mode === 'mobile') workspaceLayout.sidebarOpen = true;
+  applyWorkspaceLayout();
+}
+
+function applyWorkspaceLayout(): void {
+  const viewportWidth = shellElement.clientWidth || window.innerWidth;
+  const mode = layoutMode();
+  const desktop = mode === 'desktop';
+  const mobile = mode === 'mobile';
+  const showSidebar = mobile
+    ? workspaceLayout.activePane === 'files'
+    : workspaceLayout.sidebarOpen;
+  const showReader = desktop || workspaceLayout.activePane !== 'graph';
+  const showGraph = desktop
+    ? workspaceLayout.graphOpen
+    : workspaceLayout.activePane === 'graph';
+  const ribbonWidth = mode === 'desktop' ? 48 : mode === 'compact' ? 46 : 42;
+  const sidebarMaximum = Math.max(
+    220,
+    Math.min(480, viewportWidth - ribbonWidth - 5 - (desktop ? 605 : 320))
+  );
+  displayedSidebarWidth = clamp(
+    workspaceLayout.sidebarWidth,
+    220,
+    sidebarMaximum
+  );
+  const workspaceWidth =
+    viewportWidth -
+    ribbonWidth -
+    (showSidebar && !mobile ? displayedSidebarWidth + 5 : 0);
+  displayedReaderWidth = clamp(
+    workspaceLayout.readerWidth,
+    320,
+    Math.max(320, workspaceWidth - 285)
+  );
+
+  shellElement.style.setProperty(
+    '--sidebar-width',
+    `${displayedSidebarWidth}px`
+  );
+  shellElement.style.setProperty('--reader-width', `${displayedReaderWidth}px`);
+  shellElement.dataset.layout = mode;
+  shellElement.classList.toggle('sidebar-hidden', !showSidebar);
+  shellElement.classList.toggle('showing-files', mobile && showSidebar);
+  shellElement.classList.toggle('showing-graph', showGraph && !showReader);
+  shellElement.classList.toggle('graph-hidden', !showGraph);
+
+  sidebarResizerElement.hidden = mobile || !showSidebar;
+  workspaceResizerElement.hidden = !desktop || !showGraph;
+  for (const [button, visible] of [
+    [filesViewElement, showSidebar],
+    [noteViewElement, showReader],
+    [graphViewElement, showGraph],
+  ] as Array<[HTMLButtonElement, boolean]>) {
+    button.classList.toggle('active', visible);
+    button.setAttribute('aria-pressed', String(visible));
   }
-  syncRibbonState();
 }
 
-function showGraphView(): void {
-  if (singlePaneMedia.matches) {
-    showWorkspacePane('graph');
-  } else {
-    shellElement.classList.toggle('graph-hidden');
-    syncRibbonState();
-  }
+function startPaneResize(
+  kind: 'sidebar' | 'workspace',
+  event: PointerEvent
+): void {
+  if (event.button !== 0) return;
+  const resizer =
+    kind === 'sidebar' ? sidebarResizerElement : workspaceResizerElement;
+  const property = kind === 'sidebar' ? 'sidebarWidth' : 'readerWidth';
+  const startX = event.clientX;
+  const startWidth =
+    kind === 'sidebar' ? displayedSidebarWidth : displayedReaderWidth;
+  event.preventDefault();
+  resizer.classList.add('active');
+  document.body.classList.add('resizing-panes');
+
+  const move = (moveEvent: PointerEvent): void => {
+    workspaceLayout[property] = startWidth + moveEvent.clientX - startX;
+    applyWorkspaceLayout();
+  };
+  const finish = (): void => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', finish);
+    window.removeEventListener('pointercancel', finish);
+    resizer.classList.remove('active');
+    document.body.classList.remove('resizing-panes');
+    workspaceLayout[property] =
+      kind === 'sidebar' ? displayedSidebarWidth : displayedReaderWidth;
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', finish);
+  window.addEventListener('pointercancel', finish);
 }
 
-function syncRibbonState(): void {
-  const showingFiles = shellElement.classList.contains('showing-files');
-  const showingGraph = shellElement.classList.contains('showing-graph');
-  filesViewElement.classList.toggle(
-    'active',
-    mobileMedia.matches
-      ? showingFiles
-      : !shellElement.classList.contains('sidebar-hidden')
-  );
-  noteViewElement.classList.toggle(
-    'active',
-    singlePaneMedia.matches ? !showingFiles && !showingGraph : true
-  );
-  graphViewElement.classList.toggle(
-    'active',
-    singlePaneMedia.matches
-      ? !showingFiles && showingGraph
-      : !shellElement.classList.contains('graph-hidden')
-  );
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(Math.max(value, minimum), maximum);
 }
 
 searchElement.addEventListener('input', () => {
@@ -779,14 +855,16 @@ query<HTMLButtonElement>('#graph-reset').addEventListener('click', () => {
 });
 
 vaultSwitcherElement.addEventListener('click', toggleVaultMenu);
-filesViewElement.addEventListener('click', showFilesView);
+filesViewElement.addEventListener('click', () => showWorkspacePane('files'));
 noteViewElement.addEventListener('click', () => showWorkspacePane('reader'));
-graphViewElement.addEventListener('click', showGraphView);
-singlePaneMedia.addEventListener('change', syncRibbonState);
-mobileMedia.addEventListener('change', () => {
-  shellElement.classList.remove('showing-files');
-  syncRibbonState();
-});
+graphViewElement.addEventListener('click', () => showWorkspacePane('graph'));
+sidebarResizerElement.addEventListener('pointerdown', event =>
+  startPaneResize('sidebar', event)
+);
+workspaceResizerElement.addEventListener('pointerdown', event =>
+  startPaneResize('workspace', event)
+);
+window.addEventListener('resize', applyWorkspaceLayout);
 query<HTMLButtonElement>('#open-existing').addEventListener('click', () =>
   openVaultDialog('register')
 );
@@ -815,7 +893,7 @@ app.ontoolresult = receiveToolResult;
 app.onhostcontextchanged = context => applyTheme(context.theme);
 
 applyTheme(undefined);
-syncRibbonState();
+applyWorkspaceLayout();
 void app.connect().then(() => {
   applyTheme(app.getHostContext()?.theme);
   void requestFullscreen();
