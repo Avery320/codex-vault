@@ -204,6 +204,27 @@ describe('resource tools', () => {
       expect(created.content).toBe('# 會議筆記\n\n- 決議');
     }));
 
+  it('move_resource moves a note and updates inbound wikilinks', () =>
+    withMcpServer(SEED, async ctx => {
+      const result = await ctx.callToolJson<{
+        old_uri: string;
+        new_uri: string;
+        updated_links: number;
+      }>('move_resource', {
+        uri: 'b.md',
+        new_path: 'renamed.md',
+      });
+
+      expect(result.old_uri).toBe('b.md');
+      expect(result.new_uri).toBe('renamed.md');
+      expect(result.updated_links).toBe(1);
+      expect(
+        (await ctx.callToolJson<{ content: string }>('read_resource', {
+          uri: 'a.md',
+        })).content
+      ).toContain('[[renamed]]');
+    }));
+
   it('delete_resource without confirm returns invalid_input', () =>
     withMcpServer(SEED, async ctx => {
       const result = await ctx.callTool('delete_resource', { uri: 'a.md' });

@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { VaultFilePolicy } from '@foam/mcp';
 import { withTmpWorkspace } from '../test/test-utils';
-import { loadWorkspaceFromDirectory, NodeFileDataStore } from './filesystem';
+import { NodeFileDataStore } from './filesystem';
 
 function createTmpDir(files: Record<string, string>): {
   rootDir: string;

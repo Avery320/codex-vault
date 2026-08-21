@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { InMemoryTelemetryReporter } from '@foam/core';
 import { runCli } from './index';
@@ -24,28 +21,5 @@ describe('dispatch telemetry filtering', () => {
     await runCli(['mcp', '--help'], new TestLogger(), reporter);
 
     expect(reporter.events.find(e => e.name === 'cli.command-invoked')).toBeUndefined();
-  });
-
-  it('successful commands do not carry errorType / errorContext', async () => {
-    // `list templates` against an empty workspace exits 0 cleanly (the
-    // command gracefully returns [] when .foam/templates is missing), so
-    // it's a real successful dispatch path with no thrown errors.
-    const workspace = mkdtempSync(path.join(tmpdir(), 'foam-cli-tel-'));
-    try {
-      const reporter = new InMemoryTelemetryReporter();
-      const exitCode = await runCli(
-        ['list', 'templates', '--workspace', workspace],
-        new TestLogger(),
-        reporter
-      );
-
-      expect(exitCode).toBe(0);
-      const event = reporter.events.find(e => e.name === 'cli.command-invoked');
-      expect(event).toBeDefined();
-      expect(event?.properties).not.toHaveProperty('errorType');
-      expect(event?.properties).not.toHaveProperty('errorContext');
-    } finally {
-      rmSync(workspace, { recursive: true, force: true });
-    }
   });
 });

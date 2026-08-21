@@ -176,7 +176,7 @@ describe('foam mcp (CLI e2e)', () => {
           const explorerBefore = (await ctx.client.callTool({
             name: 'get_vault_explorer_state',
             arguments: {},
-          })) as {
+          })) as unknown as {
             structuredContent: {
               active_vault: { id: string };
               revision: number;

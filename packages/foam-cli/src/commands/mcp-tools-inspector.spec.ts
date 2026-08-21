@@ -15,7 +15,6 @@
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { writeFileSync } from 'node:fs';
 import { createTmpDir } from '../test/test-utils';
 
 const CLI_PATH = path.resolve(__dirname, '../../out/index.js');

@@ -10,19 +10,7 @@ import { ITelemetryReporter, bucketDuration } from '@foam/core';
  * "command word" would otherwise be a user-supplied free-text string).
  */
 export const KNOWN_COMMANDS = new Set([
-  'list',
-  'note',
-  'outline',
-  'links',
-  'connections',
-  'graph',
-  'daily',
-  'tag',
-  'search',
-  'rename',
-  'update',
   'mcp',
-  'config',
 ]);
 
 /**
@@ -32,7 +20,6 @@ export const KNOWN_COMMANDS = new Set([
  * non-actions and shouldn't count as command invocations.
  */
 const TELEMETRY_SKIP_COMMANDS = new Set([
-  'config',
   'help',
   '--help',
   '-h',

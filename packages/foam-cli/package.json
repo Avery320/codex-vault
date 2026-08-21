@@ -1,22 +1,15 @@
 {
   "name": "@foam/cli",
   "version": "0.46.1",
-  "description": "Foam CLI for publishing knowledge bases",
+  "description": "Codex Vault Node.js and stdio MCP runtime adapter",
   "license": "MIT",
-  "bin": {
-    "foam": "./out/index.js"
-  },
   "scripts": {
     "prebuild": "yarn workspace @foam/mcp build",
     "build": "node esbuild.js",
-    "foam": "node out/index.js",
-    "release": "node release.js",
-    "tag-release": "node ../../scripts/tag-release.js cli",
     "clean": "rimraf out",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "yarn build && vitest run --config vitest.e2e.config.ts",
-    "bench": "echo 'No benchmarks for @foam/cli'",
     "lint": "oxlint src"
   },
   "devDependencies": {

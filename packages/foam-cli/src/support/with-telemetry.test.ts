@@ -3,10 +3,9 @@ import { ITelemetryReporter, InMemoryTelemetryReporter } from '@foam/core';
 import { withTelemetry, shouldSkipTelemetry } from './with-telemetry';
 
 describe('shouldSkipTelemetry', () => {
-  it('skips the config command and undefined commands', () => {
-    expect(shouldSkipTelemetry('config')).toBe(true);
+  it('skips undefined commands and accepts mcp', () => {
     expect(shouldSkipTelemetry(undefined)).toBe(true);
-    expect(shouldSkipTelemetry('graph')).toBe(false);
+    expect(shouldSkipTelemetry('mcp')).toBe(false);
   });
 
   it('skips help and version invocations so a new user never hits the consent prompt on `foam --help`', () => {
@@ -27,16 +26,12 @@ describe('shouldSkipTelemetry', () => {
   });
 
   it('still runs telemetry for known commands without --help', () => {
-    expect(shouldSkipTelemetry('graph')).toBe(false);
-    expect(shouldSkipTelemetry('daily', ['--format', 'json'])).toBe(false);
     expect(shouldSkipTelemetry('mcp', [])).toBe(false);
   });
 
   it('skips when --help or -h appears anywhere in the args (the command never runs)', () => {
-    expect(shouldSkipTelemetry('daily', ['--help'])).toBe(true);
     expect(shouldSkipTelemetry('mcp', ['--allow-writes', '--help'])).toBe(true);
-    expect(shouldSkipTelemetry('graph', ['-h'])).toBe(true);
-    expect(shouldSkipTelemetry('note', ['show', '--help'])).toBe(true);
+    expect(shouldSkipTelemetry('mcp', ['-h'])).toBe(true);
   });
 });
 

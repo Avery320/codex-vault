@@ -40,16 +40,6 @@ describe('State', () => {
       expect(() => State.read()).toThrow();
     });
 
-    it('patch merges with existing state instead of replacing', () => {
-      State.patch({ installationId: 'first' });
-      State.patch({
-        updateCheck: { lastChecked: '2026-01-01T00:00:00.000Z', latestVersion: '0.41.0' },
-      });
-      const state = State.read();
-      expect(state.installationId).toBe('first');
-      expect(state.updateCheck?.latestVersion).toBe('0.41.0');
-    });
-
     it('preserves unknown keys present in the on-disk file', () => {
       // Future CLI version may write a key this binary doesn't know about.
       fs.writeFileSync(
@@ -90,12 +80,10 @@ describe('State', () => {
     it('preserves other state keys when generating a new ID', () => {
       // Forward-compat: if we ever add other state fields, generating the ID
       // must not stomp on them.
-      State.patch({
-        updateCheck: { lastChecked: 'x', latestVersion: 'y' },
-      });
+      State.patch({ consentEventFired: 'tty' });
       State.getOrCreateInstallationId();
       const state = State.read();
-      expect(state.updateCheck?.latestVersion).toBe('y');
+      expect(state.consentEventFired).toBe('tty');
       expect(state.installationId).toBeTruthy();
     });
   });

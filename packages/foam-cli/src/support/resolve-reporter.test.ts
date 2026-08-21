@@ -39,10 +39,10 @@ describe('resolveCliReporter', () => {
   });
 
   describe('skipped commands', () => {
-    it('returns Noop without prompting for the config command', async () => {
+    it('returns Noop without prompting for an unknown command', async () => {
       let promptCalled = false;
       const reporter = await resolveCliReporter({
-        command: 'config',
+        command: 'unknown',
         buildReporter: () => {
           throw new Error('should not build a real reporter');
         },
@@ -75,7 +75,7 @@ describe('resolveCliReporter', () => {
     it('fires cli.first-run on the recorder and returns it as the effective reporter when granted', async () => {
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'granted',
       });
@@ -92,7 +92,7 @@ describe('resolveCliReporter', () => {
     it('fires cli.first-run with consent=declined and returns Noop', async () => {
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'declined',
       });
@@ -110,7 +110,7 @@ describe('resolveCliReporter', () => {
     it('fires cli.first-run with consent=default_on but does not persist on the no-prompt path', async () => {
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'no-prompt',
       });
@@ -129,7 +129,7 @@ describe('resolveCliReporter', () => {
     it('persists the user choice so the next run is a subsequent-run path', async () => {
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'declined',
       });
@@ -143,7 +143,7 @@ describe('resolveCliReporter', () => {
       // explicit opt-out.
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'declined',
       });
@@ -154,7 +154,7 @@ describe('resolveCliReporter', () => {
     it('builds the reporter with an empty installationId when declined (anonymous fork strips identity anyway)', async () => {
       let receivedId: string | 'NOT_CALLED' = 'NOT_CALLED';
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: id => {
           receivedId = id;
           return new CapturingRecorder();
@@ -171,7 +171,7 @@ describe('resolveCliReporter', () => {
       const recorder = new CapturingRecorder();
       let receivedId: string | undefined;
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: id => {
           receivedId = id;
           return recorder;
@@ -186,7 +186,7 @@ describe('resolveCliReporter', () => {
     it('records consentEventFired=user when the user answered an interactive prompt', async () => {
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'granted',
       });
@@ -196,7 +196,7 @@ describe('resolveCliReporter', () => {
     it('records consentEventFired=user even when the user declined', async () => {
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'declined',
       });
@@ -217,7 +217,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'no-prompt',
       });
@@ -227,15 +227,15 @@ describe('resolveCliReporter', () => {
     });
 
     it('fires an upgrade event when the user finally answers interactively after prior no-prompt runs', async () => {
-      // The motivating story: user runs `foam mcp` headlessly first (state
-      // = 'tty'), then later runs an interactive `foam list`. We want
+      // The motivating story: Codex runs `foam mcp` headlessly first (state
+      // = 'tty'), then a user runs it directly in a terminal. We want
       // `cli.first-run { granted | declined }` to fire so the user can
       // provide an explicit answer.
       writeConsentState('tty');
 
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'granted',
       });
@@ -261,7 +261,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => 'no-prompt',
       });
@@ -280,7 +280,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => {
           throw new Error('should not prompt');
@@ -300,7 +300,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
       });
 
@@ -315,7 +315,7 @@ describe('resolveCliReporter', () => {
       const recorder = new CapturingRecorder();
       let promptCalled = false;
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => {
           promptCalled = true;
@@ -338,7 +338,7 @@ describe('resolveCliReporter', () => {
       const recorder = new CapturingRecorder();
       let promptCalled = false;
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
         promptOverride: async () => {
           promptCalled = true;
@@ -362,7 +362,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
       });
 
@@ -378,7 +378,7 @@ describe('resolveCliReporter', () => {
 
       const recorder = new CapturingRecorder();
       const reporter = await resolveCliReporter({
-        command: 'graph',
+        command: 'mcp',
         buildReporter: () => recorder,
       });
 

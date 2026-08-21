@@ -11,17 +11,6 @@ export function getTemplatesDir(rootUri: URI): URI {
 }
 
 /**
- * Gets the candidate URIs for the daily note template given a templates directory.
- * Pure function — no VS Code dependency.
- */
-export function getDailyNoteTemplateCandidateUris(templatesDir: URI): URI[] {
-  return [
-    templatesDir.joinPath('daily-note.js'),
-    templatesDir.joinPath('daily-note.md'),
-  ];
-}
-
-/**
  * Gets the candidate URIs for the new-note template given a templates directory.
  */
 export function getNewNoteTemplateCandidateUris(templatesDir: URI): URI[] {

@@ -33,8 +33,6 @@ export {
 export { TextEdit, WorkspaceTextEdit } from './services/text-edit';
 export type { WorkspaceTextEditGroup } from './services/text-edit';
 export { MarkdownLink } from './services/markdown-link';
-export { HeadingEdit } from './services/heading-edit';
-export type { HeadingEditResult } from './services/heading-edit';
 export { TagEdit } from './services/tag-edit';
 export type { TagEditResult } from './services/tag-edit';
 export { computeWikilinkRenameEdits } from './services/link-integrity';
@@ -47,11 +45,8 @@ export type {
   TemplateContext,
 } from './templates/note-creation-types';
 export { TriggerFactory } from './templates/note-creation-triggers';
-export { resolveDailyNote } from './templates/daily-note-resolver';
-export type { ResolveDailyNoteOptions } from './templates/daily-note-resolver';
 export { TemplateLoader } from './templates/template-loader';
 export {
-  getDailyNoteTemplateCandidateUris,
   getNewNoteTemplateCandidateUris,
   getTemplatesDir,
 } from './templates/template-discovery';
@@ -160,29 +155,17 @@ export type {
 } from './commands/search';
 export {
   noteShowData,
-  noteIdData,
   noteCreate,
   noteMove,
   noteDelete,
 } from './commands/note';
 export type {
   NoteDetail,
-  NoteIdResult,
   NoteCreateResult,
   NoteMoveResult,
 } from './commands/note';
-export {
-  renameNote,
-  renameTag,
-  renameSection,
-  renameBlock,
-} from './commands/rename';
-export type {
-  RenameNoteResult,
-  RenameTagResult,
-  RenameSectionResult,
-  RenameBlockResult,
-} from './commands/rename';
+export { renameTag } from './commands/rename';
+export type { RenameTagResult } from './commands/rename';
 export {
   parseFrontmatter,
   stringifyFrontmatter,
