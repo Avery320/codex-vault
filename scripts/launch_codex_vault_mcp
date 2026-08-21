@@ -6,7 +6,6 @@ cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
 config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
 registry_path="${CODEX_VAULT_REGISTRY_PATH:-${config_home}/codex-vault/vaults.json}"
 obsidian_registry_path="${CODEX_OBSIDIAN_REGISTRY_PATH:-${HOME}/Library/Application Support/obsidian/obsidian.json}"
-legacy_vault_path_file="${CODEX_VAULT_LEGACY_PATH_FILE:-${config_home}/codex-vault/vault-path}"
 
 if [[ ! -f "${cli_entry}" ]]; then
   echo "Codex Vault is not built. Run 'yarn build' from ${plugin_dir}." >&2
@@ -28,7 +27,6 @@ mcp_args=(
   mcp
   --vault-registry "${registry_path}"
   --obsidian-registry "${obsidian_registry_path}"
-  --legacy-vault-path "${legacy_vault_path_file}"
 )
 case "${allow_writes}" in
   1 | true | TRUE)

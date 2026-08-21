@@ -1,7 +1,7 @@
 import fs, { mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { type ILogger, Logger, NoOpLogger } from '@foam/core';
+import { type ILogger, Logger } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
 
 Logger.setLevel('error');
@@ -61,7 +61,6 @@ export class TestLogger implements ILogger {
   logs: string[] = [];
   warnings: string[] = [];
   errors: string[] = [];
-  private readonly noop = new NoOpLogger();
 
   debug() {}
   info(msg?: any) {
@@ -74,9 +73,7 @@ export class TestLogger implements ILogger {
     this.errors.push(String(msg));
   }
   getLevel() {
-    return this.noop.getLevel();
+    return 'off' as const;
   }
-  setLevel(level: Parameters<ILogger['setLevel']>[0]) {
-    this.noop.setLevel(level);
-  }
+  setLevel(_level: Parameters<ILogger['setLevel']>[0]) {}
 }

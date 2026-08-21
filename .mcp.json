@@ -8,7 +8,6 @@
       "env_vars": [
         "CODEX_VAULT_REGISTRY_PATH",
         "CODEX_OBSIDIAN_REGISTRY_PATH",
-        "CODEX_VAULT_LEGACY_PATH_FILE",
         "CODEX_VAULT_ALLOW_WRITES",
         "CODEX_MCP_NODE_PATH",
         "FOAM_LOG_LEVEL",

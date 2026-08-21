@@ -4,7 +4,7 @@ import {
 } from '../services/text-edit';
 import { computeWikilinkRenameEdits } from '../services/link-integrity';
 import { Resolver } from '../templates/variable-resolver';
-import { extractFoamTemplateFrontmatterMetadata } from '../utils/template-frontmatter-parser';
+import { parseFoamTemplate } from '../utils/template-frontmatter-parser';
 import { type Foam } from '../model/foam';
 import { FoamGraph } from '../model/graph';
 import { Resource } from '../model/note';
@@ -12,6 +12,7 @@ import { FoamWorkspace } from '../model/workspace';
 import { URI } from '../model/uri';
 import { IDataStore } from '../services/datastore';
 import { FoamError } from '../common/errors';
+import { mergeFrontmatter } from './frontmatter';
 import {
   getBasename,
   isAbsolute,
@@ -28,12 +29,13 @@ export interface NoteDetail {
   tags: string[];
   aliases: string[];
   properties: Record<string, unknown>;
-  links?: { outgoing: string[]; incoming: string[] };
+  links: { outgoing: string[]; incoming: string[] };
 }
 
 export interface NoteCreateResult {
   id: string;
   uri: URI;
+  content: string;
 }
 
 export interface NoteMoveResult {
@@ -49,12 +51,16 @@ export interface NoteMoveResult {
 export function noteShowData(
   workspace: FoamWorkspace,
   graph: FoamGraph,
-  resource: Resource,
-  opts: { includeLinks?: boolean }
+  resource: Resource
 ): NoteDetail {
   const id = workspace.getIdentifier(resource.uri);
-
-  const base: NoteDetail = {
+  const outgoing = graph
+    .getLinks(resource.uri)
+    .map(c => workspace.getIdentifier(c.target));
+  const incoming = graph
+    .getBacklinks(resource.uri)
+    .map(c => workspace.getIdentifier(c.source));
+  return {
     id,
     uri: resource.uri,
     title: resource.title,
@@ -62,19 +68,8 @@ export function noteShowData(
     tags: resource.tags.map(t => t.label),
     aliases: resource.aliases.map(a => a.title),
     properties: resource.properties as Record<string, unknown>,
+    links: { outgoing, incoming },
   };
-
-  if (!opts.includeLinks) {
-    return base;
-  }
-
-  const outgoing = graph
-    .getLinks(resource.uri)
-    .map(c => workspace.getIdentifier(c.target));
-  const incoming = graph
-    .getBacklinks(resource.uri)
-    .map(c => workspace.getIdentifier(c.source));
-  return { ...base, links: { outgoing, incoming } };
 }
 
 // ─── Internal helper ──────────────────────────────────────────────────────────
@@ -121,11 +116,17 @@ export async function noteCreate(
   opts: {
     title?: string;
     dir?: string;
+    uri?: URI;
+    content?: string;
     properties?: Record<string, string>;
   }
 ): Promise<NoteCreateResult> {
-  const title = opts.title ?? 'untitled';
   const rootUri = foam.workspace.roots[0];
+  const title =
+    opts.title ??
+    (opts.uri
+      ? getBasename(opts.uri.path).replace(/\.md$/i, '')
+      : 'untitled');
 
   const stem = title
     .toLowerCase()
@@ -137,19 +138,22 @@ export async function noteCreate(
   // (absolute `/etc/cron.hourly`, relative `../../etc`) is rejected so
   // CLI/MCP callers can't use note creation as an arbitrary-write
   // primitive.
-  const targetDirUri = opts.dir
-    ? isAbsolute(opts.dir)
-      ? rootUri.forPath(opts.dir)
-      : rootUri.joinPath(opts.dir)
-    : rootUri;
-  if (!isWithinPath(targetDirUri, rootUri)) {
-    throw new FoamError(
-      'invalid_input',
-      `dir is outside the workspace root: ${opts.dir}`,
-      { dir: opts.dir }
-    );
+  let targetUri = opts.uri;
+  if (!targetUri) {
+    const targetDirUri = opts.dir
+      ? isAbsolute(opts.dir)
+        ? rootUri.forPath(opts.dir)
+        : rootUri.joinPath(opts.dir)
+      : rootUri;
+    if (!isWithinPath(targetDirUri, rootUri)) {
+      throw new FoamError(
+        'invalid_input',
+        `dir is outside the workspace root: ${opts.dir}`,
+        { dir: opts.dir }
+      );
+    }
+    targetUri = targetDirUri.joinPath(`${stem}.md`);
   }
-  let targetUri = targetDirUri.joinPath(`${stem}.md`);
 
   const extraProps = opts.properties ?? {};
   const propLines = Object.entries(extraProps).map(([k, v]) => `${k}: ${v}`);
@@ -157,22 +161,29 @@ export async function noteCreate(
     propLines.length > 0 ? `---\n${propLines.join('\n')}\n---\n\n` : '';
   let content = `${frontmatter}# ${title}\n`;
 
-  const templateContent = await dataStore.read(
-    rootUri.joinPath('.foam', 'templates', 'new-note.md')
-  );
-  if (templateContent !== null) {
-    const resolver = new Resolver(new Map(), new Date(), title);
-    const [metadata, resolvedContent] =
-      extractFoamTemplateFrontmatterMetadata(
+  if (opts.uri) {
+    content = opts.content ?? `# ${title}\n`;
+  } else {
+    const templateContent = await dataStore.read(
+      rootUri.joinPath('.foam', 'templates', 'new-note.md')
+    );
+    if (templateContent !== null) {
+      const resolver = new Resolver(new Date(), title);
+      const template = parseFoamTemplate(
         await resolver.resolveText(templateContent)
       );
-    const templatePath = (
-      metadata.get('filepath') ??
-      `${await resolver.resolveFromName('FOAM_TITLE_SAFE')}.md`
-    ).replace(/[<>?*"|]/g, '-');
+      const templatePath = (
+        template.filepath ??
+        `${await resolver.resolveFromName('FOAM_TITLE_SAFE')}.md`
+      ).replace(/[<>?*"|]/g, '-');
 
-    targetUri = foam.workspace.resolveUri(templatePath);
-    content = resolvedContent;
+      targetUri = foam.workspace.resolveUri(templatePath);
+      content = template.content;
+    }
+    if (opts.content !== undefined) content = opts.content;
+  }
+  if (opts.properties && (opts.uri || opts.content !== undefined)) {
+    content = mergeFrontmatter(content, opts.properties, 'merge');
   }
 
   // Re-check containment after template processing: a markdown template's
@@ -197,7 +208,7 @@ export async function noteCreate(
   await dataStore.write(targetUri, content);
 
   const id = getBasename(targetUri.path).replace(/\.md$/, '');
-  return { id, uri: targetUri };
+  return { id, uri: targetUri, content };
 }
 
 // ─── Write: move ──────────────────────────────────────────────────────────────

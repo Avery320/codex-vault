@@ -65,13 +65,13 @@ export class VaultFullTextIndex {
   });
   private readonly cache = new Map<string, CachedResource>();
   private readonly subscriptions: Array<{ dispose(): void }>;
-  private readonly initialized: Promise<void>;
-  private pendingUpdates = Promise.resolve();
+  private pendingUpdates: Promise<void>;
 
   constructor(
     private readonly workspace: FoamWorkspace,
     private readonly dataStore: IDataStore
   ) {
+    this.pendingUpdates = this.buildInitialIndex();
     this.subscriptions = [
       workspace.onDidAdd(resource => this.enqueueUpsert(resource)),
       workspace.onDidUpdate(({ new: resource }) =>
@@ -79,11 +79,9 @@ export class VaultFullTextIndex {
       ),
       workspace.onDidDelete(resource => this.enqueueDelete(resource)),
     ];
-    this.initialized = this.buildInitialIndex();
   }
 
   async search(query: string, limit = 20): Promise<SearchMatch[]> {
-    await this.initialized;
     await this.pendingUpdates;
 
     const trimmedQuery = query.trim();
@@ -129,7 +127,6 @@ export class VaultFullTextIndex {
 
   private enqueueUpsert(resource: Resource): void {
     this.pendingUpdates = this.pendingUpdates.then(async () => {
-      await this.initialized;
       const document = await this.readDocument(resource);
       if (!document) {
         this.remove(resource);
@@ -146,10 +143,7 @@ export class VaultFullTextIndex {
   }
 
   private enqueueDelete(resource: Resource): void {
-    this.pendingUpdates = this.pendingUpdates.then(async () => {
-      await this.initialized;
-      this.remove(resource);
-    });
+    this.pendingUpdates = this.pendingUpdates.then(() => this.remove(resource));
   }
 
   private remove(resource: Resource): void {
@@ -218,8 +212,7 @@ function findMatchingLine(
   }
 
   const terms = matchedTerms
-    .map(term => term.toLocaleLowerCase())
-    .sort((left, right) => right.length - left.length);
+    .map(term => term.toLocaleLowerCase());
   const termIndex = lines.findIndex(line => {
     const lower = line.toLocaleLowerCase();
     return terms.some(term => lower.includes(term));

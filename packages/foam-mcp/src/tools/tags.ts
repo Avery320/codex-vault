@@ -3,11 +3,15 @@ import {
   FoamError,
   addTagsToFrontmatter,
   removeTagsFromFrontmatter,
+  listNotes,
   listTags,
   renameTag,
-  searchWorkspace,
 } from '@foam/core';
-import { parseUriInput, uriToOutputString } from '../serializers';
+import {
+  parseUriInput,
+  serializeNoteItem,
+  uriToOutputString,
+} from '../serializers';
 import type { ToolRegistrar } from '../server';
 import { json } from '../tool-result';
 import {
@@ -18,9 +22,8 @@ import {
 export function registerTagTools(
   register: ToolRegistrar,
   workspaceProvider: FoamMcpWorkspaceProvider,
-  opts: { readOnly?: boolean } = {}
+  readOnly: boolean
 ) {
-  const { readOnly = false } = opts;
   // ─── list_tags ─────────────────────────────────────────────────────────────
   register(
     'list_tags',
@@ -35,7 +38,6 @@ export function registerTagTools(
       const { foam } = requireWorkspace(workspaceProvider);
       const tags = listTags(foam.tags, {
         prefix: args.prefix,
-        sort: 'count',
         limit: args.limit,
       });
       return json(tags);
@@ -55,20 +57,11 @@ export function registerTagTools(
     async args => {
       const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const cleanTag = args.tag.startsWith('#') ? args.tag.slice(1) : args.tag;
-      const matches = searchWorkspace(foam.workspace, {
-        tags: [cleanTag],
+      const matches = listNotes(foam.workspace, {
+        tag: cleanTag,
         limit: args.limit,
       });
-      // Reuse NoteItem serialization shape (search match is a superset).
-      return json(
-        matches.map(m => ({
-          id: m.id,
-          uri: uriToOutputString(m.uri, rootUri),
-          title: m.title,
-          type: m.type,
-          tags: m.tags,
-        }))
-      );
+      return json(matches.map(match => serializeNoteItem(match, rootUri)));
     }
   );
 

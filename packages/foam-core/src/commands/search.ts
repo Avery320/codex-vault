@@ -1,6 +1,5 @@
 import { FoamWorkspace } from '../model/workspace';
 import { URI } from '../model/uri';
-import { isSubsequence } from '../utils/string';
 
 export interface SearchMatch {
   id: string;
@@ -11,8 +10,6 @@ export interface SearchMatch {
   properties: Record<string, unknown>;
   line: number;
   text: string;
-  context_before?: string[];
-  context_after?: string[];
 }
 
 export interface PropertyFilter {
@@ -23,21 +20,8 @@ export interface PropertyFilter {
 
 export interface SearchOptions {
   query?: string;
-  tags?: string[];
   properties?: PropertyFilter[];
-  type?: string;
   limit?: number;
-  context?: number;
-  /**
-   * How to match `query` against titles and aliases.
-   *
-   * - `'substring'` (default): the query must appear as a contiguous substring,
-   *   case-insensitive. Suitable for `foam search` and similar UX.
-   * - `'subsequence'`: the query characters must appear in the candidate in
-   *   order but not necessarily contiguous, case-insensitive. Matches VS
-   *   Code's `Ctrl+T` symbol-search behavior — `"alt"` matches `"alternative"`.
-   */
-  matchMode?: 'substring' | 'subsequence';
 }
 
 
@@ -53,18 +37,7 @@ export function searchWorkspace(
   opts: SearchOptions
 ): SearchMatch[] {
   const limit = opts.limit ?? 20;
-  const context = opts.context ?? 0;
   let resources = workspace.list();
-
-  if (opts.type) {
-    resources = resources.filter(r => r.type === opts.type);
-  }
-
-  if (opts.tags && opts.tags.length > 0) {
-    resources = resources.filter(r =>
-      opts.tags!.every(tag => r.tags.some(t => t.label === tag))
-    );
-  }
 
   if (opts.properties && opts.properties.length > 0) {
     resources = resources.filter(r =>
@@ -77,25 +50,16 @@ export function searchWorkspace(
   }
 
   if (opts.query) {
-    const q = opts.query.toLowerCase();
-    const matches = (candidate: string | undefined): boolean => {
-      if (!candidate) return false;
-      const c = candidate.toLowerCase();
-      return opts.matchMode === 'subsequence'
-        ? isSubsequence(q, c)
-        : c.includes(q);
-    };
+    const query = opts.query.toLocaleLowerCase();
+    const matches = (candidate: string): boolean =>
+      candidate.toLocaleLowerCase().includes(query);
     resources = resources.filter(
       r => matches(r.title) || r.aliases.some(a => matches(a.title))
     );
   }
 
-  resources = resources.slice(0, limit);
-
-  return resources.map(r => {
-    const titleLine = `# ${r.title}`;
-
-    const match: SearchMatch = {
+  return resources.slice(0, limit).map(r => {
+    return {
       id: workspace.getIdentifier(r.uri),
       uri: r.uri,
       title: r.title,
@@ -103,14 +67,7 @@ export function searchWorkspace(
       tags: r.tags.map(t => t.label),
       properties: r.properties as Record<string, unknown>,
       line: 1,
-      text: titleLine,
+      text: `# ${r.title}`,
     };
-
-    if (context > 0) {
-      match.context_before = [];
-      match.context_after = [];
-    }
-
-    return match;
   });
 }

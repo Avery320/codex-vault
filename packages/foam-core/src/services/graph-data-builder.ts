@@ -15,63 +15,23 @@ export interface BuiltGraphData {
   links: Array<{ source: string; target: string }>;
 }
 
-export interface GraphBuilderOptions {
-  /**
-   * Maps a resource URI to the node ID used in the graph.
-   *
-   * Serves two purposes:
-   * - **ID mapping**: transforms the URI into whatever string the graph uses as
-   *   an identifier (e.g. the file path for the VS Code webview, or a published
-   *   URL route for the static site).
-   * - **Filtering**: returning `undefined` excludes the resource (and any
-   *   connections to/from it) from the graph. Use this to restrict the graph to
-   *   a subset of resources — e.g. only published notes, only notes marked as
-   *   public, etc.
-   *
-   * Note: `resourceToId` is only called for real resources, not for placeholder
-   * URIs. Placeholder inclusion is controlled separately by `includePlaceholders`.
-   */
-  resourceToId: (uri: URI) => string | undefined;
-  /**
-   * Optional title transform applied before storing. Defaults to identity.
-   */
-  transformTitle?: (title: string, resource: Resource) => string;
-  /**
-   * Whether to include placeholder nodes — synthetic nodes created for link
-   * targets that don't correspond to any real resource (i.e. broken links).
-   *
-   * Placeholders are implicitly included whenever their source resource is
-   * included: they have no independent existence and only matter because
-   * something links to them. Setting this to `false` suppresses them even
-   * when their source is included. Defaults to `false`.
-   */
-  includePlaceholders?: boolean;
-}
-
 export function buildGraphData(
   resources: Resource[],
   connections: Connection[],
-  options: GraphBuilderOptions
+  resourceToId: (uri: URI) => string
 ): BuiltGraphData {
-  const { resourceToId, transformTitle, includePlaceholders = false } = options;
   const nodeInfo: Record<string, GraphNodeData> = {};
   const links = new Map<string, { source: string; target: string }>();
 
   for (const resource of resources) {
     const id = resourceToId(resource.uri);
-    if (id === undefined) {
-      continue;
-    }
-    const rawTitle =
-      resource.type === 'note' ? resource.title : resource.uri.getBasename();
-    const title = transformTitle ? transformTitle(rawTitle, resource) : rawTitle;
     nodeInfo[id] = {
       id,
-      type:
+      type: resource.type,
+      title:
         resource.type === 'note'
-          ? resource.properties.type ?? 'note'
-          : resource.type,
-      title,
+          ? resource.title
+          : resource.uri.getBasename(),
       properties: resource.properties ?? {},
       tags: resource.tags.map(tag => ({ label: tag.label })),
     };
@@ -79,21 +39,10 @@ export function buildGraphData(
 
   for (const connection of connections) {
     const sourceId = resourceToId(connection.source);
-    if (sourceId === undefined) {
-      continue;
-    }
-
     const isPlaceholder = connection.target.isPlaceholder();
-
-    if (isPlaceholder && !includePlaceholders) {
-      continue;
-    }
-
-    let targetId = resourceToId(connection.target);
+    const targetId = resourceToId(connection.target);
 
     if (isPlaceholder) {
-      // Use resourceToId result if available, otherwise fall back to raw path.
-      targetId = targetId ?? connection.target.path;
       if (!(targetId in nodeInfo)) {
         nodeInfo[targetId] = {
           id: targetId,
@@ -103,8 +52,6 @@ export function buildGraphData(
           tags: [],
         };
       }
-    } else if (targetId === undefined) {
-      continue;
     }
 
     links.set(`${sourceId}->${targetId}`, { source: sourceId, target: targetId });

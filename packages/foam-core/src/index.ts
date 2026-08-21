@@ -18,7 +18,7 @@ export {
 export { buildGraphData } from './services/graph-data-builder';
 
 // Logging and lifecycle
-export { Logger, BaseLogger, NoOpLogger } from './utils/log';
+export { Logger, BaseLogger } from './utils/log';
 export type { ILogger, LogLevel, LogLevelThreshold } from './utils/log';
 export type { IDisposable } from './common/lifecycle';
 export { Emitter } from './common/event';

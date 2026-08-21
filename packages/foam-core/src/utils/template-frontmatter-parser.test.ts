@@ -1,236 +1,55 @@
-import {
-  extractFoamTemplateFrontmatterMetadata,
-  removeFoamMetadata,
-} from './template-frontmatter-parser';
+import { parseFoamTemplate } from './template-frontmatter-parser';
 
-describe('extractFoamTemplateFrontmatterMetadata', () => {
-  test('Returns an empty object if there is not frontmatter', () => {
-    const input = `# $FOAM_TITLE`;
-    const expectedMetadata = new Map<string, string>();
-    const expected = [expectedMetadata, input];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
+describe('parseFoamTemplate', () => {
+  it('leaves regular Markdown unchanged', () => {
+    const content = '---\ntype: note\n---\n\n# $FOAM_TITLE\n';
+    expect(parseFoamTemplate(content)).toEqual({ content });
   });
 
-  test('Returns an empty object if `foam_template` is not used', () => {
-    const input = `---
-foo: bar
----
-
-# $FOAM_TITLE
-`;
-
-    const expectedMetadata = new Map<string, string>();
-    const expected = [expectedMetadata, input];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
-  });
-
-  test('Returns an empty object if foam_template is not a YAML mapping', () => {
-    const input = `---json
-{
-  "foo": "bar",
-  "foam_template": 4
-}
----
-
-# $FOAM_TITLE
-`;
-
-    const expectedMetadata = new Map<string, string>();
-    const expected = [expectedMetadata, input];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
-  });
-
-  test('Returns an empty object if frontmatter is not YAML', () => {
-    const input = `---json
-{
-  "foo": "bar",
-  "foam_template": {
-    "filepath": "journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md"
-  }
-}
----
-
-# $FOAM_TITLE
-`;
-
-    const expectedMetadata = new Map<string, string>();
-    const expected = [expectedMetadata, input];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
-  });
-
-  test('Returns the `foam_template` metadata when it is used in its own frontmatter block', () => {
-    const input = `---
+  it('extracts filepath and removes a template-only frontmatter block', () => {
+    expect(
+      parseFoamTemplate(`---
 foam_template:
-  name: My Note Template
-  description: This is my note template
-  filepath: journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md
+  name: New note
+  filepath: notes/$FOAM_TITLE.md
 ---
 
 # $FOAM_TITLE
-`;
-
-    const output = `
-# $FOAM_TITLE
-`;
-
-    const expectedMetadata = new Map<string, string>();
-    expectedMetadata.set('name', 'My Note Template');
-    expectedMetadata.set('description', 'This is my note template');
-    expectedMetadata.set(
-      'filepath',
-      'journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md'
-    );
-    const expected = [expectedMetadata, output];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
+`)
+    ).toEqual({
+      filepath: 'notes/$FOAM_TITLE.md',
+      content: '\n# $FOAM_TITLE\n',
+    });
   });
 
-  test('Returns the `foam_template` metadata when it is used in its own frontmatter block (and there is another frontmatter block after)', () => {
-    const input = `---
+  it('preserves a second frontmatter block', () => {
+    expect(
+      parseFoamTemplate(`---
 foam_template:
-  filepath: journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md
-  description: This is my note template
-  name: My Note Template
+  filepath: notes/$FOAM_TITLE.md
 ---
 
 ---
-foo: bar
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
+type: note
 ---
 
 # $FOAM_TITLE
-`;
-
-    const output = `---
-foo: bar
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
+`).content
+    ).toBe(`---
+type: note
 ---
 
 # $FOAM_TITLE
-`;
+`);
+  });
 
-    const expectedMetadata = new Map<string, string>();
-    expectedMetadata.set('name', 'My Note Template');
-    expectedMetadata.set('description', 'This is my note template');
-    expectedMetadata.set(
-      'filepath',
-      'journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md'
+  it('removes template metadata from shared CRLF frontmatter', () => {
+    const parsed = parseFoamTemplate(
+      '---\r\ntype: daily-note\r\nfoam_template:\r\n  filepath: daily/note.md\r\n  name: Daily Note\r\n  description: Daily template\r\n---\r\n\r\n# Content\r\n'
     );
-    const expected = [expectedMetadata, output];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
-  });
-
-  test('Returns the `foam_template` metadata when it is used in a shared frontmatter block', () => {
-    const input = `---
-foo: bar
-foam_template:
-  name: My Note Template
-  filepath: journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md
-  description: This is my note template
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
----
-
-# $FOAM_TITLE`;
-
-    const output = `---
-foo: bar
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
----
-
-# $FOAM_TITLE`;
-
-    const expectedMetadata = new Map<string, string>();
-    expectedMetadata.set('name', 'My Note Template');
-    expectedMetadata.set('description', 'This is my note template');
-    expectedMetadata.set(
-      'filepath',
-      'journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md'
-    );
-    const expected = [expectedMetadata, output];
-    const result = extractFoamTemplateFrontmatterMetadata(input);
-    expect(result).toEqual(expected);
-  });
-});
-
-describe('removeFoamMetadata', () => {
-  test('Removes Foam specific frontmatter without messing up non-Foam frontmatter', () => {
-    const input = `---
-foo: bar
-foam_template: &foam_template # A YAML comment
-  description: This is my note template
-  filepath: journal/$CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE_$FOAM_TITLE.md # A YAML comment
-  name: My Note Template
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
----
-
-# $FOAM_TITLE`;
-
-    const expected = `---
-foo: bar
-# A YAML comment
-metadata: &info
-  title: The Gentlemen
-  year: 2019
-more_metadata: *info
----
-
-# $FOAM_TITLE`;
-
-    const result = removeFoamMetadata(input);
-    expect(result).toEqual(expected);
-  });
-
-  test('Removes Foam specific frontmatter when file uses CRLF line endings', () => {
-    const input =
-      '---\r\nfoo: bar\r\nfoam_template:\r\n  description: This is my note template\r\n  filepath: journal/note.md\r\n  name: My Note Template\r\n---\r\n\r\n# $FOAM_TITLE';
-
-    const expected = '---\r\nfoo: bar\r\n---\r\n\r\n# $FOAM_TITLE';
-
-    const result = removeFoamMetadata(input);
-    expect(result).toEqual(expected);
-  });
-});
-
-describe('extractFoamTemplateFrontmatterMetadata with CRLF', () => {
-  test('Removes foam_template block from mixed frontmatter with CRLF line endings', () => {
-    const input =
-      '---\r\ntype: daily-note\r\nfoam_template:\r\n  filepath: /daily-notes/note.md\r\n  name: Daily Note\r\n  description: Custom daily note template\r\n---\r\n\r\n# Content\r\n';
-
-    const expectedOutput =
-      '---\r\ntype: daily-note\r\n---\r\n\r\n# Content\r\n';
-
-    const expectedMetadata = new Map<string, string>();
-    expectedMetadata.set('filepath', '/daily-notes/note.md');
-    expectedMetadata.set('name', 'Daily Note');
-    expectedMetadata.set('description', 'Custom daily note template');
-
-    const [metadata, output] = extractFoamTemplateFrontmatterMetadata(input);
-    expect(metadata).toEqual(expectedMetadata);
-    expect(output).toEqual(expectedOutput);
+    expect(parsed).toEqual({
+      filepath: 'daily/note.md',
+      content: '---\r\ntype: daily-note\r\n---\r\n\r\n# Content\r\n',
+    });
   });
 });

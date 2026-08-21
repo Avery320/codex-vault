@@ -2,7 +2,6 @@ import micromatch from 'micromatch';
 import { Logger } from '../src/utils/log';
 import { IDataStore, IMatcher } from '../src/services/datastore';
 import { URI } from '../src/model/uri';
-import { asAbsolutePaths } from '../src/utils/path';
 import fs from 'fs';
 import path from 'path';
 
@@ -20,6 +19,20 @@ function getFilesFromDir(files: string[], directory: string) {
       files.push(absolute);
     }
   });
+}
+
+function asAbsolutePaths(glob: string, folders: string[]): string[] {
+  if (path.posix.isAbsolute(glob)) return [glob];
+  const [first, ...rest] = glob.split('/');
+  const matching =
+    folders.length > 1
+      ? folders
+          .filter(folder => path.posix.basename(folder) === first)
+          .map(folder => path.posix.join(folder, ...rest))
+      : [];
+  return matching.length > 0
+    ? matching
+    : folders.map(folder => path.posix.join(folder, glob));
 }
 
 export class FileDataStore implements IDataStore {

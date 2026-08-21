@@ -3,7 +3,7 @@ import { URI } from '../model/uri';
 import { IDisposable } from '../common/lifecycle';
 import { ResourceProvider } from '../model/provider';
 
-export const imageExtensions = [
+const imageExtensions = [
   '.png',
   '.jpg',
   '.jpeg',

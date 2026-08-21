@@ -40,8 +40,6 @@ Options:
                       Use the persistent multi-vault registry instead of one workspace
   --obsidian-registry <file>
                       Import known Obsidian vaults (read-only)
-  --legacy-vault-path <file>
-                      Migrate the previous single-path Codex Vault setting
   --allow-writes      Register write tools. Off by default.
   --help              Show this help
 
@@ -66,7 +64,6 @@ export interface McpArgs {
   workspaceDir?: string;
   vaultRegistryPath?: string;
   obsidianRegistryPath?: string;
-  legacyVaultPathFile?: string;
   allowWrites: boolean;
 }
 
@@ -77,7 +74,6 @@ export function parseMcpArgs(argv: string[]): McpArgs {
     workspaceDir: vaultRegistryPath ? undefined : resolveWorkspaceDir(args),
     vaultRegistryPath,
     obsidianRegistryPath: getString(args, 'obsidian-registry'),
-    legacyVaultPathFile: getString(args, 'legacy-vault-path'),
     allowWrites: getFlag(args, 'allow-writes'),
   };
 }
@@ -106,9 +102,6 @@ export async function runMcpCommand(
       registryPath: path.resolve(args.vaultRegistryPath),
       obsidianRegistryPath: args.obsidianRegistryPath
         ? path.resolve(args.obsidianRegistryPath)
-        : undefined,
-      legacyVaultPathFile: args.legacyVaultPathFile
-        ? path.resolve(args.legacyVaultPathFile)
         : undefined,
     });
     const manager = new NodeVaultWorkspaceManager(registry);

@@ -17,6 +17,7 @@ export interface FoamMcpWorkspaceContext {
   searchIndex: VaultFullTextIndex;
   changeFeed: VaultChangeFeed;
   vault: Omit<VaultSummary, 'active'>;
+  dispose(): void;
 }
 
 export interface FoamMcpWorkspaceProvider {
@@ -65,6 +66,11 @@ export function createWorkspaceContext(options: {
       path: options.vault?.path ?? path,
       last_opened_at: options.vault?.last_opened_at ?? Date.now(),
     },
+    dispose: () => {
+      changeFeed.dispose();
+      searchIndex.dispose();
+      options.foam.dispose();
+    },
   };
 }
 
@@ -76,8 +82,7 @@ export class StaticWorkspaceProvider implements FoamMcpWorkspaceProvider {
   }
 
   async close(): Promise<void> {
-    this.context.changeFeed.dispose();
-    this.context.searchIndex.dispose();
+    this.context.dispose();
   }
 }
 

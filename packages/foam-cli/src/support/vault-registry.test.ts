@@ -4,7 +4,7 @@ import { createTmpDir } from '../test/test-utils';
 import { VaultRegistry } from './vault-registry';
 
 describe('VaultRegistry', () => {
-  it('imports Obsidian vaults and migrates the legacy path without duplicates', async () => {
+  it('imports Obsidian vaults without duplicates', async () => {
     const { rootDir, cleanup } = createTmpDir({}, 'codex-vault-registry-');
     try {
       const vaultA = path.join(rootDir, 'Alpha');
@@ -12,7 +12,6 @@ describe('VaultRegistry', () => {
       await fs.mkdir(path.join(vaultA, '.obsidian'), { recursive: true });
       await fs.mkdir(path.join(vaultB, '.obsidian'), { recursive: true });
       const obsidianRegistryPath = path.join(rootDir, 'obsidian.json');
-      const legacyVaultPathFile = path.join(rootDir, 'vault-path');
       await fs.writeFile(
         obsidianRegistryPath,
         JSON.stringify({
@@ -22,12 +21,9 @@ describe('VaultRegistry', () => {
           },
         })
       );
-      await fs.writeFile(legacyVaultPathFile, `${vaultA}\n`);
-
       const registry = new VaultRegistry({
         registryPath: path.join(rootDir, 'codex-vault', 'vaults.json'),
         obsidianRegistryPath,
-        legacyVaultPathFile,
         now: () => 100,
         createId: () => 'generated',
       });

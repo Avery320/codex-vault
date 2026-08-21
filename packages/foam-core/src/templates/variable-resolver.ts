@@ -36,88 +36,26 @@ const knownFoamVariables = new Set([
   'FOAM_DATE_SECONDS_UNIX',
 ]);
 
-/**
- * Interface for resolving environment-specific variables.
- * Implement this for each host environment (VS Code, CLI, etc.).
- */
-export interface VariableProvider {
-  /** Obtain a note title interactively or from environment context. */
-  resolveTitle(): Promise<string>;
-  /** Return selected text in the current editor, or '' if not applicable. */
-  resolveSelectedText(): string;
-  /** Return the current working directory path. */
-  resolveCurrentDir(): string;
-}
-
 export class Resolver implements VariableResolver {
-  private promises = new Map<string, Promise<string | undefined>>();
+  private readonly promises = new Map<string, Promise<string | undefined>>();
 
-  /**
-   * @param givenValues pre-supplied variable values (e.g. FOAM_TITLE for daily notes)
-   * @param foamDate date used for FOAM_DATE_* variables
-   * @param foamTitle convenience shorthand for givenValues.set('FOAM_TITLE', ...)
-   * @param locale locale string for date formatting, defaults to 'default'
-   * @param variableProvider environment-specific provider for interactive variables
-   */
   constructor(
-    private givenValues: Map<string, string>,
-    public foamDate: Date,
-    foamTitle?: string,
-    private locale: string = 'default',
-    private variableProvider?: VariableProvider
-  ) {
-    if (foamTitle) {
-      this.givenValues.set('FOAM_TITLE', foamTitle);
-    }
-  }
-
-  define(name: string, value: string) {
-    this.givenValues.set(name, value);
-  }
-
-  getVariables(): Record<string, string> {
-    return Object.fromEntries(this.givenValues);
-  }
+    private readonly foamDate: Date,
+    private readonly foamTitle?: string,
+    private readonly locale: string = 'default'
+  ) {}
 
   async resolveText(text: string): Promise<string> {
-    let snippet = new SnippetParser().parse(text, false, false);
-    let foamVariablesInTemplate = new Set(
+    const snippet = new SnippetParser().parse(text, false, false);
+    const foamVariablesInTemplate = new Set(
       snippet
         .variables()
         .map(v => v.name)
         .filter(name => knownFoamVariables.has(name))
     );
 
-    // Append FOAM_SELECTED_TEXT to the template if it was provided as a given
-    // value but not already present in the template.
-    if (
-      this.givenValues.has('FOAM_SELECTED_TEXT') &&
-      !foamVariablesInTemplate.has('FOAM_SELECTED_TEXT')
-    ) {
-      const token = '$FOAM_SELECTED_TEXT';
-      text = text.endsWith('\n') ? `${text}${token}\n` : `${text}\n${token}`;
-      snippet = new SnippetParser().parse(text, false, false);
-      foamVariablesInTemplate = new Set(
-        snippet
-          .variables()
-          .map(v => v.name)
-          .filter(name => knownFoamVariables.has(name))
-      );
-    }
-
     await snippet.resolveVariables(this, foamVariablesInTemplate);
     return snippet.snippetTextWithVariablesSubstituted(foamVariablesInTemplate);
-  }
-
-  async resolveAll(variables: Variable[]): Promise<Map<string, string>> {
-    await Promise.all(variables.map(variable => variable.resolve(this)));
-    const resolvedValues = new Map<string, string>();
-    variables.forEach(variable => {
-      if (variable.children.length > 0) {
-        resolvedValues.set(variable.name, variable.toString());
-      }
-    });
-    return resolvedValues;
   }
 
   async resolveFromName(name: string): Promise<string> {
@@ -128,15 +66,11 @@ export class Resolver implements VariableResolver {
 
   async resolve(variable: Variable): Promise<string | undefined> {
     const name = variable.name;
-    if (this.givenValues.has(name)) {
-      this.promises.set(name, Promise.resolve(this.givenValues.get(name)));
-    } else if (!this.promises.has(name)) {
+    if (!this.promises.has(name)) {
       let value: Promise<string | undefined> = Promise.resolve(undefined);
       switch (name) {
         case 'FOAM_TITLE':
-          value = this.variableProvider
-            ? this.variableProvider.resolveTitle()
-            : Promise.resolve(undefined);
+          value = Promise.resolve(this.foamTitle);
           break;
         case 'FOAM_TITLE_SAFE':
           value = resolveFoamTitleSafe(this);
@@ -145,18 +79,10 @@ export class Resolver implements VariableResolver {
           value = toSlug(await this.resolve(new Variable('FOAM_TITLE')));
           break;
         case 'FOAM_SELECTED_TEXT':
-          value = Promise.resolve(
-            this.variableProvider
-              ? this.variableProvider.resolveSelectedText()
-              : ''
-          );
+          value = Promise.resolve('');
           break;
         case 'FOAM_CURRENT_DIR':
-          value = Promise.resolve(
-            this.variableProvider
-              ? this.variableProvider.resolveCurrentDir()
-              : undefined
-          );
+          value = Promise.resolve(undefined);
           break;
         case 'FOAM_DATE_FORMAT': {
           const fmt =
@@ -258,7 +184,7 @@ export class Resolver implements VariableResolver {
 
 const UNALLOWED_CHARS = '/\\#%&{}<>?*$!\'":@+`|=';
 
-export const resolveFoamTitleSafe = async (resolver: Resolver) => {
+const resolveFoamTitleSafe = async (resolver: Resolver) => {
   let safeTitle = await resolver.resolveFromName('FOAM_TITLE');
   UNALLOWED_CHARS.split('').forEach(char => {
     safeTitle = safeTitle.split(char).join('-');

@@ -117,8 +117,9 @@ export const bootstrap = async (
     },
     dispose: () => {
       subscriptions.forEach(s => s.dispose());
-      workspace.dispose();
       graph.dispose();
+      tags.dispose();
+      workspace.dispose();
     },
   };
 

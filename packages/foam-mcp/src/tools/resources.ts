@@ -85,9 +85,8 @@ function buildNextContent(
 export function registerResourceTools(
   register: ToolRegistrar,
   workspaceProvider: FoamMcpWorkspaceProvider,
-  opts: { readOnly?: boolean } = {}
+  readOnly: boolean
 ) {
-  const { readOnly = false } = opts;
   // ─── list_resources ────────────────────────────────────────────────────────
   register(
     'list_resources',
@@ -104,7 +103,7 @@ export function registerResourceTools(
       const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const items = listNotes(foam.workspace, {
         type: args.type,
-        tags: args.tag ? [args.tag] : undefined,
+        tag: args.tag || undefined,
         limit: args.limit,
       });
       return json(items.map(i => serializeNoteItem(i, rootUri)));
@@ -134,9 +133,7 @@ export function registerResourceTools(
         ? { uri: parseUriInput(args.uri, rootUri) }
         : { identifier: args.identifier! };
       const resource = resolveNote(foam.workspace, ref);
-      const detail = noteShowData(foam.workspace, foam.graph, resource, {
-        includeLinks: true,
-      });
+      const detail = noteShowData(foam.workspace, foam.graph, resource);
       return json(serializeNoteDetail(detail, rootUri));
     }
   );
@@ -221,30 +218,12 @@ export function registerResourceTools(
     },
     async args => {
       const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      let uri: URI | undefined;
       if (args.path) {
-        const uri = parseUriInput(args.path, rootUri);
+        uri = parseUriInput(args.path, rootUri);
         if (!uri.path.toLocaleLowerCase().endsWith('.md')) {
           throw new FoamError('invalid_input', '`path` must end with `.md`.');
         }
-        if ((await dataStore.read(uri)) !== null) {
-          throw new FoamError('resource_exists', `Resource already exists.`, {
-            uri: args.path,
-          });
-        }
-        const filename = uri.path.split('/').at(-1) ?? 'untitled.md';
-        const title = args.title ?? filename.replace(/\.md$/i, '');
-        const base = args.content ?? `# ${title}\n`;
-        const content = args.properties
-          ? mergeFrontmatter(base, args.properties, 'merge')
-          : base;
-        await dataStore.write(uri, content);
-        await foam.workspace.fetchAndSet(uri);
-        return json({
-          uri: uriToOutputString(uri, rootUri),
-          id: foam.workspace.getIdentifier(uri),
-          title,
-          content_sha256: sha256(content),
-        });
       }
 
       const result = await noteCreate(
@@ -253,23 +232,18 @@ export function registerResourceTools(
         {
           title: args.title,
           dir: args.dir,
+          uri,
+          content: args.content,
           properties: args.properties,
         }
       );
-      if (args.content !== undefined) {
-        const content = args.properties
-          ? mergeFrontmatter(args.content, args.properties, 'merge')
-          : args.content;
-        await dataStore.write(result.uri, content);
-        await foam.workspace.fetchAndSet(result.uri);
-      }
+      await foam.workspace.fetchAndSet(result.uri);
       const resource = foam.workspace.find(result.uri);
-      const content = await dataStore.read(result.uri);
       return json({
         uri: uriToOutputString(result.uri, rootUri),
         id: result.id,
         title: resource?.title ?? args.title ?? '',
-        content_sha256: content === null ? undefined : sha256(content),
+        content_sha256: sha256(result.content),
       });
     }
   );

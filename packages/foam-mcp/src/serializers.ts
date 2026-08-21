@@ -116,8 +116,6 @@ export interface JsonSearchMatch {
   properties: Record<string, unknown>;
   line: number;
   text: string;
-  context_before?: string[];
-  context_after?: string[];
 }
 
 export interface JsonTraversalResult {

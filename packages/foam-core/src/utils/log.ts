@@ -57,12 +57,6 @@ export class ConsoleLogger extends BaseLogger {
   }
 }
 
-export class NoOpLogger extends BaseLogger {
-  log(_l: LogLevel, _m?: string, ..._p: any[]): void {
-    // do nothing
-  }
-}
-
 export class Logger {
   static debug(message?: any, ...params: any[]): void {
     Logger.defaultLogger.debug(message, ...params);

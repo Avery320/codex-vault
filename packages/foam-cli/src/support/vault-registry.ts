@@ -26,7 +26,6 @@ interface ObsidianRegistry {
 export interface VaultRegistryOptions {
   registryPath: string;
   obsidianRegistryPath?: string;
-  legacyVaultPathFile?: string;
   now?: () => number;
   createId?: () => string;
 }
@@ -57,7 +56,6 @@ export class VaultRegistry {
 
     const imported = await this.importObsidianVaults();
     changed = imported.changed || changed;
-    changed = (await this.importLegacyVault()) || changed;
 
     const knownIds = new Set(this.data.vaults.map(vault => vault.id));
     for (const [projectPath, vaultId] of Object.entries(
@@ -212,24 +210,6 @@ export class VaultRegistry {
       }
     }
     return { activeId, changed };
-  }
-
-  private async importLegacyVault(): Promise<boolean> {
-    const legacyPath = this.options.legacyVaultPathFile;
-    if (!legacyPath) return false;
-    let value: string;
-    try {
-      value = (await fs.readFile(legacyPath, 'utf8')).split(/\r?\n/, 1)[0].trim();
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-      throw error;
-    }
-    if (!value) return false;
-    try {
-      return (await this.addDirectory({ vaultPath: value })).changed;
-    } catch {
-      return false;
-    }
   }
 
   private async addDirectory(options: {

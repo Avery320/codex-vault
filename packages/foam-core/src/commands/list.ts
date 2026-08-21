@@ -34,7 +34,7 @@ export interface PlaceholderItem {
 
 export function listNotes(
   workspace: FoamWorkspace,
-  opts: { type?: string; tags?: string[]; limit?: number }
+  opts: { type?: string; tag?: string; limit?: number }
 ): NoteItem[] {
   let resources = workspace.list();
 
@@ -42,9 +42,9 @@ export function listNotes(
     resources = resources.filter(r => r.type === opts.type);
   }
 
-  if (opts.tags && opts.tags.length > 0) {
+  if (opts.tag !== undefined) {
     resources = resources.filter(r =>
-      opts.tags!.every(tag => r.tags.some(t => t.label === tag))
+      r.tags.some(tag => tag.label === opts.tag)
     );
   }
 
@@ -63,7 +63,7 @@ export function listNotes(
 
 export function listTags(
   foamTags: FoamTags,
-  opts: { prefix?: string; sort?: 'count' | 'name'; limit?: number }
+  opts: { prefix?: string; limit?: number }
 ): TagItem[] {
   let entries = Array.from(foamTags.tags.entries()).map(([tag, locations]) => ({
     tag,
@@ -74,9 +74,7 @@ export function listTags(
     entries = entries.filter(e => e.tag.startsWith(opts.prefix!));
   }
 
-  entries.sort((a, b) =>
-    opts.sort === 'count' ? b.count - a.count : a.tag.localeCompare(b.tag)
-  );
+  entries.sort((a, b) => b.count - a.count);
 
   if (opts.limit !== undefined) {
     entries = entries.slice(0, opts.limit);
@@ -91,13 +89,6 @@ export interface OrphansOptions {
    * — only `note`-typed resources are eligible to be orphans.
    */
   excludeTypes?: string[];
-  /**
-   * When true, outgoing links whose target type is one of `excludeTypes`
-   * (e.g. attachments and images) don't count toward "has outgoing links".
-   * A note that only links to images is treated as an orphan. Defaults to
-   * `false`.
-   */
-  ignoreOutgoingExcludedTypes?: boolean;
 }
 
 const DEFAULT_EXCLUDE_TYPES = ['attachment', 'image'];
@@ -108,19 +99,15 @@ export function listOrphans(
   opts: OrphansOptions = {}
 ): NoteSummary[] {
   const excludeTypes = opts.excludeTypes ?? DEFAULT_EXCLUDE_TYPES;
-  const ignoreOutgoingExcluded = opts.ignoreOutgoingExcludedTypes ?? false;
 
   return workspace
     .list()
     .filter(r => {
       if (excludeTypes.includes(r.type)) return false;
-      const outgoing = ignoreOutgoingExcluded
-        ? graph
-            .getLinks(r.uri)
-            .filter(c => !excludeTypes.includes(workspace.find(c.target)?.type))
-        : graph.getLinks(r.uri);
-      const incoming = graph.getBacklinks(r.uri);
-      return outgoing.length === 0 && incoming.length === 0;
+      return (
+        graph.getLinks(r.uri).length === 0 &&
+        graph.getBacklinks(r.uri).length === 0
+      );
     })
     .map(r => ({
       id: workspace.getIdentifier(r.uri),
@@ -135,18 +122,12 @@ export function listDeadends(
   opts: OrphansOptions = {}
 ): NoteSummary[] {
   const excludeTypes = opts.excludeTypes ?? DEFAULT_EXCLUDE_TYPES;
-  const ignoreOutgoingExcluded = opts.ignoreOutgoingExcludedTypes ?? false;
 
   return workspace
     .list()
     .filter(r => {
       if (excludeTypes.includes(r.type)) return false;
-      const outgoing = ignoreOutgoingExcluded
-        ? graph
-            .getLinks(r.uri)
-            .filter(c => !excludeTypes.includes(workspace.find(c.target)?.type))
-        : graph.getLinks(r.uri);
-      return outgoing.length === 0;
+      return graph.getLinks(r.uri).length === 0;
     })
     .map(r => ({
       id: workspace.getIdentifier(r.uri),

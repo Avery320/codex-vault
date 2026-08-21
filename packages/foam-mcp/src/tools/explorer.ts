@@ -158,15 +158,11 @@ async function buildExplorerState(
   }
 
   const resources = foam.workspace.list();
-  const graph = buildGraphData(resources, foam.graph.getAllConnections(), {
-    resourceToId: uri => uriToOutputString(uri, rootUri),
-    includePlaceholders: true,
-  });
-  for (const resource of resources) {
-    if (resource.type !== 'note') continue;
-    const id = uriToOutputString(resource.uri, rootUri);
-    if (graph.nodeInfo[id]) graph.nodeInfo[id].type = 'note';
-  }
+  const graph = buildGraphData(
+    resources,
+    foam.graph.getAllConnections(),
+    uri => uriToOutputString(uri, rootUri)
+  );
   const files = resources
     .filter(resource => resource.type === 'note')
     .map(resource => ({

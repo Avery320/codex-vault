@@ -1,5 +1,5 @@
 import { isSome } from './core';
-export const HASHTAG_REGEX =
+const HASHTAG_REGEX =
   /(?<=^|\s)#([0-9]*[\p{L}\p{Extended_Pictographic}/_-](?:[\p{L}\p{Extended_Pictographic}\p{N}/_-]|\uFE0F|\p{Emoji_Modifier})*)/gmu;
 export const WORD_REGEX =
   /(?<=^|\s)([0-9]*[\p{L}\p{Extended_Pictographic}/_-](?:[\p{L}\p{Extended_Pictographic}\p{N}/_-]|\uFE0F|\p{Emoji_Modifier})*)/gmu;

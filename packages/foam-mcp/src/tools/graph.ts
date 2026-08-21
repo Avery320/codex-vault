@@ -4,6 +4,7 @@ import {
   listOrphans,
   listDeadends,
   listPlaceholders,
+  listTags,
   resolveNote,
   traverseGraph,
 } from '@foam/core';
@@ -27,9 +28,8 @@ const MAX_TRAVERSAL_DEPTH = 5;
 export function registerGraphTools(
   register: ToolRegistrar,
   workspaceProvider: FoamMcpWorkspaceProvider,
-  opts: { readOnly?: boolean } = {}
+  readOnly: boolean
 ) {
-  const { readOnly = false } = opts;
   // ─── get_connections ───────────────────────────────────────────────────────
   register(
     'get_connections',
@@ -149,11 +149,13 @@ export function registerGraphTools(
     async () => {
       const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const allResources = foam.workspace.list();
+      const resourcesByPath = new Map(
+        allResources.map(resource => [resource.uri.path, resource])
+      );
       const noteCount = allResources.filter(r => r.type === 'note').length;
       const attachmentCount = allResources.length - noteCount;
       const allConnections = foam.graph.getAllConnections();
       const orphans = listOrphans(foam.workspace, foam.graph);
-      const placeholders = listPlaceholders(foam.workspace, foam.graph);
 
       const linkCounts = new Map<string, number>();
       for (const c of allConnections) {
@@ -163,9 +165,7 @@ export function registerGraphTools(
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([uriPath, count]) => {
-          const resource = foam.workspace
-            .list()
-            .find(r => r.uri.path === uriPath);
+          const resource = resourcesByPath.get(uriPath);
           return resource
             ? {
                 uri: uriToOutputString(resource.uri, rootUri),
@@ -176,17 +176,14 @@ export function registerGraphTools(
         })
         .filter(x => x !== null);
 
-      const mostUsedTags = Array.from(foam.tags.tags.entries())
-        .map(([tag, locations]) => ({ tag, count: locations.length }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
+      const mostUsedTags = listTags(foam.tags, { limit: 10 });
 
       return json({
         note_count: noteCount,
         attachment_count: attachmentCount,
         connection_count: allConnections.length,
         orphan_count: orphans.length,
-        placeholder_count: placeholders.length,
+        placeholder_count: foam.graph.placeholders.size,
         tag_count: foam.tags.tags.size,
         most_connected: mostConnected,
         most_used_tags: mostUsedTags,

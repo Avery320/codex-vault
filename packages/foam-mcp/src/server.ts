@@ -70,15 +70,15 @@ export class FoamMcpServer {
 
     // Read-only tools always registered.
     registerStructureTools(register, opts.workspaceProvider);
-    registerGraphTools(register, opts.workspaceProvider, { readOnly });
+    registerGraphTools(register, opts.workspaceProvider, readOnly);
     registerExplorerTool(register, opts.workspaceProvider, opts.vaultManager);
     registerSearchTools(register, opts.workspaceProvider);
 
     // Modules that mix read and write tools accept a `readOnly` flag and
     // skip registering the writers entirely. Clients that list tools see
     // the actual capability surface.
-    registerResourceTools(register, opts.workspaceProvider, { readOnly });
-    registerTagTools(register, opts.workspaceProvider, { readOnly });
+    registerResourceTools(register, opts.workspaceProvider, readOnly);
+    registerTagTools(register, opts.workspaceProvider, readOnly);
     if (opts.vaultManager) {
       registerVaultTools(register, opts.vaultManager);
     }
