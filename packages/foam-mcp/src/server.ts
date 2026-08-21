@@ -17,17 +17,14 @@ import { registerStructureTools } from './tools/structure';
 import { registerVaultTools } from './tools/vaults';
 import { registerExplorerTool } from './tools/explorer';
 import { registerVaultExplorerResource } from './ui-resource';
-import {
-  FoamMcpWorkspaceProvider,
-  VaultManager,
-} from './workspace-context';
+import { FoamMcpWorkspaceProvider, VaultManager } from './workspace-context';
 
 /**
  * Pre-bound `registerTool` helper handed to tool modules. Has the same
  * signature as {@link McpServer.registerTool} (so zod-shape inference on
  * handler args still works at the call site), but every handler is
- * automatically wrapped with error handling and telemetry — there is
- * exactly one composition point.
+ * automatically wrapped with error handling and, for model-visible tools,
+ * telemetry. App-only lifecycle traffic is intentionally not usage telemetry.
  */
 export type ToolRegistrar = McpServer['registerTool'];
 
@@ -130,22 +127,26 @@ export class FoamMcpServer {
         this.telemetry.trackEvent('mcp.session-with-tool');
       }
     };
-    // Runtime: forward to mcp.registerTool with the handler wrapped through
-    // error handling + telemetry. We cast the resulting closure back to the
-    // SDK's overloaded signature — the per-tool zod-shape inference at the
-    // call site survives because we don't constrain the handler shape here.
+    // Runtime: forward to mcp.registerTool with centralized error handling and
+    // model-tool telemetry. We cast the resulting closure back to the SDK's
+    // overloaded signature — per-tool zod inference at the call site survives
+    // because we don't constrain the handler shape here.
     const fn = (
       name: string,
       config: Parameters<ToolRegistrar>[1],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handler: any
     ): ReturnType<ToolRegistrar> => {
-      const wrapped = withToolTelemetry(
-        this.telemetry,
-        name,
-        onToolInvoked,
-        withToolErrorHandling(handler)
-      );
+      const errorHandled = withToolErrorHandling(handler);
+      const visibility = (
+        config._meta as { ui?: { visibility?: string[] } } | undefined
+      )?.ui?.visibility;
+      const appOnly =
+        visibility?.includes('app') === true &&
+        visibility.includes('model') === false;
+      const wrapped = appOnly
+        ? errorHandled
+        : withToolTelemetry(this.telemetry, name, onToolInvoked, errorHandled);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (this.mcp.registerTool as any)(name, config, wrapped);
     };

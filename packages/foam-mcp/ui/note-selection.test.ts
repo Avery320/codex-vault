@@ -9,9 +9,7 @@ describe('note selection', () => {
       vaultId: 'vault-1',
       vaultName: 'Notes',
       noteUri: 'folder/note.md',
-      source: ['before', 'selected one', 'selected two', 'after', 'far'].join(
-        '\n'
-      ),
+      lineCount: 5,
       quote: 'selected one\nselected two',
       startLine: 2,
       endLine: 3,
@@ -32,7 +30,7 @@ describe('note selection', () => {
       createNoteSelection({
         vaultName: 'Notes',
         noteUri: 'note.md',
-        source: 'only line',
+        lineCount: 1,
         quote: '   ',
         startLine: 1,
         endLine: 1,
@@ -43,7 +41,7 @@ describe('note selection', () => {
       createNoteSelection({
         vaultName: 'Notes',
         noteUri: 'note.md',
-        source: 'only line',
+        lineCount: 1,
         quote: 'only',
         startLine: -20,
         endLine: 100,

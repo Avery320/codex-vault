@@ -185,6 +185,7 @@ export class NodeVaultWorkspaceManager implements VaultManager {
 }
 
 async function disposeWorkspace(workspace: ActiveWorkspace): Promise<void> {
+  workspace.context.changeFeed.dispose();
   workspace.context.searchIndex.dispose();
   await workspace.watcher.dispose();
 }

@@ -47,12 +47,15 @@ export function mapErrorToToolResult(err: unknown): ToolErrorResult {
  * Wraps a tool handler so any thrown error becomes a structured tool
  * error response instead of crashing the server.
  */
-export function withToolErrorHandling<TArgs, TResult extends object>(
-  handler: (args: TArgs) => Promise<TResult>
-): (args: TArgs) => Promise<TResult | ToolErrorResult> {
-  return async args => {
+export function withToolErrorHandling<
+  TArgs extends unknown[],
+  TResult extends object
+>(
+  handler: (...args: TArgs) => Promise<TResult>
+): (...args: TArgs) => Promise<TResult | ToolErrorResult> {
+  return async (...args) => {
     try {
-      return await handler(args);
+      return await handler(...args);
     } catch (err) {
       return mapErrorToToolResult(err);
     }

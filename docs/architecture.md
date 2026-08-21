@@ -23,6 +23,13 @@ Reader 將選取範圍轉成 Markdown 行號，再用 `updateModelContext()` 傳
 Read mode 不註冊 mutation tools。Read-write mode 使用 preview + SHA-256 commit
 避免覆寫 preview 後已變更的檔案。
 
+## 即時同步
+
+Node watcher 更新 Foam workspace 後，revision feed 會喚醒 Explorer 唯一一個待命中的
+app-only MCP request。Explorer 再取得同一個 canonical workspace state，更新檔案樹、
+reader、backlinks 與 graph。revision 讓等待建立前發生的事件不會漏接；背景與 teardown
+則使用 cancellation 清理待命 request。
+
 ## 不支援
 
 - 修改 Codex 私有 UI 或建立固定側邊欄。

@@ -2,17 +2,68 @@ import { z } from 'zod';
 import { buildGraphData, resolveNote } from '@foam/core';
 import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
+import { json } from '../tool-result';
 import { FoamMcpWorkspaceProvider, VaultManager } from '../workspace-context';
 
 // MCP App hosts cache UI by URI; bump this path when the bundled UI changes.
 export const VAULT_EXPLORER_RESOURCE_URI =
-  'ui://codex-vault/v3/vault-explorer.html';
+  'ui://codex-vault/v4/vault-explorer.html';
+
+// Stay below the MCP SDK's default 60-second request timeout so the server
+// completes each wait cleanly before the host times it out.
+const LIVE_UPDATE_WAIT_MS = 50_000;
 
 export function registerExplorerTool(
   register: ToolRegistrar,
   workspaceProvider: FoamMcpWorkspaceProvider,
   vaultManager?: VaultManager
 ): void {
+  register(
+    'wait_for_vault_change',
+    {
+      description:
+        'Wait for the active vault to change. Used internally by the Codex Vault UI.',
+      inputSchema: {
+        vault_id: z.string(),
+        since_revision: z.number().int().nonnegative(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      _meta: {
+        ui: { visibility: ['app'] },
+      },
+    },
+    async (args, extra) => {
+      const active = workspaceProvider.getActive();
+      if (!active) {
+        return json({
+          vault_id: null,
+          revision: 0,
+          changed: true,
+          reset: true,
+        });
+      }
+      if (args.vault_id !== active.vault.id) {
+        return json({
+          vault_id: active.vault.id,
+          revision: active.changeFeed.revision,
+          changed: true,
+          reset: true,
+        });
+      }
+      const change = await active.changeFeed.waitForChange(
+        args.since_revision,
+        LIVE_UPDATE_WAIT_MS,
+        extra.signal
+      );
+      return json({ vault_id: active.vault.id, ...change });
+    }
+  );
+
   register(
     'get_vault_explorer_state',
     {
@@ -97,6 +148,7 @@ async function buildExplorerState(
       files: [],
       graph: { nodeInfo: {}, links: [] },
       summary: { note_count: 0, connection_count: 0 },
+      revision: 0,
       needs_vault_selection: true,
     };
   }
@@ -138,6 +190,7 @@ async function buildExplorerState(
       note_count: files.length,
       connection_count: graph.links.length,
     },
+    revision: active.changeFeed.revision,
     needs_vault_selection: false,
   };
 }

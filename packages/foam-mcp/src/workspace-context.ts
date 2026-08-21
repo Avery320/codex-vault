@@ -1,11 +1,6 @@
-import {
-  Foam,
-  FoamError,
-  IDataStore,
-  QueryStore,
-  URI,
-} from '@foam/core';
+import { Foam, FoamError, IDataStore, QueryStore, URI } from '@foam/core';
 import { VaultFullTextIndex } from './full-text-index';
+import { VaultChangeFeed } from './vault-change-feed';
 
 export interface VaultSummary {
   id: string;
@@ -21,6 +16,7 @@ export interface FoamMcpWorkspaceContext {
   dataStore: IDataStore;
   queryStore: QueryStore;
   searchIndex: VaultFullTextIndex;
+  changeFeed: VaultChangeFeed;
   vault: Omit<VaultSummary, 'active'>;
 }
 
@@ -57,12 +53,15 @@ export function createWorkspaceContext(options: {
   const dataStore = options.foam.services.dataStore;
   const path = options.rootUri.toFsPath();
   const name = path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+  const searchIndex = new VaultFullTextIndex(options.foam.workspace, dataStore);
+  const changeFeed = new VaultChangeFeed(options.foam.workspace);
   return {
     foam: options.foam,
     rootUri: options.rootUri,
     dataStore,
     queryStore: options.queryStore,
-    searchIndex: new VaultFullTextIndex(options.foam.workspace, dataStore),
+    searchIndex,
+    changeFeed,
     vault: {
       id: options.vault?.id ?? path,
       name: options.vault?.name ?? name,
@@ -80,6 +79,7 @@ export class StaticWorkspaceProvider implements FoamMcpWorkspaceProvider {
   }
 
   async close(): Promise<void> {
+    this.context.changeFeed.dispose();
     this.context.searchIndex.dispose();
   }
 }

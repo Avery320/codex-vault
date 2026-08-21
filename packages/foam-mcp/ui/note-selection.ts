@@ -7,7 +7,7 @@ export interface NoteSelection {
   endLine: number;
 }
 
-export interface SourceLineRange {
+interface SourceLineRange {
   startLine: number;
   endLine: number;
 }
@@ -16,7 +16,7 @@ interface NoteSelectionInput {
   vaultId?: string;
   vaultName: string;
   noteUri: string;
-  source: string;
+  lineCount: number;
   quote: string;
   startLine: number;
   endLine: number;
@@ -34,9 +34,11 @@ export function createNoteSelection(
   const noteUri = input.noteUri.trim();
   if (!quote || !noteUri) return null;
 
-  const lines = input.source.replace(/\r\n?/g, '\n').split('\n');
-  const startLine = clampLine(input.startLine, lines.length);
-  const endLine = Math.max(startLine, clampLine(input.endLine, lines.length));
+  const startLine = clampLine(input.startLine, input.lineCount);
+  const endLine = Math.max(
+    startLine,
+    clampLine(input.endLine, input.lineCount)
+  );
   return {
     vaultId: input.vaultId,
     vaultName: input.vaultName.trim() || 'Vault',
@@ -70,12 +72,6 @@ export function sourceLineRange(
     startLine: Math.min(start, end),
     endLine: Math.max(start, end),
   };
-}
-
-export function selectionLocationLabel(selection: NoteSelection): string {
-  return selection.startLine === selection.endLine
-    ? `第 ${selection.startLine} 行`
-    : `第 ${selection.startLine}–${selection.endLine} 行`;
 }
 
 function clampLine(line: number, lineCount: number): number {

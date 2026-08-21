@@ -43,6 +43,7 @@ describe('FoamMcpServer lifecycle', () => {
           'get_workspace_info',
           'get_vault_explorer_state',
           'show_vault_explorer',
+          'wait_for_vault_change',
           // tags
           'list_tags',
           'search_by_tag',
@@ -64,7 +65,7 @@ describe('FoamMcpServer lifecycle', () => {
       const tool = list.tools.find(item => item.name === 'show_vault_explorer');
 
       expect(tool?._meta).toMatchObject({
-        ui: { resourceUri: 'ui://codex-vault/v3/vault-explorer.html' },
+        ui: { resourceUri: 'ui://codex-vault/v4/vault-explorer.html' },
       });
       expect(tool?.annotations).toMatchObject({
         readOnlyHint: true,
@@ -76,7 +77,7 @@ describe('FoamMcpServer lifecycle', () => {
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://codex-vault/v3/vault-explorer.html',
+            uri: 'ui://codex-vault/v4/vault-explorer.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ])
@@ -104,6 +105,7 @@ describe('FoamMcpServer lifecycle', () => {
         structuredContent: {
           focus_uri: string;
           active_vault: { active: boolean };
+          revision: number;
           needs_vault_selection: boolean;
           files: Array<{ uri: string; title: string }>;
           graph: {
@@ -117,6 +119,7 @@ describe('FoamMcpServer lifecycle', () => {
       expect(result.structuredContent.active_vault).toMatchObject({
         active: true,
       });
+      expect(result.structuredContent.revision).toBe(0);
       expect(result.structuredContent.needs_vault_selection).toBe(false);
       expect(result.structuredContent.files.map(file => file.uri)).toEqual([
         'a.md',
@@ -136,6 +139,47 @@ describe('FoamMcpServer lifecycle', () => {
       expect(state.structuredContent.files).toEqual(
         result.structuredContent.files
       );
+    }));
+
+  it('exposes an app-only change wait that resolves after a workspace update', () =>
+    withMcpServer(SEED, async ctx => {
+      const list = await ctx.client.listTools();
+      const tool = list.tools.find(
+        item => item.name === 'wait_for_vault_change'
+      );
+      expect(tool?._meta).toMatchObject({
+        ui: { visibility: ['app'] },
+      });
+
+      const before = (await ctx.client.callTool({
+        name: 'get_vault_explorer_state',
+        arguments: {},
+      })) as {
+        structuredContent: {
+          active_vault: { id: string };
+          revision: number;
+        };
+      };
+      const wait = ctx.callToolJson<{
+        vault_id: string;
+        revision: number;
+        changed: boolean;
+        reset: boolean;
+      }>('wait_for_vault_change', {
+        vault_id: before.structuredContent.active_vault.id,
+        since_revision: before.structuredContent.revision,
+      });
+
+      const uri = ctx.rootUri.joinPath('a.md');
+      ctx.dataStore.set(uri, '# Updated A\n\n[[b]]');
+      await ctx.foam.workspace.fetchAndSet(uri);
+
+      await expect(wait).resolves.toMatchObject({
+        vault_id: before.structuredContent.active_vault.id,
+        revision: before.structuredContent.revision + 1,
+        changed: true,
+        reset: false,
+      });
     }));
 
   it('treats frontmatter types as note metadata in the explorer graph', () =>

@@ -11,7 +11,9 @@ describe('FoamMcpServer telemetry', () => {
     it('fires once after the client completes the initialize handshake', async () => {
       const reporter = new InMemoryTelemetryReporter();
       await withMcpServer(SEED, { telemetry: reporter }, async () => {
-        const startedEvents = reporter.events.filter(e => e.name === 'mcp.session-started');
+        const startedEvents = reporter.events.filter(
+          e => e.name === 'mcp.session-started'
+        );
         expect(startedEvents).toHaveLength(1);
       });
     });
@@ -19,7 +21,9 @@ describe('FoamMcpServer telemetry', () => {
     it('carries mode=read-write by default and includes bucketed noteCount + attachmentCount', async () => {
       const reporter = new InMemoryTelemetryReporter();
       await withMcpServer(SEED, { telemetry: reporter }, async () => {
-        const event = reporter.events.find(e => e.name === 'mcp.session-started');
+        const event = reporter.events.find(
+          e => e.name === 'mcp.session-started'
+        );
         expect(event?.properties?.mode).toBe('read-write');
         // SEED has 2 notes → 1-10 bucket; no attachments → 0 bucket
         expect(event?.properties?.noteCount).toBe('1-10');
@@ -29,18 +33,30 @@ describe('FoamMcpServer telemetry', () => {
 
     it('reports mode=read when mode is read', async () => {
       const reporter = new InMemoryTelemetryReporter();
-      await withMcpServer(SEED, { telemetry: reporter, mode: 'read' }, async () => {
-        const event = reporter.events.find(e => e.name === 'mcp.session-started');
-        expect(event?.properties?.mode).toBe('read');
-      });
+      await withMcpServer(
+        SEED,
+        { telemetry: reporter, mode: 'read' },
+        async () => {
+          const event = reporter.events.find(
+            e => e.name === 'mcp.session-started'
+          );
+          expect(event?.properties?.mode).toBe('read');
+        }
+      );
     });
 
     it('carries the client name from the initialize handshake', async () => {
       const reporter = new InMemoryTelemetryReporter();
-      await withMcpServer(SEED, { telemetry: reporter, clientName: 'claude-desktop' }, async () => {
-        const event = reporter.events.find(e => e.name === 'mcp.session-started');
-        expect(event?.properties?.client).toBe('claude-desktop');
-      });
+      await withMcpServer(
+        SEED,
+        { telemetry: reporter, clientName: 'claude-desktop' },
+        async () => {
+          const event = reporter.events.find(
+            e => e.name === 'mcp.session-started'
+          );
+          expect(event?.properties?.client).toBe('claude-desktop');
+        }
+      );
     });
   });
 
@@ -48,7 +64,9 @@ describe('FoamMcpServer telemetry', () => {
     it('does not fire until at least one tool is invoked', async () => {
       const reporter = new InMemoryTelemetryReporter();
       await withMcpServer(SEED, { telemetry: reporter }, async () => {
-        const beforeAnyCall = reporter.events.filter(e => e.name === 'mcp.session-with-tool');
+        const beforeAnyCall = reporter.events.filter(
+          e => e.name === 'mcp.session-with-tool'
+        );
         expect(beforeAnyCall).toHaveLength(0);
       });
     });
@@ -60,19 +78,46 @@ describe('FoamMcpServer telemetry', () => {
         await ctx.callTool('list_resources');
         await ctx.callTool('list_tags');
 
-        const events = reporter.events.filter(e => e.name === 'mcp.session-with-tool');
+        const events = reporter.events.filter(
+          e => e.name === 'mcp.session-with-tool'
+        );
         expect(events).toHaveLength(1);
       });
     });
   });
 
   describe('mcp.tool-invoked', () => {
+    it('does not record app-only lifecycle tools as model tool usage', async () => {
+      const reporter = new InMemoryTelemetryReporter();
+      await withMcpServer(SEED, { telemetry: reporter }, async ctx => {
+        await ctx.callTool('wait_for_vault_change', {
+          vault_id: 'different-vault',
+          since_revision: 0,
+        });
+
+        expect(
+          reporter.events.find(
+            event =>
+              event.name === 'mcp.tool-invoked' &&
+              event.properties?.tool === 'wait_for_vault_change'
+          )
+        ).toBeUndefined();
+        expect(
+          reporter.events.filter(
+            event => event.name === 'mcp.session-with-tool'
+          )
+        ).toHaveLength(0);
+      });
+    });
+
     it('fires once per tool call with tool, durationBucket, outcome', async () => {
       const reporter = new InMemoryTelemetryReporter();
       await withMcpServer(SEED, { telemetry: reporter }, async ctx => {
         await ctx.callTool('list_resources');
 
-        const invoked = reporter.events.filter(e => e.name === 'mcp.tool-invoked');
+        const invoked = reporter.events.filter(
+          e => e.name === 'mcp.tool-invoked'
+        );
         expect(invoked).toHaveLength(1);
         expect(invoked[0].properties).toMatchObject({
           tool: 'list_resources',
@@ -91,7 +136,9 @@ describe('FoamMcpServer telemetry', () => {
         await ctx.callTool('get_resource');
 
         const invoked = reporter.events.find(
-          e => e.name === 'mcp.tool-invoked' && e.properties?.tool === 'get_resource'
+          e =>
+            e.name === 'mcp.tool-invoked' &&
+            e.properties?.tool === 'get_resource'
         );
         expect(invoked?.properties?.outcome).toBe('error');
       });
@@ -107,7 +154,11 @@ describe('FoamMcpServer telemetry', () => {
         const tools = reporter.events
           .filter(e => e.name === 'mcp.tool-invoked')
           .map(e => e.properties?.tool);
-        expect(tools).toEqual(['list_resources', 'list_tags', 'get_workspace_info']);
+        expect(tools).toEqual([
+          'list_resources',
+          'list_tags',
+          'get_workspace_info',
+        ]);
       });
     });
   });
@@ -125,8 +176,12 @@ describe('FoamMcpServer telemetry', () => {
         await ctx.callTool('list_resources');
       });
 
-      expect(reporterA.events.filter(e => e.name === 'mcp.session-with-tool')).toHaveLength(1);
-      expect(reporterB.events.filter(e => e.name === 'mcp.session-with-tool')).toHaveLength(1);
+      expect(
+        reporterA.events.filter(e => e.name === 'mcp.session-with-tool')
+      ).toHaveLength(1);
+      expect(
+        reporterB.events.filter(e => e.name === 'mcp.session-with-tool')
+      ).toHaveLength(1);
     });
   });
 

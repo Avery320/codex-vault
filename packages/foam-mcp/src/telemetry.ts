@@ -1,7 +1,4 @@
-import {
-  ITelemetryReporter,
-  bucketDuration,
-} from '@foam/core';
+import { ITelemetryReporter, bucketDuration } from '@foam/core';
 
 /**
  * Wraps a tool handler to fire `mcp.tool-invoked` (and `mcp.error` on
@@ -16,18 +13,18 @@ import {
  * Unconstrained on `TResult` — the SDK's CallToolResult shape is open and
  * we only need to peek at the optional `isError` flag.
  */
-export function withToolTelemetry<TArgs, TResult>(
+export function withToolTelemetry<TArgs extends unknown[], TResult>(
   reporter: ITelemetryReporter,
   toolName: string,
   onInvoked: () => void,
-  handler: (args: TArgs) => Promise<TResult>
-): (args: TArgs) => Promise<TResult> {
-  return async args => {
+  handler: (...args: TArgs) => Promise<TResult>
+): (...args: TArgs) => Promise<TResult> {
+  return async (...args) => {
     const startedAt = Date.now();
     let outcome: 'success' | 'error' = 'success';
     let result: TResult;
     try {
-      result = await handler(args);
+      result = await handler(...args);
       if ((result as { isError?: boolean })?.isError === true) {
         outcome = 'error';
       }

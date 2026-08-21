@@ -17,6 +17,7 @@ import {
   createWorkspaceContext,
   StaticWorkspaceProvider,
 } from './workspace-context';
+import { VaultChangeFeed } from './vault-change-feed';
 
 export interface McpTestContext {
   client: Client;
@@ -24,6 +25,7 @@ export interface McpTestContext {
   foam: Foam;
   dataStore: InMemoryDataStore;
   rootUri: URI;
+  changeFeed: VaultChangeFeed;
   callTool: (
     name: string,
     args?: Record<string, unknown>
@@ -115,13 +117,12 @@ export async function withMcpServer<T>(
     'off'
   );
 
-  const workspaceProvider = new StaticWorkspaceProvider(
-    createWorkspaceContext({
-      foam,
-      rootUri,
-      queryStore: new QueryStore(dataStore as IDataStore, rootUri),
-    })
-  );
+  const workspaceContext = createWorkspaceContext({
+    foam,
+    rootUri,
+    queryStore: new QueryStore(dataStore as IDataStore, rootUri),
+  });
+  const workspaceProvider = new StaticWorkspaceProvider(workspaceContext);
   const server = new FoamMcpServer({
     workspaceProvider,
     mode: opts.mode ?? 'read-write',
@@ -165,6 +166,7 @@ export async function withMcpServer<T>(
     foam,
     dataStore,
     rootUri,
+    changeFeed: workspaceContext.changeFeed,
     callTool,
     callToolJson,
   };

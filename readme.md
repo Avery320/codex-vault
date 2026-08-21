@@ -10,6 +10,7 @@ vault、搜尋筆記、查看 backlinks 與知識圖譜，並把選取內容加�
 
 - 瀏覽與搜尋 Markdown、wikilinks、tags 和 frontmatter。
 - 顯示 backlinks、孤立筆記、失效連結與知識圖譜。
+- Vault 檔案變更後即時同步檔案樹、reader、backlinks 與知識圖譜。
 - 選取文字並加入留言，附加到 Codex composer；不會自動送出。
 - 累積多則註解，每則保留筆記路徑、文字與行號。
 - 透過 MCP tools 安全地讀寫筆記；寫入預設關閉。

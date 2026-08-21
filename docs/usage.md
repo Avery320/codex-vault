@@ -16,6 +16,10 @@ Vault registry 位於 `~/.config/codex-vault/vaults.json`。
 
 macOS 首次啟動會嘗試匯入 Obsidian registry，但不會修改 Obsidian 設定。
 
+Explorer 開啟且可見時，外部新增、修改或刪除 Markdown 檔案會自動同步檔案樹、
+reader、backlinks 與知識圖譜，不需要手動重新整理。切到背景時會暫停等待，恢復可見
+後再接續同步。
+
 ## 註解
 
 1. 在 reader 選取文字。

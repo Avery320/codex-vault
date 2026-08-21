@@ -36,7 +36,15 @@ interface ExplorerPayload {
   files: VaultFile[];
   graph: GraphData;
   summary: { note_count: number; connection_count: number };
+  revision: number;
   needs_vault_selection: boolean;
+}
+
+interface VaultChangeSignal {
+  vault_id: string | null;
+  revision: number;
+  changed: boolean;
+  reset: boolean;
 }
 
 interface FoamGraphElement extends HTMLElement {
@@ -173,7 +181,7 @@ const annotationSubmitElement = query<HTMLButtonElement>('#annotation-submit');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
-let activeNoteSource = '';
+let activeNoteLineCount = 0;
 let pendingSelection: NoteSelection | null = null;
 let pendingSelectionRect: DOMRect | null = null;
 let attachedAnnotations: NoteAnnotation[] = [];
@@ -188,6 +196,8 @@ let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences;
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
 let displayedReaderWidth = workspaceLayout.readerWidth;
+let appConnected = false;
+let liveSyncController: AbortController | null = null;
 
 graphElement.showControls = false;
 graphElement.maxFitZoom = 2.2;
@@ -338,7 +348,8 @@ function isExplorerPayload(value: unknown): value is ExplorerPayload {
     Array.isArray(candidate.files) &&
     !!candidate.graph &&
     typeof candidate.graph === 'object' &&
-    !!candidate.summary
+    !!candidate.summary &&
+    typeof candidate.revision === 'number'
   );
 }
 
@@ -355,19 +366,23 @@ function setExplorerPayload(next: ExplorerPayload): void {
 
   if (vaultChanged) {
     activeUri = null;
-    activeNoteSource = '';
+    activeNoteLineCount = 0;
     dismissSelectionCandidate(true);
     searchElement.value = '';
     searchSequence += 1;
   }
 
   renderVault(next);
-  renderFileTree(next.files);
   applyGraphFilters();
   applyGraphPreferences();
-  setStatus(
-    `${next.summary.note_count} 則筆記 · ${next.summary.connection_count} 條連結`
-  );
+  const searchQuery = searchElement.value;
+  if (searchQuery.trim()) void runSearch(searchQuery);
+  else {
+    renderFileTree(next.files);
+    setStatus(
+      `${next.summary.note_count} 則筆記 · ${next.summary.connection_count} 條連結`
+    );
+  }
 
   const requested = next.focus_uri;
   if (requested && next.files.some(file => file.uri === requested)) {
@@ -376,10 +391,20 @@ function setExplorerPayload(next: ExplorerPayload): void {
     void openNote(next.files[0].uri);
   } else if (activeUri && !next.files.some(file => file.uri === activeUri)) {
     activeUri = null;
-    activeNoteSource = '';
+    activeNoteLineCount = 0;
     dismissSelectionCandidate(true);
     showEmptyDocument('從檔案列表或圖譜選擇一則筆記。');
   }
+  const activeFile = activeUri
+    ? next.files.find(file => file.uri === activeUri)
+    : undefined;
+  if (activeFile) {
+    noteTitleElement.textContent = activeFile.title;
+    notePathElement.textContent = activeFile.uri;
+    notePathElement.title = activeFile.uri;
+  }
+
+  syncLiveUpdates(vaultChanged);
 }
 
 function renderVault(next: ExplorerPayload): void {
@@ -488,7 +513,7 @@ async function openNote(uri: string): Promise<void> {
   showWorkspacePane('reader');
   const sequence = ++noteSequence;
   activeUri = uri;
-  activeNoteSource = '';
+  activeNoteLineCount = 0;
   dismissSelectionCandidate(true);
   const file = payload.files.find(item => item.uri === uri);
   noteTitleElement.textContent = file?.title ?? uri;
@@ -500,6 +525,10 @@ async function openNote(uri: string): Promise<void> {
   showEmptyDocument('正在讀取筆記…');
   backlinksElement.hidden = true;
 
+  await loadNote(uri, sequence);
+}
+
+async function loadNote(uri: string, sequence: number): Promise<void> {
   try {
     const [resourceResult, connectionResult] = await Promise.all([
       app.callServerTool({ name: 'read_resource', arguments: { uri } }),
@@ -513,15 +542,23 @@ async function openNote(uri: string): Promise<void> {
     const connections = parseToolJson<{
       backlinks: Array<{ uri: string; title: string }>;
     }>(connectionResult);
-    activeNoteSource = resource.content;
+    activeNoteLineCount = resource.content.split(/\r\n?|\n/).length;
     renderMarkdown(resource.content);
     renderBacklinks(connections.backlinks);
   } catch (error) {
     if (sequence !== noteSequence) return;
-    activeNoteSource = '';
+    activeNoteLineCount = 0;
     dismissSelectionCandidate(true);
     showEmptyDocument(errorMessage(error));
   }
+}
+
+async function refreshOpenNote(uri: string): Promise<void> {
+  const scrollTop = readerScrollElement.scrollTop;
+  const sequence = ++noteSequence;
+  dismissSelectionCandidate(true);
+  await loadNote(uri, sequence);
+  if (sequence === noteSequence) readerScrollElement.scrollTop = scrollTop;
 }
 
 function parseToolJson<T>(result: ToolResultLike): T {
@@ -561,7 +598,7 @@ function captureNoteSelection(): void {
   const browserSelection = window.getSelection();
   if (
     !activeUri ||
-    !activeNoteSource ||
+    activeNoteLineCount === 0 ||
     !browserSelection ||
     browserSelection.rangeCount !== 1 ||
     browserSelection.isCollapsed
@@ -580,7 +617,7 @@ function captureNoteSelection(): void {
     vaultId: payload?.active_vault?.id,
     vaultName: payload?.active_vault?.name ?? 'Vault',
     noteUri: activeUri,
-    source: activeNoteSource,
+    lineCount: activeNoteLineCount,
     quote: browserSelection.toString(),
     startLine: sourceRange.startLine,
     endLine: sourceRange.endLine,
@@ -733,6 +770,72 @@ async function refreshExplorerState(): Promise<void> {
     arguments: {},
   });
   setExplorerPayload(parseToolJson<ExplorerPayload>(result));
+}
+
+function syncLiveUpdates(restart = false): void {
+  if (restart) stopLiveUpdates();
+  if (
+    liveSyncController ||
+    !appConnected ||
+    document.hidden ||
+    !payload?.active_vault
+  ) {
+    return;
+  }
+
+  const controller = new AbortController();
+  liveSyncController = controller;
+  void runLiveUpdates(controller);
+}
+
+function stopLiveUpdates(): void {
+  const controller = liveSyncController;
+  liveSyncController = null;
+  controller?.abort();
+}
+
+async function runLiveUpdates(controller: AbortController): Promise<void> {
+  const { signal } = controller;
+  try {
+    while (!signal.aborted) {
+      const current = payload;
+      if (!current?.active_vault) return;
+      const vaultId = current.active_vault.id;
+
+      try {
+        const result = await app.callServerTool(
+          {
+            name: 'wait_for_vault_change',
+            arguments: {
+              vault_id: vaultId,
+              since_revision: current.revision,
+            },
+          },
+          { signal, timeout: 55_000 }
+        );
+        if (signal.aborted) return;
+        const change = parseToolJson<VaultChangeSignal>(result);
+        if (payload?.active_vault?.id !== vaultId) continue;
+        if (change.changed || change.reset) {
+          const noteToRefresh = activeUri;
+          await refreshExplorerState();
+          if (
+            noteToRefresh &&
+            activeUri === noteToRefresh &&
+            payload?.active_vault?.id === vaultId
+          ) {
+            await refreshOpenNote(noteToRefresh);
+          }
+        }
+      } catch (error) {
+        if (signal.aborted) return;
+        console.warn('Codex Vault live update failed; retrying.', error);
+        await new Promise(resolve => setTimeout(resolve, 1_000));
+      }
+    }
+  } finally {
+    if (liveSyncController === controller) liveSyncController = null;
+  }
 }
 
 function openVaultDialog(mode: VaultDialogMode): void {
@@ -1051,20 +1154,30 @@ document.addEventListener('click', event => {
 });
 
 app.ontoolresult = receiveToolResult;
+app.onteardown = async () => {
+  stopLiveUpdates();
+  return {};
+};
 app.onhostcontextchanged = context => {
   if (context.theme !== undefined) applyTheme(context.theme);
   if (MODEL_CONTEXT_HOST_STATE_KEY in context) {
     attachedAnnotations = annotationsFromModelContextHostState(context);
   }
 };
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopLiveUpdates();
+  else syncLiveUpdates();
+});
 
 graphPreferences = readGraphPreferences();
 updateGraphOutputs();
 applyTheme(undefined);
 applyWorkspaceLayout();
 void app.connect().then(() => {
+  appConnected = true;
   const hostContext = app.getHostContext();
   applyTheme(hostContext?.theme);
   attachedAnnotations = annotationsFromModelContextHostState(hostContext);
+  syncLiveUpdates();
   void requestFullscreen();
 });
