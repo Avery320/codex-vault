@@ -212,7 +212,7 @@ describe('resource tools', () => {
       expect(err.code).toBe('invalid_input');
     }));
 
-  it('delete_resource permanently removes the file when permanent=true', () =>
+  it('delete_resource removes the file after confirmation', () =>
     withMcpServer(SEED, async ctx => {
       const result = await ctx.callToolJson<{
         deleted: boolean;
@@ -220,10 +220,9 @@ describe('resource tools', () => {
       }>('delete_resource', {
         uri: 'subdir/c.md',
         confirm: true,
-        permanent: true,
       });
       expect(result.deleted).toBe(true);
-      expect(result.trashed).toBe(false);
+      expect(result.trashed).toBe(true);
       const read = await ctx.callTool('read_resource', { uri: 'subdir/c.md' });
       expect(read.isError).toBe(true);
     }));
@@ -286,7 +285,6 @@ describe('resource tools — path traversal containment', () => {
       const result = await ctx.callTool('delete_resource', {
         uri: '/etc/passwd',
         confirm: true,
-        permanent: true,
       });
       expect(result.isError).toBe(true);
       const err = JSON.parse(result.content[0].text!);

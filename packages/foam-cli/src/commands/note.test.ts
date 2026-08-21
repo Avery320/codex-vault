@@ -7,6 +7,7 @@ setColorsEnabled(false);
 import {
   createTestNote,
   createInMemoryWorkspace,
+  InMemoryDataStore,
   withTmpWorkspace,
   TestLogger,
 } from '../test/test-utils';
@@ -191,43 +192,18 @@ describe('noteMove', () => {
 // ─── noteDelete ───────────────────────────────────────────────────────────────
 
 describe('noteDelete', () => {
-  it('moves note to .foam/trash/ by default', () =>
-    withTmpWorkspace({ 'alpha.md': '# Alpha' }, async ({ rootDir, workspace, dataStore }) => {
-      const resource = resolveNote(workspace, { identifier: 'alpha' });
-      const result = await noteDelete(workspace, dataStore, resource, {});
-      expect(result.trashed).toBe(true);
-      expect(result.uri.path).toContain('.foam');
-      expect(fs.existsSync(path.join(rootDir, 'alpha.md'))).toBe(false);
-      expect(fs.existsSync(result.uri.toFsPath())).toBe(true);
-    }, 'foam-note-test-'));
+  it('delegates deletion to the data store', async () => {
+    const { workspace } = createInMemoryWorkspace([
+      createTestNote({ uri: '/workspace/alpha.md', title: 'Alpha' }),
+    ]);
+    const resource = resolveNote(workspace, { identifier: 'alpha' });
+    const dataStore = new InMemoryDataStore();
+    dataStore.set(resource.uri, '# Alpha');
 
-  it('generates collision-safe trash paths for notes with the same filename', () =>
-    withTmpWorkspace(
-      { 'notes/todo.md': '# Todo', 'archive/todo.md': '# Archived Todo' },
-      async ({ rootDir, workspace, dataStore }) => {
-        const notesTodo = resolveNote(workspace, {
-          uri: URI.file(path.join(rootDir, 'notes', 'todo.md')),
-        });
-        await noteDelete(workspace, dataStore, notesTodo, {});
-        const archiveTodo = resolveNote(workspace, {
-          uri: URI.file(path.join(rootDir, 'archive', 'todo.md')),
-        });
-        await noteDelete(workspace, dataStore, archiveTodo, {});
+    await noteDelete(dataStore, resource);
 
-        expect(fs.existsSync(path.join(rootDir, '.foam', 'trash', 'notes', 'todo.md'))).toBe(true);
-        expect(fs.existsSync(path.join(rootDir, '.foam', 'trash', 'archive', 'todo.md'))).toBe(true);
-      },
-      'foam-note-test-'
-    ));
-
-  it('permanently deletes with --permanent', () =>
-    withTmpWorkspace({ 'alpha.md': '# Alpha' }, async ({ rootDir, workspace, dataStore }) => {
-      const resource = resolveNote(workspace, { identifier: 'alpha' });
-      const result = await noteDelete(workspace, dataStore, resource, { permanent: true });
-      expect(result.trashed).toBe(false);
-      expect(result.uri.path).toContain('alpha.md');
-      expect(fs.existsSync(path.join(rootDir, 'alpha.md'))).toBe(false);
-    }, 'foam-note-test-'));
+    expect(await dataStore.read(resource.uri)).toBeNull();
+  });
 });
 
 // ─── runNoteCommand (integration) ─────────────────────────────────────────────
@@ -379,15 +355,4 @@ describe('runNoteCommand', () => {
       expect(logger.errors[0]).toContain('--force');
     }, 'foam-note-test-'));
 
-  it('delete: trashes note with --force', () =>
-    withTmpWorkspace({ 'alpha.md': '# Alpha' }, async ({ rootDir }) => {
-      const logger = new TestLogger();
-      const code = await runNoteCommand(
-        ['delete', 'alpha', '--force', '--workspace', rootDir],
-        logger
-      );
-      expect(code).toBe(0);
-      expect(logger.logs[0]).toContain('Trashed:');
-      expect(fs.existsSync(path.join(rootDir, 'alpha.md'))).toBe(false);
-    }, 'foam-note-test-'));
 });

@@ -170,7 +170,6 @@ export type {
   NoteIdResult,
   NoteCreateResult,
   NoteMoveResult,
-  NoteDeleteResult,
 } from './commands/note';
 export {
   renameNote,

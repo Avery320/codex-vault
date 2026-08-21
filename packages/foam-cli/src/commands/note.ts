@@ -46,7 +46,7 @@ Subcommands:
   id <identifier>      Print the Foam identifier for a note
   create               Create a new note
   move <identifier>    Move/rename a note, rewriting all wikilinks
-  delete <identifier>  Delete a note (moves to .foam/trash/ by default)
+  delete <identifier>  Move a note to the system trash
 
 Options (all subcommands):
   --path <path>        Target by exact path instead of identifier resolution
@@ -262,7 +262,6 @@ export async function runNoteCommand(
 
   if (subcommand === 'delete') {
     const force = getFlag(parsed, 'force');
-    const permanent = getFlag(parsed, 'permanent');
 
     if (!force) {
       // Refuse if not a TTY (scripts must pass --force)
@@ -284,31 +283,22 @@ export async function runNoteCommand(
       }
     }
 
-    const result = await noteDelete(workspace, dataStore, resource, {
-      permanent,
-    });
+    await noteDelete(dataStore, resource);
     if (format === 'json') {
       logger.info(
         JSON.stringify(
           {
-            uri: result.uri.toFsPath(),
-            source_uri: result.source_uri.toFsPath(),
-            trashed: result.trashed,
+            uri: resource.uri.toFsPath(),
+            trashed: true,
           },
           null,
           2
         )
       );
     } else {
-      if (result.trashed) {
-        logger.info(
-          `Trashed: ${path.relative(rootDir, result.source_uri.toFsPath())} → ${path.relative(rootDir, result.uri.toFsPath())}`
-        );
-      } else {
-        logger.info(
-          `Deleted: ${path.relative(rootDir, result.uri.toFsPath())}`
-        );
-      }
+      logger.info(
+        `Moved to system trash: ${path.relative(rootDir, resource.uri.toFsPath())}`
+      );
     }
     return 0;
   }

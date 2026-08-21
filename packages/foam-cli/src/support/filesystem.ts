@@ -46,11 +46,8 @@ export class NodeFileDataStore implements IDataStore {
   }
 
   async delete(uri: URI): Promise<void> {
-    try {
-      await fs.unlink(uri.toFsPath());
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    const { default: trash } = await import('trash');
+    await trash(uri.toFsPath(), { glob: false });
   }
 
   async move(from: URI, to: URI): Promise<void> {

@@ -21,9 +21,7 @@ import {
   getBasename,
   isAbsolute,
   isWithinPath,
-  relativeTo,
 } from '../utils/path';
-import { getRootUriFor } from './workspace';
 
 // ─── Return types ─────────────────────────────────────────────────────────────
 
@@ -70,15 +68,6 @@ export interface NoteMoveResult {
   old_id: string;
   id: string;
   updated_links: number;
-}
-
-export interface NoteDeleteResult {
-  /** Final location of the file after the operation: `.foam/trash/...` URI when trashed, or the original URI when permanently deleted. */
-  uri: URI;
-  /** Original URI of the deleted resource. */
-  source_uri: URI;
-  /** True if the file was moved to trash, false if permanently deleted. */
-  trashed: boolean;
 }
 
 // ─── Read: show ───────────────────────────────────────────────────────────────
@@ -326,29 +315,9 @@ export async function noteMove(
 
 // ─── Write: delete ────────────────────────────────────────────────────────────
 
-/**
- * Deletes a note. By default, moves it to `.foam/trash/` (under the
- * workspace root that contains the resource), preserving the
- * resource's relative path. Pass `permanent: true` to hard-delete.
- */
 export async function noteDelete(
-  workspace: FoamWorkspace,
   dataStore: IDataStore,
-  resource: Resource,
-  opts: { permanent?: boolean }
-): Promise<NoteDeleteResult> {
-  const uri = resource.uri;
-
-  if (opts.permanent) {
-    await dataStore.delete(uri);
-    return { uri, source_uri: uri, trashed: false };
-  }
-
-  const rootUri = getRootUriFor(workspace, uri);
-  const relPath = relativeTo(uri.path, rootUri.path);
-  // Derive the trash URI from the workspace root so it inherits the right
-  // scheme/authority (file:// in Node, vscode-vfs:// in the web extension).
-  const trashUri = rootUri.joinPath('.foam', 'trash', relPath);
-  await dataStore.move(uri, trashUri);
-  return { uri: trashUri, source_uri: uri, trashed: true };
+  resource: Resource
+): Promise<void> {
+  await dataStore.delete(resource.uri);
 }

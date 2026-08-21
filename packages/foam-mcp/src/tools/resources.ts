@@ -332,11 +332,10 @@ export function registerResourceTools(
     'delete_resource',
     {
       description:
-        'Delete a note. Set `confirm: true` to proceed. By default the note is moved to .foam/trash; pass `permanent: true` to hard-delete.',
+        'Move a note to the system Trash or Recycle Bin. Set `confirm: true` to proceed.',
       inputSchema: {
         uri: z.string(),
         confirm: z.boolean().optional(),
-        permanent: z.boolean().optional(),
       },
     },
     async args => {
@@ -349,13 +348,10 @@ export function registerResourceTools(
       }
       const uri = parseUriInput(args.uri, rootUri);
       const resource = resolveNote(foam.workspace, { uri });
-      const result = await noteDelete(foam.workspace, dataStore, resource, {
-        permanent: args.permanent === true,
-      });
+      await noteDelete(dataStore, resource);
       return json({
         deleted: true,
-        trashed: result.trashed,
-        location: uriToOutputString(result.uri, rootUri),
+        trashed: true,
       });
     }
   );
