@@ -22,7 +22,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'oldblock',
         'newblock'
@@ -45,7 +44,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'myblock',
         'renamedblock'
@@ -69,7 +67,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'block1',
         'renamed'
@@ -92,7 +89,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'myblock',
         'renamed'
@@ -119,7 +115,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'oldblock',
         'newblock'
@@ -140,7 +135,6 @@ describe('HeadingEdit', () => {
 
       const result = HeadingEdit.createRenameBlockEdits(
         graph,
-        ws,
         noteA.uri,
         'orphan',
         'renamed'
@@ -170,7 +164,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Old Section',
         'New Section'
@@ -196,7 +189,6 @@ Jump to [[#Old Section]].
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Old Section',
         'New Section'
@@ -226,7 +218,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'OldSection',
         'NewSection'
@@ -260,7 +251,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'OldSection',
         'NewSection'
@@ -296,7 +286,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Section One',
         'Section Renamed'
@@ -328,7 +317,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Old Section',
         'New Section'
@@ -362,7 +350,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'OldSection',
         'NewSection'
@@ -399,7 +386,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'OldSection',
         'NewSection'
@@ -442,7 +428,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Old Section',
         'New Section'
@@ -476,7 +461,6 @@ Content.
 
       const result = HeadingEdit.createRenameSectionEdits(
         graph,
-        ws,
         noteA.uri,
         'Some Section',
         'New Section'

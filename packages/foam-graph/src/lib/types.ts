@@ -1,4 +1,4 @@
-import type { NodeInfo, GroupRule } from '../protocol';
+import type { NodeInfo } from '../protocol';
 
 export interface GraphModelNode extends NodeInfo {
   neighbors: string[];
@@ -42,7 +42,6 @@ export interface ResolvedStyle {
     [key: string]: string;
   };
   colorMode: 'none' | 'directory' | 'type';
-  groups: GroupRule[];
 }
 
 export type NodeState = 'regular' | 'highlighted' | 'lessened';

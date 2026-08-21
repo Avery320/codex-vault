@@ -198,8 +198,7 @@ describe('foam mcp (CLI e2e)', () => {
             content: Array<{ text: string }>;
           };
           expect(JSON.parse(change.content[0].text)).toMatchObject({
-            vault_id: explorerBefore.structuredContent.active_vault.id,
-            changed: true,
+            revision: explorerBefore.structuredContent.revision + 1,
             reset: false,
           });
 

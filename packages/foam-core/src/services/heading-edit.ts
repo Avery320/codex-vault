@@ -1,5 +1,4 @@
 import { FoamGraph } from '../model/graph';
-import { FoamWorkspace } from '../model/workspace';
 import { URI } from '../model/uri';
 import { ResourceLink, NoteLinkDefinition } from '../model/note';
 import { MarkdownLink } from './markdown-link';
@@ -25,7 +24,6 @@ export abstract class HeadingEdit {
    */
   static createRenameBlockEdits(
     graph: FoamGraph,
-    workspace: FoamWorkspace,
     resourceUri: URI,
     oldId: string,
     newId: string
@@ -148,7 +146,6 @@ export abstract class HeadingEdit {
    */
   static createRenameSectionEdits(
     graph: FoamGraph,
-    workspace: FoamWorkspace,
     resourceUri: URI,
     oldLabel: string,
     newLabel: string

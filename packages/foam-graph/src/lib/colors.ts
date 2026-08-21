@@ -1,8 +1,6 @@
 import { rgb, hsl } from 'd3-color';
 import type { RGBColor } from 'd3-color';
 import type { GraphModelNode, ResolvedStyle } from './types';
-import type { GroupRule } from '../protocol';
-import { resolveGroupColor } from './groups';
 
 export function hashString(str: string): number {
   let hash = 0;
@@ -43,8 +41,7 @@ export function getNodeFillAndBorder(
   nodeInfo: GraphModelNode,
   state: 'regular' | 'highlighted' | 'lessened',
   style: ResolvedStyle,
-  colorMode: 'none' | 'directory' | 'type',
-  groups: GroupRule[] = []
+  colorMode: 'none' | 'directory' | 'type'
 ): { fill: RGBColor; border: RGBColor } {
   let baseColor: string;
 
@@ -57,9 +54,6 @@ export function getNodeFillAndBorder(
   } else {
     baseColor = getTypeColor(nodeInfo.type, style);
   }
-
-  const groupColor = resolveGroupColor(nodeInfo, groups);
-  if (groupColor) baseColor = groupColor;
 
   const typeFill = rgb(baseColor);
 

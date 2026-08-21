@@ -66,64 +66,6 @@ export {
 export { Resolver } from './templates/variable-resolver';
 export type { VariableProvider } from './templates/variable-resolver';
 
-// Query
-export type {
-  QueryFilter,
-  QueryDescriptor,
-  ResourceView,
-  SourceReader,
-  SelectInput,
-  SelectEntry,
-} from './query/index';
-export {
-  parseFilter,
-  QueryResult,
-  executeQuery,
-  ALL_QUERY_FIELDS,
-  requiresSource,
-  beautifyFieldLabel,
-  normalizeSelectEntry,
-  tryBuildUserRegex,
-} from './query/index';
-export { renderDqlQuery } from './query/dql';
-export type { RenderDqlQueryOptions } from './query/dql';
-export { renderJsQuery } from './query/js';
-export type { RenderJsQueryOptions } from './query/js';
-export type { Query, ParseQueryResult } from './query/saved';
-export {
-  parseQuery,
-  serializeQuery,
-  idFromQueryFilename,
-  filenameFromQueryId,
-  humanizeQueryId,
-  sanitizeQueryId,
-} from './query/saved';
-export type { LoadedQuery, QueryDataStoreOps } from './query/saved-store';
-export {
-  QueryStore,
-  QUERIES_DIR,
-  QUERIES_GLOB,
-  createQueryDataStore,
-} from './query/saved-store';
-export {
-  escapeHtml,
-  noteLink,
-  renderList,
-  renderTable,
-  renderCount,
-  renderResults,
-} from './query/html';
-export type {
-  FoamQueryRenderEvent,
-  MarkdownRenderer,
-  MarkdownRenderOptions,
-  QueryRender,
-  QueryResultShape,
-  ToHref,
-} from './query/html';
-export type { RenderContext } from './query/render-context';
-export { createRenderContext } from './query/render-context';
-
 // Config
 export type { IFoamConfig, IFoamConfigSource } from './config';
 export { Config, DefaultFoamConfig, cascadeFoamConfig } from './config';

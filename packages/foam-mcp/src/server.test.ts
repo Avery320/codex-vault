@@ -161,9 +161,7 @@ describe('FoamMcpServer lifecycle', () => {
         };
       };
       const wait = ctx.callToolJson<{
-        vault_id: string;
         revision: number;
-        changed: boolean;
         reset: boolean;
       }>('wait_for_vault_change', {
         vault_id: before.structuredContent.active_vault.id,
@@ -175,9 +173,7 @@ describe('FoamMcpServer lifecycle', () => {
       await ctx.foam.workspace.fetchAndSet(uri);
 
       await expect(wait).resolves.toMatchObject({
-        vault_id: before.structuredContent.active_vault.id,
         revision: before.structuredContent.revision + 1,
-        changed: true,
         reset: false,
       });
     }));

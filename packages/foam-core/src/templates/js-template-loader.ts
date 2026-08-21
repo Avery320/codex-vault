@@ -104,7 +104,7 @@ export class JSTemplateLoader {
       // with the current note context.
       return async (noteContext: TemplateContext) => {
         try {
-          Object.assign(context, createTemplateGlobals(noteContext));
+          Object.assign(context, createTemplateGlobals());
 
           // Execute the template function
           const result = await createNote(noteContext);

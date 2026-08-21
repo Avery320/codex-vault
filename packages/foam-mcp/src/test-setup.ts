@@ -8,7 +8,6 @@ import {
   IDataStore,
   ITelemetryReporter,
   MarkdownResourceProvider,
-  QueryStore,
   URI,
 } from '@foam/core';
 import { InMemoryDataStore } from '@foam/core/test';
@@ -120,7 +119,6 @@ export async function withMcpServer<T>(
   const workspaceContext = createWorkspaceContext({
     foam,
     rootUri,
-    queryStore: new QueryStore(dataStore as IDataStore, rootUri),
   });
   const workspaceProvider = new StaticWorkspaceProvider(workspaceContext);
   const server = new FoamMcpServer({

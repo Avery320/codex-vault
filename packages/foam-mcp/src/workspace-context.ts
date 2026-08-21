@@ -1,4 +1,4 @@
-import { Foam, FoamError, IDataStore, QueryStore, URI } from '@foam/core';
+import { Foam, FoamError, IDataStore, URI } from '@foam/core';
 import { VaultFullTextIndex } from './full-text-index';
 import { VaultChangeFeed } from './vault-change-feed';
 
@@ -14,7 +14,6 @@ export interface FoamMcpWorkspaceContext {
   foam: Foam;
   rootUri: URI;
   dataStore: IDataStore;
-  queryStore: QueryStore;
   searchIndex: VaultFullTextIndex;
   changeFeed: VaultChangeFeed;
   vault: Omit<VaultSummary, 'active'>;
@@ -47,7 +46,6 @@ export interface VaultManager extends FoamMcpWorkspaceProvider {
 export function createWorkspaceContext(options: {
   foam: Foam;
   rootUri: URI;
-  queryStore: QueryStore;
   vault?: Partial<Omit<VaultSummary, 'active'>>;
 }): FoamMcpWorkspaceContext {
   const dataStore = options.foam.services.dataStore;
@@ -59,7 +57,6 @@ export function createWorkspaceContext(options: {
     foam: options.foam,
     rootUri: options.rootUri,
     dataStore,
-    queryStore: options.queryStore,
     searchIndex,
     changeFeed,
     vault: {

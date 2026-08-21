@@ -10,7 +10,6 @@ import { withToolErrorHandling } from './errors';
 import { withToolTelemetry } from './telemetry';
 import { registerResourceTools } from './tools/resources';
 import { registerGraphTools } from './tools/graph';
-import { registerQueryTools } from './tools/queries';
 import { registerTagTools } from './tools/tags';
 import { registerSearchTools } from './tools/search';
 import { registerStructureTools } from './tools/structure';
@@ -96,7 +95,6 @@ export class FoamMcpServer {
     registerGraphTools(register, opts.workspaceProvider, { readOnly });
     registerExplorerTool(register, opts.workspaceProvider, opts.vaultManager);
     registerSearchTools(register, opts.workspaceProvider);
-    registerQueryTools(register, opts.workspaceProvider);
 
     // Modules that mix read and write tools accept a `readOnly` flag and
     // skip registering the writers entirely. Clients that list tools see

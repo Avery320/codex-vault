@@ -47,5 +47,4 @@ packages。原始 Foam VS Code extension 不在現行 source tree 或 build grap
 
 - 已共用：wikilink alias、source line metadata、表格 pipe 保護、block anchor。
 - 保持安全預設：raw HTML 關閉。
-- 尚未搬移：note embed、Foam Query 與 Query JS；它們需要另外定義讀檔、循環與
-  trust boundary，不能直接從 VS Code preview 接入。
+- 尚未搬移：note embed。

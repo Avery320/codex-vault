@@ -34,7 +34,6 @@
   },
   "devDependencies": {
     "@types/markdown-it": "14.1.2",
-    "@types/jexl": "^2.3.4",
     "markdown-it": "14.3.0",
     "markdown-it-regex": "^0.2.0",
     "oxlint": "^1.57.0",
@@ -48,7 +47,6 @@
     "detect-newline": "^3.1.0",
     "github-slugger": "^1.4.0",
     "gray-matter": "^4.0.2",
-    "jexl": "^2.3.0",
     "js-sha1": "^0.7.0",
     "lodash": "^4.17.21",
     "lru-cache": "^11.0.0",
@@ -56,7 +54,6 @@
     "remark-frontmatter": "^2.0.0",
     "remark-parse": "^8.0.2",
     "remark-wiki-link": "^0.0.4",
-    "safe-regex2": "^5.1.1",
     "title-case": "^3.0.2",
     "unified": "^9.0.0",
     "unist-util-visit": "^2.0.2",

@@ -1,4 +1,3 @@
-import { TemplateContext } from './note-creation-types';
 import { URI } from '../model/uri';
 import { toSlug } from '../utils/slug';
 import { Logger } from '../utils/log';
@@ -11,7 +10,7 @@ import dayjs from 'dayjs';
  *
  * This is NOT a security sandbox. 
  */
-export function createTemplateGlobals(context: TemplateContext) {
+export function createTemplateGlobals() {
   return {
     // Console for debugging (logs to Foam output channel)
     console: {

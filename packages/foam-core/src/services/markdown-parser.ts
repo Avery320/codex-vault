@@ -795,10 +795,6 @@ const wikilinkPlugin: ParserPlugin = {
       });
     }
   },
-  onDidVisitTree: (tree, note) => {
-    // This onDidVisitTree is now handled globally after all plugins have run
-    // and localDefinitions have been collected.
-  },
 };
 
 // Matches a footnote definition line: [^id]: content

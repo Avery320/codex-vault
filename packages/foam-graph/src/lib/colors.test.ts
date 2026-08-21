@@ -3,7 +3,6 @@ import { rgb } from 'd3-color';
 import {
   getTypeColor,
   getDirectoryColor,
-  getNodeFillAndBorder,
   getNodeLabelColor,
   getLinkColor,
 } from './colors';
@@ -106,44 +105,6 @@ describe('node properties.color takes precedence over colorMode', () => {
 
   it('overrides none coloring', () => {
     expect(fillOf(redNode, 'none')).toBe(rgb('red').toString());
-  });
-});
-
-describe('group color overrides colorMode', () => {
-  const makeGroup = (color: string, type: string) => ({
-    id: 'g1', label: 'test', color, enabled: true,
-    match: { property: 'type' as const, value: type },
-  });
-
-  it('an enabled matching group overrides type color', () => {
-    const group = makeGroup('#ff0000', 'project');
-    const style = makeStyle();
-    const result = getNodeFillAndBorder(graph.projectA, 'regular', style, 'type', [group]);
-    expect(result.fill.toString()).toBe(rgb('#ff0000').toString());
-  });
-
-  it('an enabled matching group overrides directory color', () => {
-    const group = makeGroup('#ff0000', 'note');
-    const style = makeStyle();
-    const result = getNodeFillAndBorder(graph.workA, 'regular', style, 'directory', [group]);
-    expect(result.fill.toString()).toBe(rgb('#ff0000').toString());
-  });
-
-  it('a disabled group does not override color', () => {
-    const group = { ...makeGroup('#ff0000', 'project'), enabled: false };
-    const style = makeStyle();
-    const result = getNodeFillAndBorder(graph.projectA, 'regular', style, 'type', [group]);
-    expect(result.fill.toString()).not.toBe(rgb('#ff0000').toString());
-  });
-
-  it('last matching group wins when multiple groups match', () => {
-    const style = makeStyle();
-    const groups = [
-      makeGroup('#ff0000', 'project'),
-      makeGroup('#00ff00', 'project'),
-    ];
-    const result = getNodeFillAndBorder(graph.projectA, 'regular', style, 'type', groups);
-    expect(result.fill.toString()).toBe(rgb('#00ff00').toString());
   });
 });
 

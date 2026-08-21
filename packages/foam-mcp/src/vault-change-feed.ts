@@ -2,7 +2,6 @@ import { FoamWorkspace, IDisposable } from '@foam/core';
 
 export interface VaultChangeWaitResult {
   revision: number;
-  changed: boolean;
   reset: boolean;
 }
 
@@ -40,7 +39,6 @@ export class VaultChangeFeed implements IDisposable {
     if (this.disposed || sinceRevision !== this.currentRevision) {
       return Promise.resolve({
         revision: this.currentRevision,
-        changed: true,
         reset: this.disposed || sinceRevision > this.currentRevision,
       });
     }
@@ -67,7 +65,6 @@ export class VaultChangeFeed implements IDisposable {
         () =>
           finish({
             revision: this.currentRevision,
-            changed: this.currentRevision !== sinceRevision,
             reset: false,
           }),
         timeoutMs
@@ -83,7 +80,6 @@ export class VaultChangeFeed implements IDisposable {
     this.currentRevision += 1;
     const result: VaultChangeWaitResult = {
       revision: this.currentRevision,
-      changed: true,
       reset: false,
     };
     for (const finish of this.waiters) finish(result);
@@ -95,7 +91,6 @@ export class VaultChangeFeed implements IDisposable {
     for (const subscription of this.subscriptions) subscription.dispose();
     const result: VaultChangeWaitResult = {
       revision: this.currentRevision,
-      changed: true,
       reset: true,
     };
     for (const finish of this.waiters) finish(result);

@@ -10,7 +10,6 @@ import {
 } from '@foam/mcp';
 import { ITelemetryReporter, Logger, NoopTelemetryReporter } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
-import { createNodeQueryStore } from '../support/node-query-store';
 import { NodeWatcher } from '../support/watcher';
 import {
   parseArgs,
@@ -145,7 +144,6 @@ export async function runMcpCommand(
       createWorkspaceContext({
         foam,
         rootUri,
-        queryStore: createNodeQueryStore(rootUri),
       })
     );
   }

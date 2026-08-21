@@ -41,17 +41,13 @@ export function registerExplorerTool(
       const active = workspaceProvider.getActive();
       if (!active) {
         return json({
-          vault_id: null,
           revision: 0,
-          changed: true,
           reset: true,
         });
       }
       if (args.vault_id !== active.vault.id) {
         return json({
-          vault_id: active.vault.id,
           revision: active.changeFeed.revision,
-          changed: true,
           reset: true,
         });
       }
@@ -60,7 +56,7 @@ export function registerExplorerTool(
         LIVE_UPDATE_WAIT_MS,
         extra.signal
       );
-      return json({ vault_id: active.vault.id, ...change });
+      return json(change);
     }
   );
 

@@ -192,7 +192,3 @@ export const locale = _locale;
 export const translationsConfigFile = _translationsConfigFile;
 
 export const globals: any = _globals;
-
-interface ISetImmediate {
-  (callback: (...args: any[]) => void): void;
-}

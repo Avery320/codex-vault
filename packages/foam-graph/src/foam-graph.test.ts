@@ -5,51 +5,6 @@ import { FoamGraph } from './foam-graph';
 import { makeGraph } from './test-utils';
 
 describe('foam-graph', () => {
-  it('can show/hide the control panel', () => {
-    const element = new FoamGraph();
-
-    element.graphData = makeGraph({
-      nodeInfo: {
-        '/note': {
-          id: '/note',
-          type: 'note',
-          title: 'Note',
-          properties: {},
-          tags: [],
-        },
-      },
-    });
-    element.showControls = true;
-
-    const t1 = element.render() as TemplateResult;
-    const c1 = t1.values.find(
-      v =>
-        v != null &&
-        typeof v === 'object' &&
-        'strings' in v &&
-        (v as TemplateResult).strings.some(s =>
-          s.includes('foam-control-panel')
-        )
-    );
-
-    expect(c1).not.toBeUndefined();
-
-    element.showControls = false;
-
-    const t2 = element.render() as TemplateResult;
-    const c2 = t2.values.find(
-      v =>
-        v != null &&
-        typeof v === 'object' &&
-        'strings' in v &&
-        (v as TemplateResult).strings.some(s =>
-          s.includes('foam-control-panel')
-        )
-    );
-
-    expect(c2).toBeUndefined();
-  });
-
   it('derives visible graph data from raw graph data', () => {
     const element = new FoamGraph();
     element.graphData = makeGraph({
@@ -119,29 +74,8 @@ describe('foam-graph', () => {
     );
   });
 
-  it('accepts graph nodes without tags when deriving autocomplete options', () => {
+  it('updates selection state from canvas events', () => {
     const element = new FoamGraph();
-    element.graphData = makeGraph({
-      nodeInfo: {
-        attachment: {
-          id: 'attachment',
-          type: 'attachment',
-          title: 'Attachment',
-          properties: {},
-        } as any,
-      },
-    });
-
-    (element as any).updated(new Map([['graphData', null]]));
-
-    expect(() => element.render()).not.toThrow();
-  });
-
-  it('updates app state from child intent events', () => {
-    const element = new FoamGraph();
-
-    (element as any)._onToggleNodeType({ type: 'tag', visible: false });
-    expect((element as any).showNodesOfType.tag).toBe(false);
 
     (element as any)._onCanvasNodeClick({ nodeId: 'note-a', append: false });
     expect([...(element as any).selectedNodeIds]).toEqual(['note-a']);
@@ -174,39 +108,8 @@ describe('foam-graph', () => {
     expect((element as any).selectedNodeIds.size).toBe(0);
   });
 
-  it('replaces groups when a new graph style provides groups', () => {
-    const element = new FoamGraph();
-    (element as any).groups = [
-      {
-        id: 'local',
-        label: 'Local',
-        color: '#111111',
-        enabled: true,
-        match: { property: 'type', value: 'note' },
-      },
-    ];
-    element.graphStyle = {
-      groups: [
-        {
-          id: 'configured',
-          label: 'Configured',
-          color: '#222222',
-          enabled: true,
-          match: { property: 'tag', value: 'project' },
-        },
-      ],
-    };
-
-    (element as any).updated(new Map([['graphStyle', null]]));
-
-    expect((element as any).groups.map((group: { id: string }) => group.id)).toEqual([
-      'configured',
-    ]);
-  });
-
   it('passes labels setting to the canvas', () => {
     const element = new FoamGraph();
-    element.showControls = false;
     element.labels = 'always';
 
     const t = element.render() as TemplateResult;

@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import { TextEdit, uriToWorkspacePath } from '@foam/core';
 import {
   parseArgs,
@@ -131,7 +130,7 @@ export async function runLintCommand(
   }
 
   try {
-    const { rootDir, workspace } = await loadWorkspaceFromDirectory(workspaceDir);
+    const { workspace } = await loadWorkspaceFromDirectory(workspaceDir);
     const rules = buildRules(ruleFilter);
     const lintResult = await lintWorkspace(workspace, rules);
 

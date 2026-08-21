@@ -40,72 +40,8 @@ export interface StyleConfig {
   };
 }
 
-export type GroupMatchProperty = 'type' | 'path' | 'tag' | 'title' | string;
-
-export interface GroupMatch {
-  property: GroupMatchProperty;
-  value: string;
-}
-
-export interface GroupRule {
-  id: string;
-  label: string;
-  color: string;
-  enabled: boolean;
-  match: GroupMatch;
-}
-
 export interface GraphStyle {
   style?: StyleConfig;
   colorMode?: 'none' | 'directory' | 'type';
-  groups?: GroupRule[];
   showNodesOfType?: Record<string, boolean>;
 }
-
-/** Config for a built-in special type (tag, attachment, image, placeholder) */
-export interface BuiltinTypeConfig {
-  enabled?: boolean;
-  color?: string;
-}
-
-/**
- * A named, pre-configured graph view.
- * Merge order: foam.graph.style → named view → inline config.
- */
-export interface GraphViewConfig {
-  name?: string;
-  colorBy?: 'none' | 'directory' | 'type';
-  groups?: GroupRule[];
-  /** Visibility and color for built-in types: tag, attachment, image, placeholder */
-  show?: Record<string, BuiltinTypeConfig>;
-  background?: string;
-  fontSize?: number;
-  fontFamily?: string;
-  lineColor?: string;
-}
-
-export interface ShowGraphArgs {
-  view?: string;
-  config?: GraphViewConfig;
-}
-
-// Host → graph component
-export type ExtensionMessage =
-  | { type: 'didUpdateStyle'; payload: GraphStyle }
-  | { type: 'didUpdateGraphData'; payload: GraphData }
-  | { type: 'didSelectNote'; payload: string };
-
-// Graph component → host
-export type WebviewMessage =
-  | { type: 'webviewDidLoad' }
-  | { type: 'webviewDidSelectNode'; payload: string }
-  | {
-      type: 'error';
-      payload: {
-        message: string;
-        filename: string;
-        lineno: number;
-        colno: number;
-        error?: unknown;
-      };
-    };

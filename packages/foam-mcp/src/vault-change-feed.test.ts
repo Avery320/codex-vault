@@ -9,7 +9,6 @@ describe('VaultChangeFeed', () => {
 
       await expect(ctx.changeFeed.waitForChange(0, 1_000)).resolves.toEqual({
         revision: 1,
-        changed: true,
         reset: false,
       });
     }));

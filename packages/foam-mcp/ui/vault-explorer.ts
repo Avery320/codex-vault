@@ -41,16 +41,13 @@ interface ExplorerPayload {
 }
 
 interface VaultChangeSignal {
-  vault_id: string | null;
   revision: number;
-  changed: boolean;
   reset: boolean;
 }
 
 interface FoamGraphElement extends HTMLElement {
   graphData: GraphData | null;
   graphStyle: Record<string, unknown> | null;
-  showControls: boolean;
   maxFitZoom: number | null;
   graphScope: 'full' | { depth: number };
   focusNodeId: string | null;
@@ -199,7 +196,6 @@ let displayedReaderWidth = workspaceLayout.readerWidth;
 let appConnected = false;
 let liveSyncController: AbortController | null = null;
 
-graphElement.showControls = false;
 graphElement.maxFitZoom = 2.2;
 graphElement.selection = {
   neighborDepth: 1,
@@ -816,7 +812,7 @@ async function runLiveUpdates(controller: AbortController): Promise<void> {
         if (signal.aborted) return;
         const change = parseToolJson<VaultChangeSignal>(result);
         if (payload?.active_vault?.id !== vaultId) continue;
-        if (change.changed || change.reset) {
+        if (change.revision !== current.revision || change.reset) {
           const noteToRefresh = activeUri;
           await refreshExplorerState();
           if (

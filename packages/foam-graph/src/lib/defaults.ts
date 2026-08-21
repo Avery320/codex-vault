@@ -21,6 +21,5 @@ export function getDefaultStyle(): ResolvedStyle {
       tag: getCSSVar('--vscode-list-highlightForeground') || '#f9c74f',
     },
     colorMode: 'type',
-    groups: [],
   };
 }

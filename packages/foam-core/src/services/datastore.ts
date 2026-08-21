@@ -197,7 +197,7 @@ export class AlwaysIncludeMatcher implements IMatcher {
     return files;
   }
 
-  isMatch(uri: URI): boolean {
+  isMatch(): boolean {
     return true;
   }
 
@@ -205,7 +205,6 @@ export class AlwaysIncludeMatcher implements IMatcher {
     return;
   }
 }
-
 
 export class SubstringExcludeMatcher implements IMatcher {
   include: string[] = ['**/*'];

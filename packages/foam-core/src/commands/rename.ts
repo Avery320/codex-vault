@@ -226,7 +226,6 @@ export async function renameSection(
 
   const result = HeadingEdit.createRenameSectionEdits(
     graph,
-    workspace,
     resource.uri,
     oldLabel,
     newLabel
@@ -265,7 +264,6 @@ export async function renameBlock(
 
   const result = HeadingEdit.createRenameBlockEdits(
     graph,
-    workspace,
     resource.uri,
     oldId,
     newId

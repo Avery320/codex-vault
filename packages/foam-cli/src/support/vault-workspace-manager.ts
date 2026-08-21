@@ -8,7 +8,6 @@ import {
   VaultFilePolicy,
 } from '@foam/mcp';
 import { loadWorkspaceFromDirectory } from './filesystem';
-import { createNodeQueryStore } from './node-query-store';
 import { VaultRecord, VaultRegistry } from './vault-registry';
 import { NodeWatcher } from './watcher';
 
@@ -142,7 +141,6 @@ export class NodeVaultWorkspaceManager implements VaultManager {
         context: createWorkspaceContext({
           foam,
           rootUri,
-          queryStore: createNodeQueryStore(rootUri),
           vault,
         }),
         watcher,

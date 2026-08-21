@@ -59,11 +59,7 @@ export class NoteCreationEngine {
         result = await this.executeJSTemplate(trigger, template, resolver);
         break;
       case 'markdown':
-        result = await this.executeMarkdownTemplate(
-          trigger,
-          template,
-          resolver
-        );
+        result = await this.executeMarkdownTemplate(template, resolver);
         break;
       default:
         throw new Error(`Unsupported template type: ${(template as any).type}`);
@@ -113,7 +109,6 @@ export class NoteCreationEngine {
    * Executes a Markdown template using variable resolution
    */
   private async executeMarkdownTemplate(
-    trigger: NoteCreationTrigger,
     template: Template & { type: 'markdown' },
     resolver: Resolver
   ): Promise<NoteCreationResult> {

@@ -13,7 +13,6 @@ import {
   uriToWorkspacePath,
   type PropertyFilter,
   type SearchMatch,
-  type SearchOptions,
 } from '@foam/core';
 import { serializeSearchMatch } from '../support/serializers';
 import { dim, path as pathColor } from '../support/colors';

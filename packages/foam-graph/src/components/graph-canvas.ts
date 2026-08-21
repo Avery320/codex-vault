@@ -23,7 +23,6 @@ import type {
   Labels,
   LinkAnimation,
 } from '../lib/types';
-import type { GroupRule } from '../protocol';
 import type { VisibleGraph } from '../lib/graph-view-model';
 
 export interface GraphViewportSize {
@@ -178,7 +177,6 @@ export class GraphCanvas extends LitElement {
   @property({ type: Number }) nodeSizeMultiplier: number = 1;
   @property({ type: Number }) linkWidthMultiplier: number = 2;
   @property({ type: String }) animateLinks: LinkAnimation = 'forward';
-  @property({ type: Array }) groups: GroupRule[] = [];
   @property({ type: Number }) maxFitZoom: number | null = null;
 
   // Mutable rendering state closed over by force-graph callbacks.
@@ -193,7 +191,6 @@ export class GraphCanvas extends LitElement {
     linkWidthMultiplier: 2,
     animateLinks: 'forward' as LinkAnimation,
     colorMode: 'type' as 'none' | 'directory' | 'type',
-    groups: [] as GroupRule[],
     incomingReferenceCounts: new Map<string, number>(),
   };
 
@@ -267,8 +264,7 @@ export class GraphCanvas extends LitElement {
             info,
             state,
             this.rs.style,
-            this.rs.colorMode,
-            this.rs.groups
+            this.rs.colorMode
           );
           const fontSize = computeLabelFontSize(
             this.rs.style.fontSize,
@@ -390,10 +386,6 @@ export class GraphCanvas extends LitElement {
         this.graphInstance.d3VelocityDecay(1 - this.forces.velocityDecay);
         this.graphInstance.d3ReheatSimulation();
       }
-    }
-
-    if (changed.has('groups')) {
-      this.rs.groups = this.groups;
     }
 
     if (changed.has('labels')) {

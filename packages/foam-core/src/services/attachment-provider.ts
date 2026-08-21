@@ -1,6 +1,5 @@
-import { Resource, ResourceLink } from '../model/note';
+import { Resource } from '../model/note';
 import { URI } from '../model/uri';
-import { FoamWorkspace } from '../model/workspace';
 import { IDisposable } from '../common/lifecycle';
 import { ResourceProvider } from '../model/provider';
 
@@ -78,10 +77,8 @@ export class AttachmentResourceProvider implements ResourceProvider {
     return asResource(uri);
   }
 
-  resolveLink(w: FoamWorkspace, resource: Resource, l: ResourceLink) {
+  resolveLink(): URI {
     throw new Error('not supported');
-    // Silly workaround to make VS Code happy
-    return resource.uri;
   }
 
   dispose() {
