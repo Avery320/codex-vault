@@ -3,13 +3,8 @@ import {
   WorkspaceTextEdit,
 } from '../services/text-edit';
 import { computeWikilinkRenameEdits } from '../services/link-integrity';
-import {
-  getNewNoteTemplateCandidateUris,
-  getTemplatesDir,
-} from '../templates/template-discovery';
-import { TemplateLoader } from '../templates/template-loader';
 import { Resolver } from '../templates/variable-resolver';
-import { NoteCreationEngine } from '../templates/note-creation-engine';
+import { extractFoamTemplateFrontmatterMetadata } from '../utils/template-frontmatter-parser';
 import { type Foam } from '../model/foam';
 import { FoamGraph } from '../model/graph';
 import { Resource } from '../model/note';
@@ -118,10 +113,6 @@ async function applyEditsToFiles(
  * workspace the caller can pass an absolute `dir` to target a specific
  * root.
  *
- * `isTrusted` controls whether JavaScript templates (`new-note.js`) may
- * execute. Callers driven by untrusted input (MCP agents, CLI by default)
- * must pass `false`; the VS Code path passes `workspace.isTrusted`.
- *
  * Errors with `resource_exists` if the destination file already exists.
  */
 export async function noteCreate(
@@ -131,8 +122,7 @@ export async function noteCreate(
     title?: string;
     dir?: string;
     properties?: Record<string, string>;
-  },
-  isTrusted: boolean
+  }
 ): Promise<NoteCreateResult> {
   const title = opts.title ?? 'untitled';
   const rootUri = foam.workspace.roots[0];
@@ -167,30 +157,22 @@ export async function noteCreate(
     propLines.length > 0 ? `---\n${propLines.join('\n')}\n---\n\n` : '';
   let content = `${frontmatter}# ${title}\n`;
 
-  // Try new-note.md / new-note.js template
-  const templatesDir = getTemplatesDir(rootUri);
-  const candidates = getNewNoteTemplateCandidateUris(templatesDir);
-
-  for (const templateUri of candidates) {
-    const templateContent = await dataStore.read(templateUri);
-    if (templateContent === null) continue;
-
-    const loader = new TemplateLoader(
-      async uri => (await dataStore.read(uri)) ?? '',
-      isTrusted
-    );
-    const template = await loader.loadTemplate(templateUri);
+  const templateContent = await dataStore.read(
+    rootUri.joinPath('.foam', 'templates', 'new-note.md')
+  );
+  if (templateContent !== null) {
     const resolver = new Resolver(new Map(), new Date(), title);
-    const engine = new NoteCreationEngine(foam);
-    const result = await engine.processTemplate(
-      { type: 'command', command: 'foam.create-note', params: { title } },
-      template,
-      resolver
-    );
+    const [metadata, resolvedContent] =
+      extractFoamTemplateFrontmatterMetadata(
+        await resolver.resolveText(templateContent)
+      );
+    const templatePath = (
+      metadata.get('filepath') ??
+      `${await resolver.resolveFromName('FOAM_TITLE_SAFE')}.md`
+    ).replace(/[<>?*"|]/g, '-');
 
-    targetUri = foam.workspace.resolveUri(result.filepath.path);
-    content = result.content;
-    break;
+    targetUri = foam.workspace.resolveUri(templatePath);
+    content = resolvedContent;
   }
 
   // Re-check containment after template processing: a markdown template's

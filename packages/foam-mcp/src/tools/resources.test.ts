@@ -335,30 +335,68 @@ describe('resource tools — path traversal containment', () => {
     }));
 });
 
-describe('resource tools — JS template execution', () => {
-  // A `.foam/templates/new-note.js` would otherwise be picked up and
-  // executed by `noteCreate`. The MCP server is agent-driven and never
-  // trusted, so the JS template must be refused.
-  const JS_TEMPLATE_SEED = {
-    'existing.md': '# existing',
-    '.foam/templates/new-note.js': `
-      module.exports = async () => ({
-        filepath: 'pwned.md',
-        content: 'should not appear',
-      });
-    `,
-  };
+describe('resource tools — note creation', () => {
+  it('create_resource ignores unsupported JavaScript templates', () =>
+    withMcpServer(
+      {
+        'existing.md': '# existing',
+        '.foam/templates/new-note.js': `throw new Error('must not run')`,
+      },
+      async ctx => {
+        const result = await ctx.callToolJson<{ uri: string; title: string }>(
+          'create_resource',
+          { title: 'hello' }
+        );
+        expect(result.uri).toBe('hello.md');
+        expect(result.title).toBe('hello');
+      }
+    ));
 
-  it('create_resource refuses to execute JS templates', () =>
-    withMcpServer(JS_TEMPLATE_SEED, async ctx => {
-      const result = await ctx.callTool('create_resource', { title: 'hello' });
-      expect(result.isError).toBe(true);
-      const err = JSON.parse(result.content[0].text!);
-      expect(err.code).toBe('untrusted_workspace');
-      expect(err.data?.templatePath).toBe(
-        '/workspace/.foam/templates/new-note.js'
-      );
-    }));
+  it('create_resource applies the Markdown template and filepath metadata', () =>
+    withMcpServer(
+      {
+        'existing.md': '# existing',
+        '.foam/templates/new-note.md': `---
+foam_template:
+  filepath: notes/$FOAM_TITLE.md
+---
+# $FOAM_TITLE
+`,
+      },
+      async ctx => {
+        const result = await ctx.callToolJson<{ uri: string }>(
+          'create_resource',
+          { title: 'hello' }
+        );
+        expect(result.uri).toBe('notes/hello.md');
+        expect(
+          (
+            await ctx.callToolJson<{ content: string }>('read_resource', {
+              uri: result.uri,
+            })
+          ).content
+        ).toBe('# hello\n');
+      }
+    ));
+
+  it('create_resource rejects a Markdown template path outside the vault', () =>
+    withMcpServer(
+      {
+        '.foam/templates/new-note.md': `---
+foam_template:
+  filepath: ../../outside.md
+---
+# unsafe
+`,
+      },
+      async ctx => {
+        const result = await ctx.callTool('create_resource', {
+          title: 'hello',
+        });
+        expect(result.isError).toBe(true);
+        expect(JSON.parse(result.content[0].text!).code).toBe('invalid_input');
+      }
+    ));
 
   it('create_resource rejects absolute dir outside the workspace', () =>
     withMcpServer({ 'existing.md': '# existing' }, async ctx => {
@@ -391,7 +429,7 @@ describe('resource tools — JS template execution', () => {
       expect(result.uri).toBe('subdir/hello.md');
     }));
 
-  it('create_resource still works when no JS template is present', () =>
+  it('create_resource works without a Markdown template', () =>
     withMcpServer({ 'existing.md': '# existing' }, async ctx => {
       const result = await ctx.callToolJson<{ uri: string; title: string }>(
         'create_resource',

@@ -9,9 +9,6 @@ async function main() {
   const pkg = JSON.parse(
     fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')
   );
-  const corePkg = JSON.parse(
-    fs.readFileSync(path.join(__dirname, '../foam-core/package.json'), 'utf8')
-  );
 
   const ctx = await esbuild.context({
     entryPoints: ['src/index.ts'],
@@ -33,7 +30,6 @@ async function main() {
     },
     define: {
       __CLI_VERSION__: JSON.stringify(pkg.version),
-      __CORE_VERSION__: JSON.stringify(corePkg.version),
     },
   });
 

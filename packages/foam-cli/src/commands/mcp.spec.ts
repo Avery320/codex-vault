@@ -53,10 +53,6 @@ async function withCliMcpArgs<T>(
     command: process.execPath,
     args: [CLI_PATH, 'mcp', ...mcpArgs],
     stderr: 'pipe',
-    // Disable telemetry: this test spawns the *built* CLI binary, which
-    // wires the real AppInsights reporter in main(). Without this we'd
-    // POST events on every test run.
-    env: { ...process.env, FOAM_TELEMETRY: '0' },
   });
 
   const stderrChunks: string[] = [];

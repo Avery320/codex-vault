@@ -1,7 +1,7 @@
 {
   "name": "@foam/core",
   "version": "0.46.0",
-  "description": "Platform-agnostic core logic for Foam",
+  "description": "Codex Vault Markdown and knowledge graph core",
   "license": "MIT",
   "main": "out/src/index.js",
   "types": "out/src/index.d.ts",
@@ -21,8 +21,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "release": "node release.js",
-    "tag-release": "node ../../scripts/tag-release.js core",
     "clean": "rimraf out",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest run",

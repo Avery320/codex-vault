@@ -12,6 +12,5 @@ export default defineConfig({
   },
   define: {
     __CLI_VERSION__: JSON.stringify('0.0.0-test'),
-    __CORE_VERSION__: JSON.stringify('0.0.0-test'),
   },
 });

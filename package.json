@@ -14,8 +14,6 @@
     "packages/*"
   ],
   "scripts": {
-    "changeset": "changeset",
-    "version-packages": "changeset version",
     "reset": "yarn && yarn clean && yarn build",
     "clean": "lerna run clean",
     "build": "lerna run build",
@@ -29,12 +27,8 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.7.0",
-    "@changesets/cli": "^2.31.0",
-    "all-contributors-cli": "^6.16.1",
     "husky": "^9.1.7",
-    "lerna": "^8.2.2",
-    "vite-tsconfig-paths": "^6.1.1"
+    "lerna": "^8.2.2"
   },
   "engines": {
     "node": ">=22"

@@ -8,7 +8,7 @@ import {
   VaultManager,
   VaultFilePolicy,
 } from '@foam/mcp';
-import { ITelemetryReporter, Logger, NoopTelemetryReporter } from '@foam/core';
+import { Logger } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
 import { NodeWatcher } from '../support/watcher';
 import {
@@ -84,8 +84,7 @@ export function parseMcpArgs(argv: string[]): McpArgs {
 
 export async function runMcpCommand(
   args: McpArgs,
-  logger: CliLogger,
-  reporter: ITelemetryReporter = NoopTelemetryReporter
+  logger: CliLogger
 ): Promise<number> {
   // The MCP transport owns stdout — anything written there is interpreted
   // as protocol messages. Send our own logs to stderr only.
@@ -148,13 +147,10 @@ export async function runMcpCommand(
     );
   }
 
-  // The dispatcher already forked the reporter for component='mcp' — this
-  // command just routes it into FoamMcpServer.
   const server = new FoamMcpServer({
     workspaceProvider,
     vaultManager,
     mode: args.allowWrites ? 'read-write' : 'read',
-    telemetry: reporter,
   });
 
   const transport = new StdioServerTransport();
@@ -175,6 +171,5 @@ export async function runMcpCommand(
   logger.error('[foam-mcp] Shutting down.');
   await server.close();
   await staticWatcher?.dispose();
-  await reporter.dispose();
   return 0;
 }

@@ -247,7 +247,6 @@ export function registerResourceTools(
         });
       }
 
-      // MCP is agent-driven; never grant JS-template execution rights.
       const result = await noteCreate(
         foam,
         dataStore,
@@ -255,8 +254,7 @@ export function registerResourceTools(
           title: args.title,
           dir: args.dir,
           properties: args.properties,
-        },
-        false
+        }
       );
       if (args.content !== undefined) {
         const content = args.properties

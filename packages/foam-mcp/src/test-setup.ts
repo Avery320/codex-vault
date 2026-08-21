@@ -5,7 +5,6 @@ import {
   createMarkdownParser,
   Foam,
   IDataStore,
-  ITelemetryReporter,
   MarkdownResourceProvider,
   URI,
 } from '@foam/core';
@@ -43,18 +42,6 @@ export interface McpTestOptions {
   /** Server mode. Defaults to `'read-write'` so existing tests exercise the
    *  full tool surface without opting in. */
   mode?: FoamMcpServerMode;
-  /**
-   * Telemetry reporter passed into `FoamMcpServer`. Tests that don't pass
-   * one get a noop (the default). Tests that do can assert on the events
-   * the reporter received.
-   */
-  telemetry?: ITelemetryReporter;
-  /**
-   * Client info advertised on the MCP `initialize` handshake. Affects the
-   * `client` property on `mcp.session-started`. Defaults to a generic
-   * identity used by all existing tests.
-   */
-  clientName?: string;
 }
 
 /**
@@ -123,7 +110,6 @@ export async function withMcpServer<T>(
   const server = new FoamMcpServer({
     workspaceProvider,
     mode: opts.mode ?? 'read-write',
-    telemetry: opts.telemetry,
   });
 
   const [clientTransport, serverTransport] =
@@ -131,7 +117,7 @@ export async function withMcpServer<T>(
   await server.connect(serverTransport);
 
   const client = new Client(
-    { name: opts.clientName ?? 'foam-mcp-test', version: '0.0.0' },
+    { name: 'foam-mcp-test', version: '0.0.0' },
     { capabilities: {} }
   );
   await client.connect(clientTransport);
