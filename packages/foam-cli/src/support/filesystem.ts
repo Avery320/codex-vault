@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import micromatch from 'micromatch';
 
 import {
   URI,
@@ -19,44 +18,20 @@ import {
   VaultFilePolicy,
 } from '@foam/mcp';
 
-const isWithinPath = (candidate: string, parent: string) => {
-  const relative = path.relative(parent, candidate);
-  return (
-    relative === '' ||
-    (!relative.startsWith('..') && !path.isAbsolute(relative))
-  );
-};
-
 export class NodeFileDataStore implements IDataStore {
   constructor(
     private readonly rootDir: string,
-    private readonly excludedPaths: string[],
     private readonly matcher: IMatcher,
     private readonly isPathIgnored: (fsPath: string) => boolean = () => false
   ) {}
 
-  async list(pattern?: string) {
+  async list(): Promise<URI[]> {
     const files: string[] = [];
-    await collectFiles(
-      this.rootDir,
-      files,
-      this.excludedPaths,
-      this.isPathIgnored
-    );
-    let uris = files.map(file => URI.file(file));
-    if (pattern) {
-      const absoluteGlob = path.posix.join(this.rootDir, pattern);
-      const matched = micromatch(
-        uris.map(u => u.toFsPath()),
-        [absoluteGlob]
-      );
-      const matchedSet = new Set(matched);
-      uris = uris.filter(u => matchedSet.has(u.toFsPath()));
-    }
-    return uris.filter(uri => this.matcher.isMatch(uri));
+    await collectFiles(this.rootDir, files, this.isPathIgnored);
+    return files.map(URI.file).filter(uri => this.matcher.isMatch(uri));
   }
 
-  async read(uri: URI) {
+  async read(uri: URI): Promise<string | null> {
     try {
       return await fs.readFile(uri.toFsPath(), 'utf8');
     } catch {
@@ -73,15 +48,15 @@ export class NodeFileDataStore implements IDataStore {
   async delete(uri: URI): Promise<void> {
     try {
       await fs.unlink(uri.toFsPath());
-    } catch (err: any) {
-      if (err.code !== 'ENOENT') throw err;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
   }
 
   async move(from: URI, to: URI): Promise<void> {
-    const toFs = to.toFsPath();
-    await fs.mkdir(path.dirname(toFs), { recursive: true });
-    await fs.rename(from.toFsPath(), toFs);
+    const destination = to.toFsPath();
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    await fs.rename(from.toFsPath(), destination);
   }
 
   async exists(uri: URI): Promise<boolean> {
@@ -95,68 +70,37 @@ export class NodeFileDataStore implements IDataStore {
 }
 
 async function collectFiles(
-  dir: string,
+  directory: string,
   files: string[],
-  excludedPaths: string[],
   isPathIgnored: (fsPath: string) => boolean
-) {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-
-    if (
-      excludedPaths.some(excludedPath => isWithinPath(fullPath, excludedPath))
-    ) {
-      continue;
-    }
-
+): Promise<void> {
+  for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    const filePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      if (isPathIgnored(fullPath)) {
-        continue;
+      if (!isPathIgnored(filePath)) {
+        await collectFiles(filePath, files, isPathIgnored);
       }
-
-      await collectFiles(fullPath, files, excludedPaths, isPathIgnored);
-      continue;
+    } else {
+      files.push(filePath);
     }
-
-    files.push(fullPath);
   }
 }
 
 export interface LoadWorkspaceOptions {
-  excludedPaths?: string[];
   filePolicy?: VaultFilePolicy;
+  watcher?: IWatcher;
 }
 
 export async function loadWorkspaceFromDirectory(
   workspaceDir: string,
-  options: LoadWorkspaceOptions & {
-    /**
-     * Optional watcher to keep the in-memory graph in sync with on-disk
-     * changes. Used by long-running consumers (e.g. the MCP server). One-shot
-     * commands (most CLI subcommands) leave this undefined and read a snapshot.
-     */
-    watcher?: IWatcher;
-  } = {}
+  options: LoadWorkspaceOptions = {}
 ) {
   const rootDir = path.resolve(workspaceDir);
   const rootUri = URI.file(rootDir);
   const filePolicy = options.filePolicy ?? new VaultFilePolicy();
-
-  const dataStore = new NodeFileDataStore(
-    rootDir,
-    [
-      ...new Set(
-        (options.excludedPaths ?? []).map(excludedPath =>
-          path.resolve(excludedPath)
-        )
-      ),
-    ],
-    filePolicy,
-    fsPath => filePolicy.isIgnored(fsPath)
+  const dataStore = new NodeFileDataStore(rootDir, filePolicy, filePath =>
+    filePolicy.isIgnored(filePath)
   );
-
   const parser = createMarkdownParser();
   const providers = [
     new MarkdownResourceProvider(dataStore, parser, VAULT_NOTE_EXTENSIONS),

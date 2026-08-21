@@ -34,26 +34,6 @@ const parser = unified()
   .use(frontmatterPlugin, ['yaml'])
   .use(wikiLinkPlugin, { aliasDivider: '|' });
 
-export function getLinkDefinitions(markdown: string): NoteLinkDefinition[] {
-  const definitions: NoteLinkDefinition[] = [];
-  const tree = parser.parse(markdown);
-  visit(tree, node => {
-    if (node.type === 'definition') {
-      const label: string = (node as any).label ?? '';
-      if (label.startsWith('^')) {
-        return; // skip footnote definitions
-      }
-      definitions.push({
-        label: (node as any).label,
-        url: (node as any).url,
-        title: (node as any).title,
-        range: astPositionToFoamRange(node.position!),
-      });
-    }
-  });
-  return definitions;
-}
-
 export function createMarkdownParser(
   extraPlugins: ParserPlugin[] = []
 ): ResourceParser {
@@ -228,7 +208,11 @@ export function createMarkdownParser(
           if (entry) {
             entry.references.push(ref);
           } else {
-            footnoteMap.set(id, { id, definitionRange: null, references: [ref] });
+            footnoteMap.set(id, {
+              id,
+              definitionRange: null,
+              references: [ref],
+            });
           }
         }
       }
@@ -757,46 +741,3 @@ const astPositionToFoamRange = (pos: AstPosition): Range =>
     pos.end.line - 1,
     pos.end.column - 1
   );
-
-const blockParser = unified().use(markdownParse, { gfm: true });
-export const getBlockFor = (
-  markdown: string,
-  line: number | Position
-): { block: string; nLines: number } => {
-  const searchLine = typeof line === 'number' ? line : line.line;
-  const tree = blockParser.parse(markdown);
-  const lines = markdown.split('\n');
-  let startLine = -1;
-  let endLine = -1;
-
-  // For list items, we also include the sub-lists
-  visit(tree, ['listItem'], (node: any) => {
-    if (node.position.start.line === searchLine + 1) {
-      startLine = node.position.start.line - 1;
-      endLine = node.position.end.line;
-      return visit.EXIT;
-    }
-  });
-
-  // For headings, we also include the sub-sections
-  let headingLevel = -1;
-  visit(tree, ['heading'], (node: any) => {
-    if (startLine > -1 && node.depth <= headingLevel) {
-      endLine = node.position.start.line - 1;
-      return visit.EXIT;
-    }
-    if (node.position.start.line === searchLine + 1) {
-      headingLevel = node.depth;
-      startLine = node.position.start.line - 1;
-      endLine = lines.length - 1; // in case it's the last section
-    }
-  });
-
-  const nLines = startLine === -1 ? 1 : endLine - startLine;
-  const block =
-    startLine === -1
-      ? lines[searchLine] ?? ''
-      : lines.slice(startLine, endLine).join('\n');
-
-  return { block, nLines };
-};

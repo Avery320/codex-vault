@@ -1,18 +1,11 @@
-import {
-  NoteLinkDefinition,
-  Resource,
-  ResourceLink,
-  ResourceParser,
-} from '../model/note';
-import { isNone, isSome } from '../utils';
-import { Logger } from '../utils/log';
+import { Resource, ResourceLink, ResourceParser } from '../model/note';
+import { isSome } from '../utils';
 import { URI } from '../model/uri';
 import { FoamWorkspace } from '../model/workspace';
 import { IDisposable } from '../common/lifecycle';
 import { ResourceProvider } from '../model/provider';
 import { MarkdownLink } from './markdown-link';
 import { IDataStore } from './datastore';
-import { uniqBy } from 'lodash';
 
 export class MarkdownResourceProvider implements ResourceProvider {
   private disposables: IDisposable[] = [];
@@ -195,88 +188,4 @@ export class MarkdownResourceProvider implements ResourceProvider {
   dispose() {
     this.disposables.forEach(d => d.dispose());
   }
-}
-
-export function createMarkdownReferences(
-  workspace: FoamWorkspace,
-  source: Resource | URI,
-  includeExtension: boolean
-): NoteLinkDefinition[] {
-  const resource = source instanceof URI ? workspace.find(source) : source;
-
-  const definitions = resource.links
-    .filter(link => ResourceLink.isReferenceStyleLink(link))
-    .map(link => {
-      if (link.type === 'external') {
-        // no need to create definitions for external links
-        return null;
-      }
-
-      if (ResourceLink.isResolvedReference(link)) {
-        return link.definition;
-      }
-
-      const targetUri = workspace.resolveLink(resource, link);
-      const target = workspace.find(targetUri);
-      if (isNone(target)) {
-        Logger.warn(
-          `Link ${targetUri.toString()} in ${resource.uri.toString()} is not valid.`
-        );
-        return null;
-      }
-      if (target.type === 'placeholder') {
-        // no need to create definitions for placeholders
-        return null;
-      }
-
-      // Special handling for same-file section links (e.g., [[#section]])
-      if (target.uri.isEqual(resource.uri) && targetUri.fragment) {
-        return {
-          label: link.rawText.substring(
-            link.isEmbed ? 3 : 2,
-            link.rawText.length - 2
-          ),
-          url: `#${targetUri.fragment}`,
-          title: target.title,
-        };
-      }
-
-      let relativeUri = target.uri.relativeTo(resource.uri.getDirectory());
-      if (
-        !includeExtension &&
-        relativeUri.path.endsWith(workspace.defaultExtension)
-      ) {
-        relativeUri = relativeUri.changeExtension('*', '');
-      }
-
-      // Extract base path and link name separately.
-      const basePath = relativeUri.path.split('/').slice(0, -1).join('/');
-      const linkName = relativeUri.path.split('/').pop();
-
-      const encodedURL = encodeURIComponent(linkName).replace(/%20/g, ' ');
-
-      // [wikilink-text]: path/to/file.md "Page title"
-      // Build the base URL
-      let url = `${basePath ? basePath + '/' : ''}${encodedURL}`;
-
-      // Append fragment from targetUri if it exists
-      if (targetUri.fragment) {
-        url += `#${targetUri.fragment}`;
-      }
-
-      // [wikilink-text]: path/to/file.md#section "Page title"
-      return {
-        // embedded looks like ![[note-a]]
-        // regular note looks like [[note-a]]
-        label: link.rawText.substring(
-          link.isEmbed ? 3 : 2,
-          link.rawText.length - 2
-        ),
-        url: url,
-        title: target.title,
-      };
-    })
-    .filter(isSome)
-    .sort();
-  return uniqBy(definitions, def => NoteLinkDefinition.format(def));
 }

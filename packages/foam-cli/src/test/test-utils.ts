@@ -2,7 +2,6 @@ import fs from 'fs';
 import { mkdtempSync } from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
-import micromatch from 'micromatch';
 import { type ILogger, Logger, NoOpLogger } from '@foam/core';
 import { Range } from '@foam/core';
 import { URI } from '@foam/core';
@@ -30,13 +29,8 @@ export class InMemoryDataStore implements IDataStore {
     this.files.clear();
   }
 
-  async list(pattern?: string): Promise<URI[]> {
-    const paths = Array.from(this.files.keys());
-    if (!pattern) {
-      return paths.map(p => URI.parse(p, 'file'));
-    }
-    const matched = micromatch(paths, [`**/${pattern}`]);
-    return matched.map(p => URI.parse(p, 'file'));
+  async list(): Promise<URI[]> {
+    return Array.from(this.files.keys()).map(path => URI.parse(path, 'file'));
   }
 
   async read(uri: URI): Promise<string | null> {
@@ -270,9 +264,19 @@ export class TestLogger implements ILogger {
   private _noop = new NoOpLogger();
 
   debug() {}
-  info(msg?: any) { this.logs.push(String(msg)); }
-  warn(msg?: any) { this.warnings.push(String(msg)); }
-  error(msg?: any) { this.errors.push(String(msg)); }
-  getLevel() { return this._noop.getLevel(); }
-  setLevel(l: Parameters<ILogger['setLevel']>[0]) { this._noop.setLevel(l); }
+  info(msg?: any) {
+    this.logs.push(String(msg));
+  }
+  warn(msg?: any) {
+    this.warnings.push(String(msg));
+  }
+  error(msg?: any) {
+    this.errors.push(String(msg));
+  }
+  getLevel() {
+    return this._noop.getLevel();
+  }
+  setLevel(l: Parameters<ILogger['setLevel']>[0]) {
+    this._noop.setLevel(l);
+  }
 }

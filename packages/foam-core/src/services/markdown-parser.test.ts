@@ -1,14 +1,9 @@
-import {
-  createMarkdownParser,
-  getBlockFor,
-  ParserPlugin,
-} from './markdown-parser';
+import { createMarkdownParser, ParserPlugin } from './markdown-parser';
 import { NoteLinkDefinition, Resource, ResourceLink } from '../model/note';
 import { Logger } from '../utils/log';
 import { URI } from '../model/uri';
 import { Range } from '../model/range';
 import { getRandomURI } from '../../test/test-utils';
-import { Position } from '../model/position';
 
 Logger.setLevel('error');
 
@@ -249,7 +244,9 @@ I link to an [interesting topic][1] and an [[internal-note]]
       `);
 
       // external reference-style link
-      const externalLink = note.links.find(l => l.rawText === '[interesting topic][1]');
+      const externalLink = note.links.find(
+        l => l.rawText === '[interesting topic][1]'
+      );
       expect(externalLink).toBeDefined();
       expect(externalLink.type).toEqual('external');
       expect(ResourceLink.isResolvedReference(externalLink)).toBe(true);
@@ -775,124 +772,6 @@ But with some content.
         title: 'alias3',
       },
     ]);
-  });
-});
-
-describe('Block detection for lists', () => {
-  const md = `
-- this is block 1
-- this is [[block]] 2
-  - this is block 2.1
-- this is block 3
-  - this is block 3.1
-    - this is block 3.1.1
-  - this is block 3.2
-- this is block 4
-this is a simple line
-this is another simple line
-  `;
-
-  it('can detect block', () => {
-    const { block } = getBlockFor(md, 1);
-    expect(block).toEqual('- this is block 1');
-  });
-
-  it('supports nested blocks 1', () => {
-    const { block } = getBlockFor(md, 2);
-    expect(block).toEqual(`- this is [[block]] 2
-  - this is block 2.1`);
-  });
-
-  it('supports nested blocks 2', () => {
-    const { block } = getBlockFor(md, 5);
-    expect(block).toEqual(`  - this is block 3.1
-    - this is block 3.1.1`);
-  });
-
-  it('returns the line if no block is detected', () => {
-    const { block } = getBlockFor(md, 9);
-    expect(block).toEqual(`this is a simple line`);
-  });
-
-  it('is compatible with Range object', () => {
-    const note = parser.parse(URI.file('/path/to/a'), md);
-    const { start } = note.links[0].range;
-    const { block } = getBlockFor(md, start);
-    expect(block).toEqual(`- this is [[block]] 2
-  - this is block 2.1`);
-  });
-});
-
-describe('block detection for sections', () => {
-  const markdown = `
-# Section 1
-- this is block 1
-- this is [[block]] 2
-  - this is block 2.1
-
-# Section 2
-this is a simple line
-this is another simple line
-
-## Section 2.1
-  - this is block 3.1
-    - this is block 3.1.1
-  - this is block 3.2
-
-# Section 3
-# Section 4
-some text
-some text
-`;
-
-  it('should return correct block for valid markdown string with line number', () => {
-    const { block, nLines } = getBlockFor(markdown, 1);
-    expect(block).toEqual(`# Section 1
-- this is block 1
-- this is [[block]] 2
-  - this is block 2.1
-`);
-    expect(nLines).toEqual(5);
-  });
-
-  it('should return correct block for valid markdown string with position', () => {
-    const { block, nLines } = getBlockFor(markdown, 6);
-    expect(block).toEqual(`# Section 2
-this is a simple line
-this is another simple line
-
-## Section 2.1
-  - this is block 3.1
-    - this is block 3.1.1
-  - this is block 3.2
-`);
-    expect(nLines).toEqual(9);
-  });
-
-  it('should return single line for section with no content', () => {
-    const { block, nLines } = getBlockFor(markdown, 15);
-    expect(block).toEqual('# Section 3');
-    expect(nLines).toEqual(1);
-  });
-
-  it('should return till end of file for last section', () => {
-    const { block, nLines } = getBlockFor(markdown, 16);
-    expect(block).toEqual(`# Section 4
-some text
-some text`);
-    expect(nLines).toEqual(3);
-  });
-
-  it('should return single line for non-existing line number', () => {
-    const { block, nLines } = getBlockFor(markdown, 100);
-    expect(block).toEqual('');
-    expect(nLines).toEqual(1);
-  });
-
-  it('should return single line for non-existing position', () => {
-    const { block, nLines } = getBlockFor(markdown, Position.create(100, 2));
-    expect(block).toEqual('');
-    expect(nLines).toEqual(1);
   });
 });
 

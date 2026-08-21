@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,31 +29,13 @@ describe('NodeFileDataStore', () => {
     });
     try {
       const policy = new VaultFilePolicy();
-      const store = new NodeFileDataStore(rootDir, [], policy, fsPath =>
+      const store = new NodeFileDataStore(rootDir, policy, fsPath =>
         policy.isIgnored(fsPath)
       );
       const uris = await store.list();
       const paths = uris.map(u => u.toFsPath());
       expect(paths.some(p => p.endsWith('note.md'))).toBe(true);
       expect(paths.some(p => p.endsWith('other.md'))).toBe(true);
-    } finally {
-      cleanup();
-    }
-  });
-
-  it('applies an optional list pattern without changing the vault policy', async () => {
-    const { rootDir, cleanup } = createTmpDir({
-      'notes/foo.md': '# Foo',
-      'notes/foo.txt': 'plain',
-      'other.md': '# Other',
-    });
-    try {
-      const store = new NodeFileDataStore(rootDir, [], new VaultFilePolicy());
-      const uris = await store.list('notes/**/*.md');
-      const paths = uris.map(u => u.toFsPath());
-      expect(paths.some(p => p.endsWith('foo.md'))).toBe(true);
-      expect(paths.every(p => !p.endsWith('foo.txt'))).toBe(true);
-      expect(paths.every(p => !p.endsWith('other.md'))).toBe(true);
     } finally {
       cleanup();
     }
@@ -67,7 +48,7 @@ describe('NodeFileDataStore', () => {
       '.obsidian/plugins/readme.md': '# Plugin',
     });
     try {
-      const store = new NodeFileDataStore(rootDir, [], new VaultFilePolicy());
+      const store = new NodeFileDataStore(rootDir, new VaultFilePolicy());
       const uris = await store.list();
       const paths = uris.map(u => u.toFsPath());
       expect(paths.some(p => p.endsWith('note.md'))).toBe(true);
@@ -129,24 +110,5 @@ describe('loadWorkspaceFromDirectory', () => {
       const uris = workspace.list().map(r => r.uri.toFsPath());
       expect(uris.some(u => u.endsWith('note.md'))).toBe(true);
     });
-  });
-
-  it('respects explicitly excluded paths', async () => {
-    const tempDir = mkdtempSync(path.join(tmpdir(), 'foam-filesystem-test-'));
-    try {
-      fs.writeFileSync(path.join(tempDir, 'note.md'), '# Note', 'utf8');
-      fs.mkdirSync(path.join(tempDir, 'draft'), { recursive: true });
-      fs.writeFileSync(path.join(tempDir, 'draft', 'wip.md'), '# WIP', 'utf8');
-
-      const { workspace } = await loadWorkspaceFromDirectory(tempDir, {
-        excludedPaths: [path.join(tempDir, 'draft')],
-      });
-      const uris = workspace.list().map(r => r.uri.toFsPath());
-
-      expect(uris.some(u => u.endsWith('note.md'))).toBe(true);
-      expect(uris.every(u => !u.includes('draft'))).toBe(true);
-    } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
   });
 });

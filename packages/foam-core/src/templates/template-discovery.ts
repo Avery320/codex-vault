@@ -1,19 +1,13 @@
 import { URI } from '../model/uri';
-import { Config } from '../config';
 
 /**
  * Returns the URI for the templates directory within a workspace root.
  *
- * The folder is read from `foam.templates.folder` (default `.foam/templates`).
- * The configured value may contain `/` separators for nested paths.
- *
  * The result is derived from {@link rootUri} via `joinPath`, so it inherits
- * the workspace root's scheme/authority — safe for both Node and browser
- * (web extension) builds.
+ * the workspace root's scheme and authority.
  */
 export function getTemplatesDir(rootUri: URI): URI {
-  const folder = Config.getTemplatesFolder();
-  return rootUri.joinPath(...folder.split('/'));
+  return rootUri.joinPath('.foam', 'templates');
 }
 
 /**

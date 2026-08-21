@@ -17,7 +17,7 @@ export interface Services {
 
 /**
  * How long to wait for file-create events to settle before refreshing the
- * matcher so that a burst of creates does not trigger one full workspace 
+ * matcher so that a burst of creates does not trigger one full workspace
  * scan per create
  */
 const CREATE_DEBOUNCE_MS = 100;
@@ -49,17 +49,26 @@ export const bootstrap = async (
         defaultExtension,
         fetchConcurrency
       ),
-    ms => (timingLogLevel === 'off' ? null : Logger[timingLogLevel](`Workspace loaded in ${ms}ms`))
+    ms =>
+      timingLogLevel === 'off'
+        ? null
+        : Logger[timingLogLevel](`Workspace loaded in ${ms}ms`)
   );
 
   const graph = withTiming(
     () => FoamGraph.fromWorkspace(workspace, true),
-    ms => (timingLogLevel === 'off' ? null : Logger[timingLogLevel](`Graph loaded in ${ms}ms`))
+    ms =>
+      timingLogLevel === 'off'
+        ? null
+        : Logger[timingLogLevel](`Graph loaded in ${ms}ms`)
   );
 
   const tags = withTiming(
     () => FoamTags.fromWorkspace(workspace, true),
-    ms => (timingLogLevel === 'off' ? null : Logger[timingLogLevel](`Tags loaded in ${ms}ms`))
+    ms =>
+      timingLogLevel === 'off'
+        ? null
+        : Logger[timingLogLevel](`Tags loaded in ${ms}ms`)
   );
 
   const subscriptions: IDisposable[] = [];
@@ -82,7 +91,6 @@ export const bootstrap = async (
     );
     subscriptions.push(
       onDidCreateBatch(async uris => {
-        await matcher.refresh();
         for (const uri of uris) {
           if (matcher.isMatch(uri)) {
             await workspace.fetchAndSet(uri);

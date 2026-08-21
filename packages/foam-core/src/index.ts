@@ -1,10 +1,16 @@
 // Core models
-export { URI, asAbsoluteUri } from './model/uri';
+export { URI } from './model/uri';
 export type { URIComponents } from './model/uri';
 export { Range } from './model/range';
 export { Position } from './model/position';
 export { Location } from './model/location';
-export { Resource, ResourceLink, NoteLinkDefinition, Block, Footnote } from './model/note';
+export {
+  Resource,
+  ResourceLink,
+  NoteLinkDefinition,
+  Block,
+  Footnote,
+} from './model/note';
 export type { ResourceParser, ResourceJson, Tag, Section } from './model/note';
 export { FoamWorkspace } from './model/workspace';
 export { FoamGraph } from './model/graph';
@@ -16,15 +22,9 @@ export { bootstrap } from './model/foam';
 
 // Services
 export type { IDataStore, IWatcher, IMatcher } from './services/datastore';
-export {
-  GenericDataStore,
-  FileListBasedMatcher,
-  AlwaysIncludeMatcher,
-  SubstringExcludeMatcher,
-} from './services/datastore';
-export { createMarkdownParser, getLinkDefinitions, getBlockFor } from './services/markdown-parser';
+export { createMarkdownParser } from './services/markdown-parser';
 export type { ParserPlugin } from './services/markdown-parser';
-export { MarkdownResourceProvider, createMarkdownReferences } from './services/markdown-provider';
+export { MarkdownResourceProvider } from './services/markdown-provider';
 export {
   AttachmentResourceProvider,
   imageExtensions,
@@ -37,15 +37,15 @@ export { HeadingEdit } from './services/heading-edit';
 export type { HeadingEditResult } from './services/heading-edit';
 export { TagEdit } from './services/tag-edit';
 export type { TagEditResult } from './services/tag-edit';
-export {
-  computeWikilinkRenameEdits,
-  computeDirectoryWikilinkRenameEdits,
-} from './services/link-integrity';
+export { computeWikilinkRenameEdits } from './services/link-integrity';
 
 // Templates / note creation
 export { NoteCreationEngine } from './templates/note-creation-engine';
 export type { NoteCreationResult } from './templates/note-creation-types';
-export type { Template, TemplateContext } from './templates/note-creation-types';
+export type {
+  Template,
+  TemplateContext,
+} from './templates/note-creation-types';
 export { TriggerFactory } from './templates/note-creation-triggers';
 export { resolveDailyNote } from './templates/daily-note-resolver';
 export type { ResolveDailyNoteOptions } from './templates/daily-note-resolver';
@@ -58,16 +58,16 @@ export {
 export { Resolver } from './templates/variable-resolver';
 export type { VariableProvider } from './templates/variable-resolver';
 
-// Config
-export type { IFoamConfig, IFoamConfigSource } from './config';
-export { Config, DefaultFoamConfig, cascadeFoamConfig } from './config';
-
 // Utilities
 export { Logger, BaseLogger, ConsoleLogger, NoOpLogger } from './utils/log';
 export type { ILogger, LogLevel, LogLevelThreshold } from './utils/log';
 export { toSlug } from './utils/slug';
 export { isSubsequence } from './utils/string';
-export { extractHashtags, extractTagsFromProp, HASHTAG_REGEX } from './utils/hashtags';
+export {
+  extractHashtags,
+  extractTagsFromProp,
+  HASHTAG_REGEX,
+} from './utils/hashtags';
 export { isSome, isNone } from './utils/core';
 export {
   extractFoamTemplateFrontmatterMetadata,
@@ -81,7 +81,6 @@ export {
   relativeTo,
   fromFsPath,
 } from './utils/path';
-export { isWindows, isMacintosh, isLinux } from './common/platform';
 export type {
   ITelemetryReporter,
   WorkspaceSizeBucket,
@@ -122,9 +121,19 @@ export { FoamError } from './common/errors';
 export type { FoamErrorCode } from './common/errors';
 
 // Commands (high-level workspace operations, used by CLI / MCP / VS Code)
-export { uriToWorkspacePath, getRootUriFor, resolveNote } from './commands/workspace';
+export {
+  uriToWorkspacePath,
+  getRootUriFor,
+  resolveNote,
+} from './commands/workspace';
 export type { NoteRef } from './commands/workspace';
-export { listNotes, listTags, listOrphans, listDeadends, listPlaceholders } from './commands/list';
+export {
+  listNotes,
+  listTags,
+  listOrphans,
+  listDeadends,
+  listPlaceholders,
+} from './commands/list';
 export type {
   NoteItem,
   NoteSummary,
@@ -144,8 +153,18 @@ export type {
 export { outlineData } from './commands/outline';
 export type { OutlineSection, OutlineResult } from './commands/outline';
 export { searchWorkspace } from './commands/search';
-export type { SearchMatch, PropertyFilter, SearchOptions } from './commands/search';
-export { noteShowData, noteIdData, noteCreate, noteMove, noteDelete } from './commands/note';
+export type {
+  SearchMatch,
+  PropertyFilter,
+  SearchOptions,
+} from './commands/search';
+export {
+  noteShowData,
+  noteIdData,
+  noteCreate,
+  noteMove,
+  noteDelete,
+} from './commands/note';
 export type {
   NoteDetail,
   NoteIdResult,
@@ -153,7 +172,12 @@ export type {
   NoteMoveResult,
   NoteDeleteResult,
 } from './commands/note';
-export { renameNote, renameTag, renameSection, renameBlock } from './commands/rename';
+export {
+  renameNote,
+  renameTag,
+  renameSection,
+  renameBlock,
+} from './commands/rename';
 export type {
   RenameNoteResult,
   RenameTagResult,

@@ -2,7 +2,6 @@ import micromatch from 'micromatch';
 import { Logger } from '../src/utils/log';
 import { IDataStore, IMatcher } from '../src/services/datastore';
 import { URI } from '../src/model/uri';
-import { isWindows } from '../src/common/platform';
 import { asAbsolutePaths } from '../src/utils/path';
 import fs from 'fs';
 import path from 'path';
@@ -75,6 +74,8 @@ export class FileDataStore implements IDataStore {
   }
 }
 
+const isWindows = process.platform === 'win32';
+
 export const toMatcherPathFormat = isWindows
   ? (uri: URI) => uri.toFsPath().replace(/\\/g, '/')
   : (uri: URI) => uri.toFsPath();
@@ -124,9 +125,5 @@ export class Matcher implements IMatcher {
 
   isMatch(uri: URI) {
     return this.match([uri]).length > 0;
-  }
-
-  refresh(): Promise<void> {
-    return Promise.resolve();
   }
 }

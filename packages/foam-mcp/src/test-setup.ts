@@ -1,7 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import {
-  AlwaysIncludeMatcher,
   bootstrap,
   createMarkdownParser,
   Foam,
@@ -107,7 +106,7 @@ export async function withMcpServer<T>(
 
   const foam = await bootstrap(
     [rootUri],
-    new AlwaysIncludeMatcher(),
+    { isMatch: () => true },
     undefined,
     dataStore as IDataStore,
     parser,

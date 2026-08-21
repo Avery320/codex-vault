@@ -34,7 +34,9 @@
   },
   "devDependencies": {
     "@types/markdown-it": "14.1.2",
+    "@types/micromatch": "^4.0.9",
     "markdown-it": "14.3.0",
+    "micromatch": "^4.0.8",
     "markdown-it-regex": "^0.2.0",
     "oxlint": "^1.57.0",
     "rimraf": "^3.0.2",
@@ -47,8 +49,6 @@
     "detect-newline": "^3.1.0",
     "github-slugger": "^1.4.0",
     "gray-matter": "^4.0.2",
-    "lodash": "^4.17.21",
-    "lru-cache": "^11.0.0",
     "mnemonist": "^0.39.8",
     "remark-frontmatter": "^2.0.0",
     "remark-parse": "^8.0.2",

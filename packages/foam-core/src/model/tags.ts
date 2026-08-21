@@ -1,6 +1,5 @@
 import { FoamWorkspace } from './workspace';
 import { IDisposable } from '../common/lifecycle';
-import { debounce } from 'lodash';
 import { Emitter } from '../common/event';
 import { Tag } from './note';
 import { Location } from './location';
@@ -23,22 +22,17 @@ export class FoamTags implements IDisposable {
    *
    * @param workspace the target workspace
    * @param keepMonitoring whether to recompute the links when the workspace changes
-   * @param debounceFor how long to wait between change detection and tags update
    * @returns the FoamTags
    */
   public static fromWorkspace(
     workspace: FoamWorkspace,
-    keepMonitoring = false,
-    debounceFor = 0
+    keepMonitoring = false
   ): FoamTags {
     const tags = new FoamTags(workspace);
     tags.update();
 
     if (keepMonitoring) {
-      const updateTags =
-        debounceFor > 0
-          ? debounce(tags.update.bind(tags), 500)
-          : tags.update.bind(tags);
+      const updateTags = tags.update.bind(tags);
       tags.disposables.push(
         workspace.onDidAdd(updateTags),
         workspace.onDidUpdate(updateTags),

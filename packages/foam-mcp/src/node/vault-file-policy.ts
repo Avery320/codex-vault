@@ -17,11 +17,6 @@ export const VAULT_EXCLUDED_DIRECTORY_NAMES = [
  * can read.
  */
 export class VaultFilePolicy implements IMatcher {
-  readonly include = ['**/*'];
-  readonly exclude = VAULT_EXCLUDED_DIRECTORY_NAMES.map(
-    name => `**/${name}/**`
-  );
-
   private readonly excludedDirectoryNames = new Set(
     VAULT_EXCLUDED_DIRECTORY_NAMES
   );
@@ -34,10 +29,4 @@ export class VaultFilePolicy implements IMatcher {
   isMatch(uri: URI): boolean {
     return !this.isIgnored(uri.toFsPath());
   }
-
-  match(files: URI[]): URI[] {
-    return files.filter(uri => this.isMatch(uri));
-  }
-
-  async refresh(): Promise<void> {}
 }
