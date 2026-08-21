@@ -7,14 +7,12 @@ import {
   NoopTelemetryReporter,
   TELEMETRY_CONNECTION_STRING,
 } from '@foam/core';
-import { parseExportCommandArgs, renderExportHelp, runExportCommand } from './commands/export';
 import { runListCommand } from './commands/list';
 import { runNoteCommand } from './commands/note';
 import { runLinksCommand } from './commands/links';
 import { runGraphCommand } from './commands/graph';
 import { runOutlineCommand } from './commands/outline';
 import { runDailyCommand } from './commands/daily';
-import { runLintCommand } from './commands/lint';
 import { runSearchCommand } from './commands/search';
 import { runRenameCommand } from './commands/rename';
 import { runTagCommand } from './commands/tag';
@@ -35,7 +33,6 @@ import { getCoreVersion } from './support/version';
 const CLI_HELP = `Usage: foam <command> [options]
 
 Commands:
-  lint        Check workspace for issues
   list        List notes, tags, orphans, placeholders, deadends, or templates
   note        Show, create, move, delete, or get the id of a note
   outline     Show the heading structure of a note
@@ -149,18 +146,6 @@ async function dispatch(
 
   try {
     switch (command) {
-      case 'export': {
-        if (commandArgs.includes('--help') || commandArgs.includes('-h')) {
-          logger.info(renderExportHelp());
-          return 0;
-        }
-
-        await runExportCommand(parseExportCommandArgs(commandArgs));
-        return 0;
-      }
-      case 'lint': {
-        return runLintCommand(commandArgs, logger);
-      }
       case 'list': {
         return runListCommand(commandArgs, logger);
       }

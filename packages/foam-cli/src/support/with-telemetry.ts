@@ -10,8 +10,6 @@ import { ITelemetryReporter, bucketDuration } from '@foam/core';
  * "command word" would otherwise be a user-supplied free-text string).
  */
 export const KNOWN_COMMANDS = new Set([
-  'export',
-  'lint',
   'list',
   'note',
   'outline',
@@ -20,7 +18,6 @@ export const KNOWN_COMMANDS = new Set([
   'graph',
   'daily',
   'tag',
-  'grep',
   'search',
   'rename',
   'update',
@@ -53,7 +50,7 @@ const TELEMETRY_SKIP_COMMANDS = new Set([
  *    string, and a new user typing a typo first shouldn't see a
  *    consent prompt
  *  - any invocation with `--help` or `-h` anywhere in the args
- *    (e.g. `foam export --help`) — these don't run the command
+ *    (e.g. `foam mcp --help`) — these don't run the command
  */
 export function shouldSkipTelemetry(
   command: string | undefined,

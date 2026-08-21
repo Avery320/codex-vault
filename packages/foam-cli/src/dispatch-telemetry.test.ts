@@ -6,40 +6,7 @@ import { InMemoryTelemetryReporter } from '@foam/core';
 import { runCli } from './index';
 import { TestLogger } from './test/test-utils';
 
-/**
- * `dispatch` catches command exceptions and returns 1 so the user never sees
- * a stack trace. The risk is that telemetry loses the failure information:
- * without structured properties on `cli.command-invoked`, every failure
- * looks identical (`exitCode=1`) and the failure mode is invisible.
- *
- * These tests pin the contract: a caught command failure must surface
- * `errorType` and `errorContext` as properties of `cli.command-invoked`.
- */
-describe('dispatch failure telemetry', () => {
-  it('records errorType on cli.command-invoked when a command throws and dispatch catches', async () => {
-    const reporter = new InMemoryTelemetryReporter();
-    // `export` without required args throws inside parseExportCommandArgs.
-    // dispatch swallows the throw and returns exit code 1.
-    const exitCode = await runCli(['export'], new TestLogger(), reporter);
-
-    expect(exitCode).toBe(1);
-    const event = reporter.events.find(e => e.name === 'cli.command-invoked');
-    expect(event).toBeDefined();
-    expect(event?.properties).toMatchObject({
-      command: 'export',
-      exitCode: '1',
-      errorType: 'Error',
-    });
-  });
-
-  it('records errorContext=dispatch on the same event so the failure stage is identifiable', async () => {
-    const reporter = new InMemoryTelemetryReporter();
-    await runCli(['export'], new TestLogger(), reporter);
-
-    const event = reporter.events.find(e => e.name === 'cli.command-invoked');
-    expect(event?.properties?.errorContext).toBe('dispatch');
-  });
-
+describe('dispatch telemetry filtering', () => {
   it('does not emit cli.command-invoked for unknown commands (the command word is unbounded free text)', async () => {
     const reporter = new InMemoryTelemetryReporter();
     const exitCode = await runCli(['not-a-command'], new TestLogger(), reporter);

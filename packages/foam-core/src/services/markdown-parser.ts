@@ -15,10 +15,9 @@ import {
 } from '../model/note';
 import { Position } from '../model/position';
 import { Range } from '../model/range';
-import { extractHashtags, extractTagsFromProp, hash, isSome } from '../utils';
+import { extractHashtags, extractTagsFromProp, isSome } from '../utils';
 import { Logger } from '../utils/log';
 import { URI } from '../model/uri';
-import { ICache } from '../utils/cache';
 
 export interface ParserPlugin {
   name?: string;
@@ -29,36 +28,6 @@ export interface ParserPlugin {
   onDidVisitTree?: (tree: Node, note: Resource) => void;
   onDidFindProperties?: (properties: any, note: Resource, node: Node) => void;
 }
-
-type Checksum = string;
-
-export interface ParserCacheEntry {
-  checksum: Checksum;
-  resource: Resource;
-}
-
-/**
- * This caches the parsed markdown for a given URI.
- *
- * The URI identifies the resource that needs to be parsed,
- * the checksum identifies the text that needs to be parsed.
- *
- * If the URI and the Checksum have not changed, the cached resource is returned.
- */
-export type ParserCache = ICache<URI, ParserCacheEntry>;
-
-/**
- * Called after every `parse`, with the cost of that parse.
- *
- * Used by `LoadProfiler` to attribute workspace load time. Reported from the
- * outermost parser only, so a cache miss produces exactly one sample.
- */
-export type ParseObserver = (sample: {
-  uri: URI;
-  chars: number;
-  ms: number;
-  cacheHit: boolean;
-}) => void;
 
 const parser = unified()
   .use(markdownParse, { gfm: true })
@@ -86,9 +55,7 @@ export function getLinkDefinitions(markdown: string): NoteLinkDefinition[] {
 }
 
 export function createMarkdownParser(
-  extraPlugins: ParserPlugin[] = [],
-  cache?: ParserCache,
-  onParse?: ParseObserver
+  extraPlugins: ParserPlugin[] = []
 ): ResourceParser {
   const plugins = [
     titlePlugin,
@@ -272,55 +239,7 @@ export function createMarkdownParser(
     },
   };
 
-  const cachedParser: ResourceParser = {
-    parse: (uri: URI, markdown: string): Resource => {
-      const start = performance.now();
-      const actualChecksum = hash(markdown);
-      if (cache.has(uri)) {
-        const { checksum, resource } = cache.get(uri);
-        if (actualChecksum === checksum) {
-          onParse?.({
-            uri,
-            chars: markdown.length,
-            ms: performance.now() - start,
-            cacheHit: true,
-          });
-          return resource;
-        }
-      }
-      const resource = foamParser.parse(uri, markdown);
-      cache.set(uri, { checksum: actualChecksum, resource });
-      onParse?.({
-        uri,
-        chars: markdown.length,
-        ms: performance.now() - start,
-        cacheHit: false,
-      });
-      return resource;
-    },
-  };
-
-  if (isSome(cache)) {
-    return cachedParser;
-  }
-  if (!onParse) {
-    return foamParser;
-  }
-  // `foamParser` stays uninstrumented so the cached parser above reports
-  // exactly one sample per parse rather than one per layer
-  return {
-    parse: (uri: URI, markdown: string): Resource => {
-      const start = performance.now();
-      const resource = foamParser.parse(uri, markdown);
-      onParse({
-        uri,
-        chars: markdown.length,
-        ms: performance.now() - start,
-        cacheHit: false,
-      });
-      return resource;
-    },
-  };
+  return foamParser;
 }
 
 /**
@@ -690,7 +609,7 @@ const titlePlugin: ParserPlugin = {
     // Give precedence to the title from the frontmatter if it exists
     note.title = props.title?.toString() ?? note.title;
   },
-  onDidVisitTree: (tree, note) => {
+  onDidVisitTree: (_tree, note) => {
     if (note.title === '') {
       note.title = note.uri.getName();
     }

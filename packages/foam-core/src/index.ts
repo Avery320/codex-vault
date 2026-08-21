@@ -23,15 +23,7 @@ export {
   SubstringExcludeMatcher,
 } from './services/datastore';
 export { createMarkdownParser, getLinkDefinitions, getBlockFor } from './services/markdown-parser';
-export type {
-  ParserPlugin,
-  ParserCache,
-  ParserCacheEntry,
-  ParseObserver,
-} from './services/markdown-parser';
-export { LoadProfiler } from './services/load-profiler';
-export type { LoadProfileStats, ParseSample } from './services/load-profiler';
-export { EventLoopMonitor, formatMemoryUsage } from './services/host-metrics';
+export type { ParserPlugin } from './services/markdown-parser';
 export { MarkdownResourceProvider, createMarkdownReferences } from './services/markdown-provider';
 export {
   AttachmentResourceProvider,
@@ -76,16 +68,7 @@ export type { ILogger, LogLevel, LogLevelThreshold } from './utils/log';
 export { toSlug } from './utils/slug';
 export { isSubsequence } from './utils/string';
 export { extractHashtags, extractTagsFromProp, HASHTAG_REGEX } from './utils/hashtags';
-export {
-  getExcerpt,
-  stripFrontMatter,
-  stripImages,
-  isInFrontMatter,
-  isOnYAMLKeywordLine,
-} from './utils/md';
-export type { ICache } from './utils/cache';
-export { isNotNull, isSome, isNone, isNumeric, hash, firstFrom, lazyExecutor } from './utils/core';
-export { getHeadingFromFileName } from './utils/index';
+export { isSome, isNone } from './utils/core';
 export {
   extractFoamTemplateFrontmatterMetadata,
   removeFoamMetadata,
@@ -99,9 +82,6 @@ export {
   fromFsPath,
 } from './utils/path';
 export { isWindows, isMacintosh, isLinux } from './common/platform';
-export { TaskDeduplicator } from './utils/task-deduplicator';
-export type { Progress, ProgressCallback } from './services/progress';
-export { CancellationError } from './services/progress';
 export type {
   ITelemetryReporter,
   WorkspaceSizeBucket,
@@ -133,76 +113,10 @@ export type {
   GraphBuilderOptions,
 } from './services/graph-data-builder';
 
-// Export pipeline (workspace → static-site artifact set)
-export { buildSite } from './export';
-export { exportAssets } from './export/asset-filters';
-export {
-  selectAll,
-  selectWhere,
-  selectByUris,
-} from './export/selectors';
-export {
-  getWorkspaceRelativePath,
-  getContentRelativePath,
-} from './export/derive/build-route-manifest';
-export { slugifyUrlSegment, slugifyUrlPath } from './export/slug';
-export type { SlugifyUrlPathOptions } from './export/slug';
-export type {
-  ExportConfig,
-  ExportSiteConfig,
-  ExportSelector,
-  ExportAssetMatcher,
-  ExportAssetContext,
-  ExportHomepageMatcher,
-  ExportValueResolver,
-  ExportRuntimeContext,
-  ExportSiteContext,
-  ExportContext,
-  ExportArtifactSet,
-  ExportedNote,
-  ExportedAsset,
-  ExportedRoute,
-  ExportedSite,
-  ExportedBacklink,
-  ExportedDiagnostic,
-  ExportedGraphData,
-  ExportedGraphNode,
-  ExportedGraphLink,
-} from './export/types';
-export type {
-  PublishTarget,
-  PublishLocator,
-  PublishLocation,
-  AssetStrategy,
-  AssetResolution,
-  SourceLinkRewriter,
-  ResolvedLink,
-  LinkRewriteResult,
-} from './export/target';
-
-// Lint
-export {
-  lintNote,
-  lintWorkspace,
-  computeNoteEdits,
-  missingHeadingRule,
-  staleDefinitionsRule,
-  WorkspaceLintResult,
-} from './lint/lint';
-export type { LintRule, LintIssue, LintRelatedInfo, WikilinkDefinitionSetting } from './lint/lint';
-export { generateHeading } from './lint/generate-headings';
-export {
-  generateLinkReferences,
-  LINK_REFERENCE_DEFINITION_HEADER,
-  LINK_REFERENCE_DEFINITION_FOOTER,
-} from './lint/generate-link-references';
-
 // Common
 export type { IDisposable } from './common/lifecycle';
 export { Emitter } from './common/event';
 export type { Event } from './common/event';
-export { CancellationTokenSource } from './common/cancellation';
-export type { CancellationToken } from './common/cancellation';
 export { Variable } from './common/snippetParser';
 export { FoamError } from './common/errors';
 export type { FoamErrorCode } from './common/errors';

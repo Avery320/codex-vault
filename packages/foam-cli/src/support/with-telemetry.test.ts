@@ -28,14 +28,14 @@ describe('shouldSkipTelemetry', () => {
 
   it('still runs telemetry for known commands without --help', () => {
     expect(shouldSkipTelemetry('graph')).toBe(false);
-    expect(shouldSkipTelemetry('export', ['--format', 'json'])).toBe(false);
+    expect(shouldSkipTelemetry('daily', ['--format', 'json'])).toBe(false);
     expect(shouldSkipTelemetry('mcp', [])).toBe(false);
   });
 
   it('skips when --help or -h appears anywhere in the args (the command never runs)', () => {
-    expect(shouldSkipTelemetry('export', ['--help'])).toBe(true);
+    expect(shouldSkipTelemetry('daily', ['--help'])).toBe(true);
     expect(shouldSkipTelemetry('mcp', ['--allow-writes', '--help'])).toBe(true);
-    expect(shouldSkipTelemetry('lint', ['-h'])).toBe(true);
+    expect(shouldSkipTelemetry('graph', ['-h'])).toBe(true);
     expect(shouldSkipTelemetry('note', ['show', '--help'])).toBe(true);
   });
 });

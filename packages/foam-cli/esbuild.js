@@ -46,21 +46,7 @@ async function main() {
     await ctx.dispose();
   }
 
-  copyGraphBundle();
   copyMcpAppBundle();
-  copyAssets();
-}
-
-function copyGraphBundle() {
-  const src = path.join(
-    __dirname,
-    '../foam-graph/out/foam-graph.standalone.js'
-  );
-  const dest = path.join(__dirname, 'out/foam-graph.standalone.js');
-  if (fs.existsSync(src)) {
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
-  }
 }
 
 function copyMcpAppBundle() {
@@ -71,17 +57,6 @@ function copyMcpAppBundle() {
   }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
-}
-
-function copyAssets() {
-  const src = path.join(__dirname, 'assets');
-  const dest = path.join(__dirname, 'out/assets');
-  if (fs.existsSync(src)) {
-    fs.mkdirSync(dest, { recursive: true });
-    for (const file of fs.readdirSync(src)) {
-      fs.copyFileSync(path.join(src, file), path.join(dest, file));
-    }
-  }
 }
 
 main().catch(e => {

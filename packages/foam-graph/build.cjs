@@ -58,22 +58,8 @@ function writeComponentEntrypointDeclaration() {
   );
 }
 
-async function buildStandaloneTarget() {
-  console.log('Building standalone (ESM, all deps bundled)...');
-  await esbuild.build({
-    entryPoints: [path.join(dir, 'src/foam-graph.ts')],
-    bundle: true,
-    format: 'esm',
-    outfile: path.join(packageOutDir, 'foam-graph.standalone.js'),
-    platform: 'browser',
-    minify: true,
-    sourcemap: false,
-  });
-}
-
 async function main() {
   await buildLibTarget();
-  await buildStandaloneTarget();
 }
 
 main().catch(e => {
