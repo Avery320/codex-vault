@@ -393,6 +393,70 @@ foam_template:
       }
     ));
 
+  it('create_resource applies custom template date formats', () =>
+    withMcpServer(
+      {
+        '.foam/templates/new-note.md': `---
+foam_template:
+  filepath: notes/\${FOAM_DATE_FORMAT:[dated]}/$FOAM_SLUG.md
+---
+# $FOAM_TITLE (\${FOAM_DATE_FORMAT:[created]})
+`,
+      },
+      async ctx => {
+        const result = await ctx.callToolJson<{ uri: string }>(
+          'create_resource',
+          { title: 'Hello Note' }
+        );
+        expect(result.uri).toBe('notes/dated/hello-note.md');
+        expect(
+          (
+            await ctx.callToolJson<{ content: string }>('read_resource', {
+              uri: result.uri,
+            })
+          ).content
+        ).toBe('# Hello Note (created)\n');
+      }
+    ));
+
+  it('create_resource rejects legacy transforms before writing a note', () =>
+    withMcpServer(
+      {
+        '.foam/templates/new-note.md': '# ${FOAM_TITLE/(.*)/<$1>/}\n',
+      },
+      async ctx => {
+        const expression = '${FOAM_TITLE/(.*)/<$1>/}';
+        const result = await ctx.callTool('create_resource', {
+          title: 'hello',
+        });
+        expect(result.isError).toBe(true);
+        expect(JSON.parse(result.content[0].text!)).toMatchObject({
+          code: 'invalid_input',
+          data: {
+            expression,
+            template: '.foam/templates/new-note.md',
+          },
+        });
+        expect(await ctx.dataStore.exists(ctx.rootUri.joinPath('hello.md'))).toBe(
+          false
+        );
+      }
+    ));
+
+  it('create_resource with an explicit path bypasses Markdown templates', () =>
+    withMcpServer(
+      {
+        '.foam/templates/new-note.md': '# ${FOAM_TITLE/(.*)/<$1>/}\n',
+      },
+      async ctx => {
+        const result = await ctx.callToolJson<{ uri: string }>(
+          'create_resource',
+          { path: 'safe.md', content: '# Safe\n' }
+        );
+        expect(result.uri).toBe('safe.md');
+      }
+    ));
+
   it('create_resource rejects a Markdown template path outside the vault', () =>
     withMcpServer(
       {

@@ -1,18 +1,22 @@
-import { toSlug } from '../utils/slug';
-import {
-  SnippetParser,
-  Variable,
-  VariableResolver,
-} from '../common/snippetParser';
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
-import isoWeek from 'dayjs/plugin/isoWeek';
+import isoWeekPlugin from 'dayjs/plugin/isoWeek';
+import { FoamError } from '../common/errors';
+import { toSlug } from '../utils/slug';
 
-// isoWeek adds ISO week number support; advancedFormat exposes the W/WW tokens
-dayjs.extend(isoWeek);
+dayjs.extend(isoWeekPlugin);
 dayjs.extend(advancedFormat);
 
-const knownFoamVariables = new Set([
+export interface TemplateVariableContext {
+  date: Date;
+  title?: string;
+  locale?: string;
+}
+
+const TEMPLATE_PATH = '.foam/templates/new-note.md';
+const DEFAULT_DATE_FORMAT = 'YYYY-MM-DDTHH:mm:ssZ';
+const UNALLOWED_TITLE_CHARS = '/\\#%&{}<>?*$!\'":@+`|=';
+const KNOWN_VARIABLES = new Set([
   'FOAM_TITLE',
   'FOAM_TITLE_SAFE',
   'FOAM_SLUG',
@@ -36,158 +40,158 @@ const knownFoamVariables = new Set([
   'FOAM_DATE_SECONDS_UNIX',
 ]);
 
-export class Resolver implements VariableResolver {
-  private readonly promises = new Map<string, Promise<string | undefined>>();
-
-  constructor(
-    private readonly foamDate: Date,
-    private readonly foamTitle?: string,
-    private readonly locale: string = 'default'
-  ) {}
-
-  async resolveText(text: string): Promise<string> {
-    const snippet = new SnippetParser().parse(text, false, false);
-    const foamVariablesInTemplate = new Set(
-      snippet
-        .variables()
-        .map(v => v.name)
-        .filter(name => knownFoamVariables.has(name))
-    );
-
-    await snippet.resolveVariables(this, foamVariablesInTemplate);
-    return snippet.snippetTextWithVariablesSubstituted(foamVariablesInTemplate);
+export function safeTemplateTitle(title: string): string {
+  let safeTitle = title;
+  for (const char of UNALLOWED_TITLE_CHARS) {
+    safeTitle = safeTitle.split(char).join('-');
   }
+  return safeTitle;
+}
 
-  async resolveFromName(name: string): Promise<string> {
-    const variable = new Variable(name);
-    await variable.resolve(this);
-    return (variable.children[0] ?? name).toString();
-  }
+export function resolveTemplateVariables(
+  text: string,
+  context: TemplateVariableContext
+): string {
+  let result = '';
 
-  async resolve(variable: Variable): Promise<string | undefined> {
-    const name = variable.name;
-    if (!this.promises.has(name)) {
-      let value: Promise<string | undefined> = Promise.resolve(undefined);
-      switch (name) {
-        case 'FOAM_TITLE':
-          value = Promise.resolve(this.foamTitle);
-          break;
-        case 'FOAM_TITLE_SAFE':
-          value = resolveFoamTitleSafe(this);
-          break;
-        case 'FOAM_SLUG':
-          value = toSlug(await this.resolve(new Variable('FOAM_TITLE')));
-          break;
-        case 'FOAM_SELECTED_TEXT':
-          value = Promise.resolve('');
-          break;
-        case 'FOAM_CURRENT_DIR':
-          value = Promise.resolve(undefined);
-          break;
-        case 'FOAM_DATE_FORMAT': {
-          const fmt =
-            variable.children.map(c => c.toString()).join('') ||
-            'YYYY-MM-DDTHH:mm:ssZ';
-          value = Promise.resolve(dayjs(this.foamDate).format(fmt));
-          break;
-        }
-        case 'FOAM_DATE_YEAR':
-          value = Promise.resolve(String(this.foamDate.getFullYear()));
-          break;
-        case 'FOAM_DATE_YEAR_SHORT':
-          value = Promise.resolve(
-            String(this.foamDate.getFullYear()).slice(-2)
-          );
-          break;
-        case 'FOAM_DATE_MONTH':
-          value = Promise.resolve(
-            String(this.foamDate.getMonth().valueOf() + 1).padStart(2, '0')
-          );
-          break;
-        case 'FOAM_DATE_MONTH_NAME':
-          value = Promise.resolve(
-            this.foamDate.toLocaleString(this.locale, { month: 'long' })
-          );
-          break;
-        case 'FOAM_DATE_MONTH_NAME_SHORT':
-          value = Promise.resolve(
-            this.foamDate.toLocaleString(this.locale, { month: 'short' })
-          );
-          break;
-        case 'FOAM_DATE_DATE':
-          value = Promise.resolve(
-            String(this.foamDate.getDate().valueOf()).padStart(2, '0')
-          );
-          break;
-        case 'FOAM_DATE_DAY_ISO':
-          value = Promise.resolve(
-            String(((this.foamDate.getDay() + 6) % 7) + 1)
-          );
-          break;
-        case 'FOAM_DATE_WEEK': {
-          const date = new Date(this.foamDate);
-          date.setDate(date.getDate() + 4 - (date.getDay() || 7));
-          const thursday = date.getTime();
-          date.setMonth(0);
-          date.setDate(1);
-          const janFirst = date.getTime();
-          const days = Math.round((thursday - janFirst) / 86400000);
-          const weekDay = Math.floor(days / 7) + 1;
-          value = Promise.resolve(String(weekDay.valueOf()).padStart(2, '0'));
-          break;
-        }
-        case 'FOAM_DATE_WEEK_YEAR': {
-          const date = new Date(this.foamDate);
-          date.setDate(date.getDate() + 4 - (date.getDay() || 7));
-          value = Promise.resolve(String(date.getFullYear()));
-          break;
-        }
-        case 'FOAM_DATE_DAY_NAME':
-          value = Promise.resolve(
-            this.foamDate.toLocaleString(this.locale, { weekday: 'long' })
-          );
-          break;
-        case 'FOAM_DATE_DAY_NAME_SHORT':
-          value = Promise.resolve(
-            this.foamDate.toLocaleString(this.locale, { weekday: 'short' })
-          );
-          break;
-        case 'FOAM_DATE_HOUR':
-          value = Promise.resolve(
-            String(this.foamDate.getHours().valueOf()).padStart(2, '0')
-          );
-          break;
-        case 'FOAM_DATE_MINUTE':
-          value = Promise.resolve(
-            String(this.foamDate.getMinutes().valueOf()).padStart(2, '0')
-          );
-          break;
-        case 'FOAM_DATE_SECOND':
-          value = Promise.resolve(
-            String(this.foamDate.getSeconds().valueOf()).padStart(2, '0')
-          );
-          break;
-        case 'FOAM_DATE_SECONDS_UNIX':
-          value = Promise.resolve(
-            (this.foamDate.getTime() / 1000).toString().padStart(2, '0')
-          );
-          break;
-        default:
-          value = Promise.resolve(undefined);
-          break;
-      }
-      this.promises.set(name, value);
+  for (let index = 0; index < text.length; ) {
+    if (text[index] !== '$' || isEscaped(text, index)) {
+      result += text[index++];
+      continue;
     }
-    return this.promises.get(name);
+
+    if (text[index + 1] !== '{') {
+      const nameEnd = readVariableName(text, index + 1);
+      const name = text.slice(index + 1, nameEnd);
+      if (!KNOWN_VARIABLES.has(name)) {
+        result += text[index++];
+        continue;
+      }
+      result += resolveFoamVariable(name, undefined, context) ?? '';
+      index = nameEnd;
+      continue;
+    }
+
+    const nameStart = index + 2;
+    const nameEnd = readVariableName(text, nameStart);
+    const name = text.slice(nameStart, nameEnd);
+    if (!KNOWN_VARIABLES.has(name)) {
+      result += text[index++];
+      continue;
+    }
+
+    const close = findClosingBrace(text, index + 1);
+    if (close === -1) {
+      result += text.slice(index);
+      break;
+    }
+
+    const separator = text[nameEnd];
+    if (separator !== '}' && separator !== ':') {
+      const expression = text.slice(index, close + 1);
+      throw new FoamError(
+        'invalid_input',
+        `Unsupported TextMate expression in ${TEMPLATE_PATH}: ${expression}`,
+        { expression, template: TEMPLATE_PATH }
+      );
+    }
+
+    const argument =
+      separator === ':'
+        ? resolveTemplateVariables(text.slice(nameEnd + 1, close), context)
+        : undefined;
+    const value = resolveFoamVariable(name, argument, context);
+    result += value ?? argument ?? '';
+    index = close + 1;
+  }
+
+  return result;
+}
+
+function resolveFoamVariable(
+  name: string,
+  argument: string | undefined,
+  { date, title, locale = 'default' }: TemplateVariableContext
+): string | undefined {
+  switch (name) {
+    case 'FOAM_TITLE':
+      return title;
+    case 'FOAM_TITLE_SAFE':
+      return title === undefined ? undefined : safeTemplateTitle(title);
+    case 'FOAM_SLUG':
+      return title === undefined ? undefined : toSlug(title);
+    case 'FOAM_SELECTED_TEXT':
+      return '';
+    case 'FOAM_CURRENT_DIR':
+      return undefined;
+    case 'FOAM_DATE_FORMAT':
+      return dayjs(date).format(argument || DEFAULT_DATE_FORMAT);
+    case 'FOAM_DATE_YEAR':
+      return String(date.getFullYear());
+    case 'FOAM_DATE_YEAR_SHORT':
+      return String(date.getFullYear()).slice(-2);
+    case 'FOAM_DATE_MONTH':
+      return String(date.getMonth() + 1).padStart(2, '0');
+    case 'FOAM_DATE_MONTH_NAME':
+      return date.toLocaleString(locale, { month: 'long' });
+    case 'FOAM_DATE_MONTH_NAME_SHORT':
+      return date.toLocaleString(locale, { month: 'short' });
+    case 'FOAM_DATE_DATE':
+      return String(date.getDate()).padStart(2, '0');
+    case 'FOAM_DATE_DAY_ISO':
+      return String(((date.getDay() + 6) % 7) + 1);
+    case 'FOAM_DATE_WEEK':
+      return isoWeek(date).week;
+    case 'FOAM_DATE_WEEK_YEAR':
+      return isoWeek(date).year;
+    case 'FOAM_DATE_DAY_NAME':
+      return date.toLocaleString(locale, { weekday: 'long' });
+    case 'FOAM_DATE_DAY_NAME_SHORT':
+      return date.toLocaleString(locale, { weekday: 'short' });
+    case 'FOAM_DATE_HOUR':
+      return String(date.getHours()).padStart(2, '0');
+    case 'FOAM_DATE_MINUTE':
+      return String(date.getMinutes()).padStart(2, '0');
+    case 'FOAM_DATE_SECOND':
+      return String(date.getSeconds()).padStart(2, '0');
+    case 'FOAM_DATE_SECONDS_UNIX':
+      return String(date.getTime() / 1000).padStart(2, '0');
   }
 }
 
-const UNALLOWED_CHARS = '/\\#%&{}<>?*$!\'":@+`|=';
+function isoWeek(date: Date): { week: string; year: string } {
+  const thursday = new Date(date);
+  thursday.setDate(thursday.getDate() + 4 - (thursday.getDay() || 7));
+  const year = String(thursday.getFullYear());
+  const firstDay = new Date(thursday);
+  firstDay.setMonth(0);
+  firstDay.setDate(1);
+  const days = Math.round((thursday.getTime() - firstDay.getTime()) / 86400000);
+  return { week: String(Math.floor(days / 7) + 1).padStart(2, '0'), year };
+}
 
-const resolveFoamTitleSafe = async (resolver: Resolver) => {
-  let safeTitle = await resolver.resolveFromName('FOAM_TITLE');
-  UNALLOWED_CHARS.split('').forEach(char => {
-    safeTitle = safeTitle.split(char).join('-');
-  });
-  return safeTitle;
-};
+function readVariableName(text: string, start: number): number {
+  if (!/[A-Za-z_]/.test(text[start] ?? '')) return start;
+  let end = start + 1;
+  while (/[A-Za-z0-9_]/.test(text[end] ?? '')) end++;
+  return end;
+}
+
+function isEscaped(text: string, index: number): boolean {
+  let slashes = 0;
+  while (text[index - slashes - 1] === '\\') slashes++;
+  return slashes % 2 === 1;
+}
+
+function findClosingBrace(text: string, open: number): number {
+  let depth = 1;
+  for (let index = open + 1; index < text.length; index++) {
+    if (text[index] === '$' && text[index + 1] === '{') {
+      depth++;
+      index++;
+    } else if (text[index] === '}' && --depth === 0) {
+      return index;
+    }
+  }
+  return -1;
+}

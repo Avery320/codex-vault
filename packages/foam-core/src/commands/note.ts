@@ -1,5 +1,8 @@
 import { computeWikilinkRenameEdits } from '../services/link-integrity';
-import { Resolver } from '../templates/variable-resolver';
+import {
+  resolveTemplateVariables,
+  safeTemplateTitle,
+} from '../templates/variable-resolver';
 import { parseFoamTemplate } from '../utils/template-frontmatter-parser';
 import { type Foam } from '../model/foam';
 import { FoamGraph } from '../model/graph';
@@ -145,13 +148,14 @@ export async function noteCreate(
       rootUri.joinPath('.foam', 'templates', 'new-note.md')
     );
     if (templateContent !== null) {
-      const resolver = new Resolver(new Date(), title);
       const template = parseFoamTemplate(
-        await resolver.resolveText(templateContent)
+        resolveTemplateVariables(templateContent, {
+          date: new Date(),
+          title,
+        })
       );
       const templatePath = (
-        template.filepath ??
-        `${await resolver.resolveFromName('FOAM_TITLE_SAFE')}.md`
+        template.filepath ?? `${safeTemplateTitle(title)}.md`
       ).replace(/[<>?*"|]/g, '-');
 
       targetUri = foam.workspace.resolveUri(templatePath);
