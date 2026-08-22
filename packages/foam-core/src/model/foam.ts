@@ -64,7 +64,7 @@ export const bootstrap = async (
   );
 
   const tags = withTiming(
-    () => FoamTags.fromWorkspace(workspace, true),
+    () => FoamTags.fromWorkspace(workspace),
     ms =>
       timingLogLevel === 'off'
         ? null

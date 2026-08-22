@@ -1,12 +1,9 @@
 import path from 'node:path';
 import { URI } from '@foam/core';
-import {
-  VAULT_EXCLUDED_DIRECTORY_NAMES,
-  VaultFilePolicy,
-} from './vault-file-policy';
+import { VaultFilePolicy } from './vault-file-policy';
 
 describe('VaultFilePolicy', () => {
-  it.each(VAULT_EXCLUDED_DIRECTORY_NAMES)(
+  it.each(['.astro', '.git', '.obsidian', '.trash', '.yarn', 'node_modules'])(
     'ignores every file below %s',
     directoryName => {
       const policy = new VaultFilePolicy();

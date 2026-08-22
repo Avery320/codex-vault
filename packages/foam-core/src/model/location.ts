@@ -20,15 +20,9 @@ export interface Location<T> {
   data: T;
 }
 
-export abstract class Location<T> {
-  static create<T>(uri: URI, range: Range, data: T): Location<T> {
-    return { uri, range, data };
-  }
-
-  static forObjectWithRange<T extends { range: Range }>(
-    uri: URI,
-    obj: T
-  ): Location<T> {
-    return Location.create(uri, obj.range, obj);
-  }
+export function locationForObjectWithRange<T extends { range: Range }>(
+  uri: URI,
+  data: T
+): Location<T> {
+  return { uri, range: data.range, data };
 }

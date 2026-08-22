@@ -10,7 +10,7 @@ import {
 
 Logger.setLevel('error');
 
-const parser = createMarkdownParser([]);
+const parser = createMarkdownParser();
 const createNoteFromMarkdown = (content: string, path?: string) =>
   parser.parse(path ? URI.file(path) : getRandomURI(), content);
 
@@ -80,7 +80,7 @@ describe('Link resolution', () => {
       expect(ws.resolveLink(noteA, noteA.links[1])).toEqual(noteB3.uri);
     });
 
-    it('should resolve Foam wikilinks', () => {
+    it('should resolve suffix-path wikilinks', () => {
       const workspace = createTestWorkspace();
       const noteA = createNoteFromMarkdown(
         'Link to [[two/page b]] and [[one/page b]]',

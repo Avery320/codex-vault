@@ -7,7 +7,7 @@ import { toSlug } from '../utils/slug';
 dayjs.extend(isoWeekPlugin);
 dayjs.extend(advancedFormat);
 
-export interface TemplateVariableContext {
+interface TemplateVariableContext {
   date: Date;
   title?: string;
   locale?: string;

@@ -30,15 +30,6 @@ const _slash = '/';
 const _regexp =
   /^(([^:/?#]{2,}?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
 
-/** The plain-data (JSON-safe) form of a {@link URI}. */
-export interface URIComponents {
-  scheme: string;
-  authority: string;
-  path: string;
-  query: string;
-  fragment: string;
-}
-
 export class URI {
   readonly scheme: string;
   readonly authority: string;
@@ -211,26 +202,6 @@ export class URI {
 
   toString(): string {
     return encode(this, false);
-  }
-
-  toJSON(): URIComponents {
-    return {
-      scheme: this.scheme,
-      authority: this.authority,
-      path: this.path,
-      query: this.query,
-      fragment: this.fragment,
-    };
-  }
-
-  /** Reconstructs a URI instance from its {@link toJSON} plain-data form. */
-  static fromJSON(data: URIComponents): URI {
-    return new URI(data);
-  }
-
-  isMarkdown(): boolean {
-    const ext = this.getExtension();
-    return ext === '.md' || ext === '.markdown';
   }
 
   isEqual(uri: URI): boolean {

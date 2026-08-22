@@ -47,7 +47,7 @@ export class FoamWorkspace implements IDisposable {
   readonly roots: URI[];
 
   /**
-   * @param roots The root URIs of the workspace (e.g. VS Code workspace folders)
+   * @param roots The filesystem roots of the workspace
    * @param defaultExtension The default extension for notes in this workspace (e.g. `.md`)
    */
   constructor(roots: URI[] = [], public defaultExtension: string = '.md') {
@@ -131,9 +131,11 @@ export class FoamWorkspace implements IDisposable {
     this._resources.set(this.getTrieIdentifier(resource.uri.path), resource);
     this._registerDirectoryIndex(resource);
 
-    isSome(old)
-      ? this.onDidUpdateEmitter.fire({ old: old, new: resource })
-      : this.onDidAddEmitter.fire(resource);
+    if (isSome(old)) {
+      this.onDidUpdateEmitter.fire({ old, new: resource });
+    } else {
+      this.onDidAddEmitter.fire(resource);
+    }
     return this;
   }
 
@@ -142,7 +144,9 @@ export class FoamWorkspace implements IDisposable {
     this._resources.delete(this.getTrieIdentifier(uri));
     this._unregisterDirectoryIndex(uri);
 
-    isSome(deleted) && this.onDidDeleteEmitter.fire(deleted);
+    if (isSome(deleted)) {
+      this.onDidDeleteEmitter.fire(deleted);
+    }
     return deleted ?? null;
   }
 
@@ -444,7 +448,9 @@ export class FoamWorkspace implements IDisposable {
    */
   public async fetchAndSet(uri: URI): Promise<Resource | null> {
     const resource = await this.fetch(uri);
-    resource && this.set(resource);
+    if (resource) {
+      this.set(resource);
+    }
     return resource;
   }
 

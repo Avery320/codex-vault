@@ -2,11 +2,10 @@ import { FoamError } from '../common/errors';
 import {
   resolveTemplateVariables,
   safeTemplateTitle,
-  type TemplateVariableContext,
 } from './variable-resolver';
 
 const date = new Date(2021, 9, 15, 1, 2, 3);
-const context: TemplateVariableContext = {
+const context = {
   date,
   title: 'My/note#title',
   locale: 'en-US',

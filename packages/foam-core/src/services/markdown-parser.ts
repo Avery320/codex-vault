@@ -17,11 +17,9 @@ import { extractHashtags, extractTagsFromProp, isSome } from '../utils';
 import { Logger } from '../utils/log';
 import { URI } from '../model/uri';
 
-export interface ParserPlugin {
+interface ParserPlugin {
   name?: string;
   visit?: (node: Node, note: Resource, noteSource: string) => void;
-  onDidInitializeParser?: (parser: unified.Processor) => void;
-  onWillParseMarkdown?: (markdown: string) => string;
   onWillVisitTree?: (tree: Node, note: Resource) => void;
   onDidVisitTree?: (tree: Node, note: Resource) => void;
   onDidFindProperties?: (properties: any, note: Resource, node: Node) => void;
@@ -32,36 +30,18 @@ const parser = unified()
   .use(frontmatterPlugin, ['yaml'])
   .use(wikiLinkPlugin, { aliasDivider: '|' });
 
-export function createMarkdownParser(
-  extraPlugins: ParserPlugin[] = []
-): ResourceParser {
+export function createMarkdownParser(): ResourceParser {
   const plugins = [
     titlePlugin,
     wikilinkPlugin,
     tagsPlugin,
     aliasesPlugin,
     sectionsPlugin,
-    ...extraPlugins,
   ];
-
-  for (const plugin of plugins) {
-    try {
-      plugin.onDidInitializeParser?.(parser);
-    } catch (e) {
-      handleError(plugin, 'onDidInitializeParser', undefined, e);
-    }
-  }
 
   const foamParser: ResourceParser = {
     parse: (uri: URI, markdown: string): Resource => {
       Logger.debug('Parsing:', uri.toString());
-      for (const plugin of plugins) {
-        try {
-          plugin.onWillParseMarkdown?.(markdown);
-        } catch (e) {
-          handleError(plugin, 'onWillParseMarkdown', uri, e);
-        }
-      }
       const tree = parser.parse(markdown);
 
       const note: Resource = {
@@ -455,7 +435,7 @@ const handleError = (
 };
 
 /**
- * Converts the 1-index Point object into the VS Code 0-index Position object
+ * Converts a 1-indexed AST Point into the internal 0-indexed Position
  * @param point ast Point (1-indexed)
  * @returns Foam Position  (0-indexed)
  */
@@ -464,7 +444,7 @@ const astPointToFoamPosition = (point: Point): Position => {
 };
 
 /**
- * Converts the 1-index Position object into the VS Code 0-index Range object
+ * Converts a 1-indexed AST Position into the internal 0-indexed Range
  * @param position an ast Position object (1-indexed)
  * @returns Foam Range  (0-indexed)
  */

@@ -1,6 +1,6 @@
 /**
  * Shared message types between a host and the graph component.
- * This file must remain free of VS Code and Node.js imports.
+ * This file must remain free of host-specific and Node.js imports.
  */
 
 export type NodeType =

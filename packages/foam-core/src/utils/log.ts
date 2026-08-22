@@ -3,7 +3,6 @@ export interface ILogger {
   info(message?: any, ...params: any[]): void;
   warn(message?: any, ...params: any[]): void;
   error(message?: any, ...params: any[]): void;
-  getLevel(): LogLevelThreshold;
   setLevel(level: LogLevelThreshold): void;
 }
 
@@ -43,9 +42,6 @@ export abstract class BaseLogger implements ILogger {
   error(message?: any, ...params: any[]): void {
     this.doLog('error', message, ...params);
   }
-  getLevel(): LogLevelThreshold {
-    return this.level;
-  }
   setLevel(level: LogLevelThreshold): void {
     this.level = level;
   }
@@ -70,18 +66,11 @@ export class Logger {
   static error(message?: any, ...params: any[]): void {
     Logger.defaultLogger.error(message, ...params);
   }
-  static getLevel(): LogLevelThreshold {
-    return Logger.defaultLogger.getLevel();
-  }
   static setLevel(level: LogLevelThreshold): void {
     Logger.defaultLogger.setLevel(level);
   }
 
   private static defaultLogger: ILogger = new ConsoleLogger();
-
-  static setDefaultLogger(logger: ILogger) {
-    Logger.defaultLogger = logger;
-  }
 }
 
 export const withTiming = <T>(

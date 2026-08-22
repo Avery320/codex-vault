@@ -6,9 +6,8 @@ const DEBOUNCE_MS = 100;
 type IgnoredPath = string | RegExp | ((path: string) => boolean);
 
 /**
- * Node-side counterpart to VsCodeWatcher: turns chokidar events into the
- * IWatcher contract that bootstrap() expects, with a small debounce on
- * change events to coalesce save bursts.
+ * Turns chokidar events into the IWatcher contract used by core, with a small
+ * debounce on change events to coalesce save bursts.
  *
  * Construct with the same set of paths/globs the workspace was loaded
  * with so the watcher and the in-memory graph stay in sync.

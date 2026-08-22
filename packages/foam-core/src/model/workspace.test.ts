@@ -267,30 +267,56 @@ describe('find in multi-root workspaces', () => {
 
 describe('resolveUri', () => {
   const root = URI.file('/workspace');
+  const secondRoot = URI.file('/workspace2');
 
-  it('should return an already-absolute path under the root as-is (case 1)', () => {
-    const ws = new FoamWorkspace([root]);
-    const result = ws.resolveUri('/workspace/journal/file.md');
-    expect(result.path).toBe('/workspace/journal/file.md');
-  });
-
-  it('should resolve a workspace-relative absolute path under the root (case 2)', () => {
-    const ws = new FoamWorkspace([root]);
-    const result = ws.resolveUri('/journal/file.md');
-    expect(result.path).toBe('/workspace/journal/file.md');
-  });
-
-  it('should resolve a relative path against roots[0] when no relativeTo is given (case 3)', () => {
-    const ws = new FoamWorkspace([root]);
-    const result = ws.resolveUri('journal/file.md');
-    expect(result.path).toBe('/workspace/journal/file.md');
-  });
-
-  it('should resolve a relative path against relativeTo when provided (case 3)', () => {
-    const ws = new FoamWorkspace([root]);
-    const base = URI.file('/workspace/subdir/note.md');
-    const result = ws.resolveUri('../other/file.md', base);
-    expect(result.path).toBe('/workspace/other/file.md');
+  it.each([
+    [
+      'an absolute path already under a root',
+      [root],
+      '/workspace/journal/file.md',
+      undefined,
+      '/workspace/journal/file.md',
+    ],
+    [
+      'a workspace-relative absolute path',
+      [root],
+      '/journal/file.md',
+      undefined,
+      '/workspace/journal/file.md',
+    ],
+    [
+      'a relative path without a base',
+      [root],
+      'journal/file.md',
+      undefined,
+      '/workspace/journal/file.md',
+    ],
+    [
+      'a relative path with a base',
+      [root],
+      '../other/file.md',
+      URI.file('/workspace/subdir/note.md'),
+      '/workspace/other/file.md',
+    ],
+    ['the root itself', [root], '/workspace', undefined, '/workspace'],
+    [
+      'a workspace-relative path with multiple roots',
+      [root, secondRoot],
+      '/journal/file.md',
+      undefined,
+      '/workspace/journal/file.md',
+    ],
+    [
+      'an absolute path already under a later root',
+      [root, secondRoot],
+      '/workspace2/shared/file.md',
+      undefined,
+      '/workspace2/shared/file.md',
+    ],
+  ])('resolves %s', (_name, roots, input, relativeTo, expected) => {
+    expect(new FoamWorkspace(roots).resolveUri(input, relativeTo).path).toBe(
+      expected
+    );
   });
 
   it('throws on absolute path when roots is empty and no relativeTo is given', () => {
@@ -300,66 +326,38 @@ describe('resolveUri', () => {
     );
   });
 
-  it('falls back to relativeTo for absolute path when roots is empty', () => {
-    const ws = new FoamWorkspace([]);
-    const vfsBase = new URI({
-      scheme: 'vscode-vfs',
-      authority: 'github',
-      path: '/elsewhere/note.md',
-    });
-
-    const fromVfs = ws.resolveUri('/some/absolute/file.md', vfsBase);
-    expect(fromVfs.path).toBe('/some/absolute/file.md');
-    expect(fromVfs.scheme).toBe('vscode-vfs');
-    expect(fromVfs.authority).toBe('github');
-
-    const memfsBase = new URI({
-      scheme: 'memfs',
-      authority: 'sandbox',
-      path: '/other/note.md',
-    });
-
-    const fromMemfs = ws.resolveUri('/some/absolute/file.md', memfsBase);
-    expect(fromMemfs.path).toBe('/some/absolute/file.md');
-    expect(fromMemfs.scheme).toBe('memfs');
-    expect(fromMemfs.authority).toBe('sandbox');
-  });
-
-  it('should handle the root path itself as under-root (case 1)', () => {
-    const ws = new FoamWorkspace([root]);
-    const result = ws.resolveUri('/workspace');
-    expect(result.path).toBe('/workspace');
-  });
-
-  it('should use first root when multiple roots exist and path is workspace-relative (case 2)', () => {
-    const root2 = URI.file('/other-root');
-    const ws = new FoamWorkspace([root, root2]);
-    const result = ws.resolveUri('/journal/file.md');
-    expect(result.path).toBe('/workspace/journal/file.md');
-  });
-
-  it('should detect a path already under root[1] as under-root and return it as-is', () => {
-    const root2 = URI.file('/workspace2');
-    const ws = new FoamWorkspace([root, root2]);
-    const result = ws.resolveUri('/workspace2/shared/file.md');
-    // Must NOT become '/workspace/workspace2/shared/file.md'
-    expect(result.path).toBe('/workspace2/shared/file.md');
-  });
+  it.each([
+    ['custom-vfs', 'github'],
+    ['memfs', 'sandbox'],
+  ])(
+    'preserves the %s base when roots are empty',
+    (scheme, authority) => {
+      const base = new URI({
+        scheme,
+        authority,
+        path: '/elsewhere/note.md',
+      });
+      const result = new FoamWorkspace([]).resolveUri(
+        '/some/absolute/file.md',
+        base
+      );
+      expect(result).toMatchObject({
+        path: '/some/absolute/file.md',
+        scheme,
+        authority,
+      });
+    }
+  );
 
   describe('Windows drive paths', () => {
-    it('should recognize a backslash drive path already under the root as-is (case 1)', () => {
+    it.each([
+      ['backslashes', 'C:\\workspace\\journal\\file.md'],
+      ['forward slashes', '/C:/workspace/journal/file.md'],
+    ])('keeps an under-root path using %s', (_name, input) => {
       const winRoot = URI.file('C:\\workspace');
-      const ws = new FoamWorkspace([winRoot]);
-      // Raw backslash path: must be normalized before comparison, not doubled
-      const result = ws.resolveUri('C:\\workspace\\journal\\file.md');
-      expect(result.path).toBe('/C:/workspace/journal/file.md');
-    });
-
-    it('should not double a forward-slash drive path already under the root (case 1)', () => {
-      const winRoot = URI.file('C:\\workspace');
-      const ws = new FoamWorkspace([winRoot]);
-      const result = ws.resolveUri('/C:/workspace/journal/file.md');
-      expect(result.path).toBe('/C:/workspace/journal/file.md');
+      expect(new FoamWorkspace([winRoot]).resolveUri(input).path).toBe(
+        '/C:/workspace/journal/file.md'
+      );
     });
   });
 });
@@ -415,20 +413,17 @@ describe('Directory index', () => {
     expect(ws.findByDirectory('/foo/bar')).toEqual(readme);
   });
 
-  it('should prefer index over README regardless of insertion order - index first', () => {
-    const ws = createTestWorkspace();
+  it('should prefer index over README regardless of insertion order', () => {
     const index = createTestNote({ uri: '/foo/bar/index.md' });
     const readme = createTestNote({ uri: '/foo/bar/README.md' });
-    ws.set(index).set(readme);
-    expect(ws.findByDirectory('/foo/bar')).toEqual(index);
-  });
-
-  it('should prefer index over README regardless of insertion order - README first', () => {
-    const ws = createTestWorkspace();
-    const index = createTestNote({ uri: '/foo/bar/index.md' });
-    const readme = createTestNote({ uri: '/foo/bar/README.md' });
-    ws.set(readme).set(index);
-    expect(ws.findByDirectory('/foo/bar')).toEqual(index);
+    for (const resources of [
+      [index, readme],
+      [readme, index],
+    ]) {
+      const workspace = createTestWorkspace();
+      resources.forEach(resource => workspace.set(resource));
+      expect(workspace.findByDirectory('/foo/bar')).toEqual(index);
+    }
   });
 
   it('should promote README when index is deleted', () => {
@@ -450,13 +445,7 @@ describe('Directory index', () => {
     expect(ws.findByDirectory('/foo/bar')).toBeNull();
   });
 
-  it('should return null for a directory with no index files', () => {
-    const ws = createTestWorkspace();
-    ws.set(createTestNote({ uri: '/foo/bar/page.md' }));
-    expect(ws.findByDirectory('/foo/bar')).toBeNull();
-  });
-
-  it('should not treat regular files as index files', () => {
+  it('should return null when a directory contains only regular files', () => {
     const ws = createTestWorkspace();
     ws.set(createTestNote({ uri: '/foo/bar/page.md' }));
     ws.set(createTestNote({ uri: '/foo/bar/notes.md' }));

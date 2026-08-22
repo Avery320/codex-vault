@@ -1,7 +1,11 @@
 import { FoamError } from '../common/errors';
 import type { Foam } from '../model/foam';
 import type { URI } from '../model/uri';
-import { TextEdit, WorkspaceTextEdit } from './text-edit';
+import {
+  applyTextEdits,
+  groupTextEditsByUri,
+  type WorkspaceTextEdit,
+} from './text-edit';
 
 export async function writeWorkspaceResource(
   foam: Foam,
@@ -31,7 +35,7 @@ export async function applyWorkspaceTextEdits(
   foam: Foam,
   edits: WorkspaceTextEdit[]
 ) {
-  for (const { uri, edits: fileEdits } of WorkspaceTextEdit.groupByUri(edits)) {
+  for (const { uri, edits: fileEdits } of groupTextEditsByUri(edits)) {
     const content = await foam.services.dataStore.read(uri);
     if (content === null) {
       throw new FoamError(
@@ -40,6 +44,6 @@ export async function applyWorkspaceTextEdits(
         { uri: uri.toFsPath() }
       );
     }
-    await writeWorkspaceResource(foam, uri, TextEdit.apply(content, fileEdits));
+    await writeWorkspaceResource(foam, uri, applyTextEdits(content, fileEdits));
   }
 }

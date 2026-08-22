@@ -1,4 +1,4 @@
-import { createMarkdownParser, ParserPlugin } from './markdown-parser';
+import { createMarkdownParser } from './markdown-parser';
 import { NoteLinkDefinition, ResourceLink } from '../model/note';
 import { Logger } from '../utils/log';
 import { URI } from '../model/uri';
@@ -7,7 +7,7 @@ import { getRandomURI } from '../../test/test-utils';
 
 Logger.setLevel('error');
 
-const parser = createMarkdownParser([]);
+const parser = createMarkdownParser();
 const createNoteFromMarkdown = (content: string, path?: string) =>
   parser.parse(path ? URI.file(path) : getRandomURI(), content);
 
@@ -633,35 +633,6 @@ This is the content of section with url`);
     });
   });
 
-  describe('Parser plugins', () => {
-    const testPlugin: ParserPlugin = {
-      visit: (node, note) => {
-        if (node.type === 'heading') {
-          note.properties.hasHeading = true;
-        }
-      },
-    };
-    const parser = createMarkdownParser([testPlugin]);
-
-    it('can augment the parsing of the file', () => {
-      const note1 = parser.parse(
-        URI.file('/path/to/a'),
-        `
-This is a test note without headings.
-But with some content.
-`
-      );
-      expect(note1.properties.hasHeading).toBeUndefined();
-
-      const note2 = parser.parse(
-        URI.file('/path/to/a'),
-        `
-# This is a note with header
-and some content`
-      );
-      expect(note2.properties.hasHeading).toBeTruthy();
-    });
-  });
   describe('Alias', () => {
     it('can find tags in comma separated string', () => {
       const note = parser.parse(

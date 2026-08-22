@@ -113,47 +113,30 @@ describe('computeWikilinkRenameEdits', () => {
     expect(edits[0].edit.newText).toEqual('[[note-a]]');
   });
 
-  it('preserves the alias when updating a wikilink', () => {
+  it.each([
+    ['alias', '[[note-a|Alias]]', '[[new-note-a|Alias]]'],
+    ['section', '[[note-a#Section]]', '[[new-note-a#Section]]'],
+    [
+      'embedded block anchor',
+      '![[note-a#^block-id|Preview]]',
+      '![[new-note-a#^block-id|Preview]]',
+    ],
+  ])('preserves the %s when updating a wikilink', (_name, link, expected) => {
     const noteA = createNoteFromMarkdown('note-a.md', 'Content of A', root);
-    const noteB = createNoteFromMarkdown(
-      'note-b.md',
-      'Link to [[note-a|Alias]]',
-      root
-    );
+    const noteB = createNoteFromMarkdown('note-b.md', `Link to ${link}`, root);
     const { workspace, graph } = createWorkspaceAndGraph(noteA, noteB);
-    const newUri = root.resolve('new-note-a.md');
 
     const edits = computeWikilinkRenameEdits(
       workspace,
       graph,
       noteA.uri,
-      newUri
+      root.resolve('new-note-a.md')
     );
 
-    expect(edits[0].edit.newText).toEqual('[[new-note-a|Alias]]');
+    expect(edits[0].edit.newText).toEqual(expected);
   });
 
-  it('preserves the section when updating a wikilink', () => {
-    const noteA = createNoteFromMarkdown('note-a.md', 'Content of A', root);
-    const noteB = createNoteFromMarkdown(
-      'note-b.md',
-      'Link to [[note-a#Section]]',
-      root
-    );
-    const { workspace, graph } = createWorkspaceAndGraph(noteA, noteB);
-    const newUri = root.resolve('new-note-with-section.md');
-
-    const edits = computeWikilinkRenameEdits(
-      workspace,
-      graph,
-      noteA.uri,
-      newUri
-    );
-
-    expect(edits[0].edit.newText).toEqual('[[new-note-with-section#Section]]');
-  });
-
-  it('does not return edits for markdown links (delegated to VS Code built-in)', () => {
+  it('only returns edits for wikilinks', () => {
     const noteA = createNoteFromMarkdown('note-a.md', 'Content of A', root);
     const noteB = createNoteFromMarkdown(
       'note-b.md',
@@ -170,7 +153,6 @@ describe('computeWikilinkRenameEdits', () => {
       newUri
     );
 
-    // Only the wikilink should produce an edit; the markdown link should be skipped
     expect(edits).toHaveLength(1);
     expect(edits[0].edit.newText).toEqual('[[renamed]]');
   });

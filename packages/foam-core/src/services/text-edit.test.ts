@@ -1,7 +1,7 @@
 import { Range } from '../model/range';
 import { URI } from '../model/uri';
 import { Logger } from '../utils/log';
-import { TextEdit, WorkspaceTextEdit } from './text-edit';
+import { applyTextEdits, groupTextEditsByUri } from './text-edit';
 
 Logger.setLevel('error');
 
@@ -24,7 +24,7 @@ describe('applyTextEdit', () => {
 3. this is third line
 4. this is fourth line`;
 
-    const actual = TextEdit.apply(text, textEdit);
+    const actual = applyTextEdits(text, textEdit);
 
     expect(actual).toBe(expected);
   });
@@ -46,7 +46,7 @@ describe('applyTextEdit', () => {
 3. this is third line
 `;
 
-    const actual = TextEdit.apply(text, textEdit);
+    const actual = applyTextEdits(text, textEdit);
 
     expect(actual).toBe(expected);
   });
@@ -69,13 +69,12 @@ describe('applyTextEdit', () => {
 3. this is third line
 `;
 
-    const actual = TextEdit.apply(text, textEdit);
+    const actual = applyTextEdits(text, textEdit);
 
     expect(actual).toBe(expected);
   });
 
-  it('should apply multiple TextEdits in reverse order (VS Code behavior)', () => {
-    // This test shows why reverse order is important for range stability
+  it('applies multiple edits from the end to preserve source ranges', () => {
     const textEdits = [
       // Edit near beginning - would affect later ranges if applied first
       {
@@ -97,13 +96,13 @@ describe('applyTextEdit', () => {
     const text = `this is my text`;
     const expected = `[PREFIX] this is my [MIDDLE] text [END]`;
 
-    const actual = TextEdit.apply(text, textEdits);
+    const actual = applyTextEdits(text, textEdits);
 
     expect(actual).toBe(expected);
   });
 });
 
-describe('WorkspaceTextEdit.groupByUri', () => {
+describe('groupTextEditsByUri', () => {
   it('groups edits by URI while preserving URI and edit order', () => {
     const firstUri = URI.file('/workspace/first.md');
     const secondUri = URI.file('/workspace/second.md');
@@ -120,7 +119,7 @@ describe('WorkspaceTextEdit.groupByUri', () => {
       range: Range.create(0, 0, 0, 0),
     };
 
-    const groups = WorkspaceTextEdit.groupByUri([
+    const groups = groupTextEditsByUri([
       { uri: firstUri, edit: firstEdit },
       { uri: secondUri, edit: thirdEdit },
       { uri: firstUri, edit: secondEdit },

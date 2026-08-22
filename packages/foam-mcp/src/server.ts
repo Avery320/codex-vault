@@ -50,7 +50,7 @@ const READ_ONLY_INSTRUCTIONS =
  *
  * The Foam instance is injected — this library does not pick a filesystem
  * or watcher implementation. The CLI uses `NodeFileDataStore` + `NodeWatcher`;
- * a future VS Code integration would use its own equivalents.
+ * another host integration would use its own equivalents.
  */
 export class FoamMcpServer {
   private readonly mcp: McpServer;

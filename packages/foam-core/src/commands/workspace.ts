@@ -8,7 +8,7 @@ import { FoamError } from '../common/errors';
  * path themselves) or a short Foam identifier is given and the workspace
  * resolves it through its identifier index.
  *
- * Callers (CLI / MCP / VS Code) translate their own inputs (CLI flags,
+ * Callers (CLI / MCP) translate their own inputs (CLI flags,
  * MCP tool args, editor selection) into this shape.
  */
 export type NoteRef = { uri: URI } | { identifier: string };

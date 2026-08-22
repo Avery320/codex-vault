@@ -8,46 +8,33 @@ export interface TextEdit {
   newText: string;
 }
 
-export abstract class TextEdit {
-  /**
-   *
-   * @param text text on which the textEdit will be applied
-   * @param textEdit
-   * @returns {string} text with the applied textEdit
-   */
-  public static apply(text: string, textEdit: TextEdit): string;
-   
-  public static apply(text: string, textEdits: TextEdit[]): string;
-   
-  public static apply(
-    text: string,
-    textEditOrEdits: TextEdit | TextEdit[]
-  ): string {
-    if (Array.isArray(textEditOrEdits)) {
-      // Apply edits in reverse order (end-to-beginning) to maintain range validity
-      // This matches VS Code's behavior for TextEdit application
-      const sortedEdits = [...textEditOrEdits].sort((a, b) =>
-        Position.compareTo(b.range.start, a.range.start)
-      );
-      let result = text;
-      for (const textEdit of sortedEdits) {
-        result = this.apply(result, textEdit);
-      }
-      return result;
+export function applyTextEdits(
+  text: string,
+  editOrEdits: TextEdit | TextEdit[]
+): string {
+  if (Array.isArray(editOrEdits)) {
+    const sorted = [...editOrEdits].sort((a, b) =>
+      Position.compareTo(b.range.start, a.range.start)
+    );
+    let result = text;
+    for (const edit of sorted) {
+      result = applyTextEdits(result, edit);
     }
-
-    const textEdit = textEditOrEdits;
-    const eol = detectNewline.graceful(text);
-    const lines = text.split(eol);
-    const characters = text.split('');
-    const startOffset = getOffset(lines, textEdit.range.start, eol);
-    const endOffset = getOffset(lines, textEdit.range.end, eol);
-    const deleteCount = endOffset - startOffset;
-
-    const textToAppend = `${textEdit.newText}`;
-    characters.splice(startOffset, deleteCount, textToAppend);
-    return characters.join('');
+    return result;
   }
+
+  const eol = detectNewline.graceful(text);
+  const lines = text.split(eol);
+  const characters = text.split('');
+  const startOffset = getOffset(lines, editOrEdits.range.start, eol);
+  const endOffset = getOffset(lines, editOrEdits.range.end, eol);
+
+  characters.splice(
+    startOffset,
+    endOffset - startOffset,
+    editOrEdits.newText
+  );
+  return characters.join('');
 }
 
 const getOffset = (
@@ -78,27 +65,25 @@ export interface WorkspaceTextEdit {
   edit: TextEdit;
 }
 
-export interface WorkspaceTextEditGroup {
+interface WorkspaceTextEditGroup {
   uri: URI;
   edits: TextEdit[];
 }
 
-export abstract class WorkspaceTextEdit {
-  public static groupByUri(
-    edits: WorkspaceTextEdit[]
-  ): WorkspaceTextEditGroup[] {
-    const groups = new Map<string, WorkspaceTextEditGroup>();
+export function groupTextEditsByUri(
+  edits: WorkspaceTextEdit[]
+): WorkspaceTextEditGroup[] {
+  const groups = new Map<string, WorkspaceTextEditGroup>();
 
-    for (const { uri, edit } of edits) {
-      const key = uri.toString();
-      const group = groups.get(key);
-      if (group) {
-        group.edits.push(edit);
-      } else {
-        groups.set(key, { uri, edits: [edit] });
-      }
+  for (const { uri, edit } of edits) {
+    const key = uri.toString();
+    const group = groups.get(key);
+    if (group) {
+      group.edits.push(edit);
+    } else {
+      groups.set(key, { uri, edits: [edit] });
     }
-
-    return Array.from(groups.values());
   }
+
+  return Array.from(groups.values());
 }

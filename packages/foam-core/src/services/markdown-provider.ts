@@ -3,7 +3,7 @@ import { isSome } from '../utils';
 import { URI } from '../model/uri';
 import { FoamWorkspace } from '../model/workspace';
 import { ResourceProvider } from '../model/provider';
-import { MarkdownLink } from './markdown-link';
+import { analyzeMarkdownLink } from './markdown-link';
 import { IDataStore } from './datastore';
 
 export class MarkdownResourceProvider implements ResourceProvider {
@@ -38,7 +38,7 @@ export class MarkdownResourceProvider implements ResourceProvider {
           : link.rawText;
       return URI.parse(url, 'external');
     }
-    const { target, section, blockId } = MarkdownLink.analyzeLink(link);
+    const { target, section, blockId } = analyzeMarkdownLink(link);
     switch (link.type) {
       case 'wikilink': {
         if (ResourceLink.isResolvedReference(link)) {

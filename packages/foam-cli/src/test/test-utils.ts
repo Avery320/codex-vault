@@ -72,8 +72,5 @@ export class TestLogger implements ILogger {
   error(msg?: any) {
     this.errors.push(String(msg));
   }
-  getLevel() {
-    return 'off' as const;
-  }
   setLevel(_level: Parameters<ILogger['setLevel']>[0]) {}
 }

@@ -98,6 +98,26 @@ describe('Incremental graph update equivalence', () => {
     graph.dispose();
   });
 
+  it('matches a rebuild through a direct-link placeholder lifecycle', () => {
+    const workspace = createTestWorkspace().set(
+      createTestNote({ uri: '/a.md', links: [{ to: '/target.md' }] })
+    );
+    const graph = FoamGraph.fromWorkspace(workspace, true);
+
+    workspace.set(createTestNote({ uri: '/target.md' }));
+    expectEquivalentToRebuild(graph, workspace);
+
+    workspace.delete(createTestNote({ uri: '/target.md' }).uri);
+    expectEquivalentToRebuild(graph, workspace);
+    expect(graph.placeholders.has('/target.md')).toBe(true);
+
+    workspace.set(createTestNote({ uri: '/a.md' }));
+    expectEquivalentToRebuild(graph, workspace);
+    expect(graph.placeholders.has('/target.md')).toBe(false);
+
+    graph.dispose();
+  });
+
   it('matches a rebuild after a mixed sequence of mutations', () => {
     const workspace = createTestWorkspace();
     workspace

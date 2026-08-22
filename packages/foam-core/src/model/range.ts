@@ -1,5 +1,4 @@
-// Some code in this file coming from https://github.com/microsoft/vscode/
-// See LICENSE for details
+// Adapted from Microsoft's VS Code range utilities. See LICENSE for details.
 
 import { Position } from './position';
 
@@ -8,77 +7,27 @@ export interface Range {
   end: Position;
 }
 
-export abstract class Range {
-  static create(
+function fromPositions(start: Position, end = start): Range {
+  const [first, second] =
+    Position.compareTo(start, end) <= 0 ? [start, end] : [end, start];
+  return {
+    start: { ...first },
+    end: { ...second },
+  };
+}
+
+export const Range = {
+  create(
     startLine: number,
     startChar: number,
-    endLine?: number,
-    endChar?: number
+    endLine = startLine,
+    endChar = startChar
   ): Range {
-    const start: Position = {
-      line: startLine,
-      character: startChar,
-    };
-    const end: Position = {
-      line: endLine ?? startLine,
-      character: endChar ?? startChar,
-    };
-    return Range.createFromPosition(start, end);
-  }
-
-  static createFromPosition(start: Position, end?: Position) {
-    end = end ?? start;
-    let first = start;
-    let second = end;
-    if (Position.isAfter(start, end)) {
-      first = end;
-      second = start;
-    }
-    return {
-      start: {
-        line: first.line,
-        character: first.character,
-      },
-      end: {
-        line: second.line,
-        character: second.character,
-      },
-    };
-  }
-
-  static containsRange(range: Range, contained: Range): boolean {
-    return (
-      Range.containsPosition(range, contained.start) &&
-      Range.containsPosition(range, contained.end)
+    return fromPositions(
+      Position.create(startLine, startChar),
+      Position.create(endLine, endChar)
     );
-  }
+  },
 
-  static containsPosition(range: Range, position: Position): boolean {
-    return (
-      Position.isAfterOrEqual(position, range.start) &&
-      Position.isBeforeOrEqual(position, range.end)
-    );
-  }
-
-  static isEqual(r1: Range, r2: Range): boolean {
-    return (
-      Position.isEqual(r1.start, r2.start) && Position.isEqual(r1.end, r2.end)
-    );
-  }
-
-  /**
-   * Compares two ranges by their start position, e.g. for use as a sort
-   * comparator.
-   */
-  static compareTo(a: Range, b: Range): number {
-    return Position.compareTo(a.start, b.start);
-  }
-
-  static isBefore(a: Range, b: Range): boolean {
-    return Range.compareTo(a, b) < 0;
-  }
-
-  static toString(range: Range): string {
-    return `${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
-  }
-}
+  createFromPosition: fromPositions,
+};

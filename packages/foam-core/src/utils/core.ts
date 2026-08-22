@@ -38,15 +38,19 @@ export async function mapWithConcurrency<T, R>(
   if (limit <= 0) {
     throw new Error(`mapWithConcurrency: limit must be > 0, got ${limit}`);
   }
-  const results: R[] = new Array(items.length);
+  const results: R[] = [];
+  results.length = items.length;
   let next = 0;
-  const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
-    while (true) {
-      const i = next++;
-      if (i >= items.length) return;
-      results[i] = await fn(items[i]);
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        results[i] = await fn(items[i]);
+      }
     }
-  });
+  );
   await Promise.all(workers);
   return results;
 }

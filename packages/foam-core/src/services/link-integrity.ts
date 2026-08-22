@@ -1,9 +1,9 @@
 import { FoamGraph } from '../model/graph';
-import { Resource } from '../model/note';
+import { Resource, ResourceLink } from '../model/note';
 import { URI } from '../model/uri';
 import { FoamWorkspace } from '../model/workspace';
-import { MarkdownLink } from './markdown-link';
-import { WorkspaceTextEdit } from './text-edit';
+import { analyzeMarkdownLink } from './markdown-link';
+import { type WorkspaceTextEdit } from './text-edit';
 
 function buildFutureWorkspace(
   workspace: FoamWorkspace,
@@ -25,6 +25,17 @@ function toCorrectCase(identifier: string, directoryUri: URI): string {
   return pathSegments.slice(-identifierSegments.length).join('/');
 }
 
+function retargetWikilink(link: ResourceLink, target: string) {
+  const { section, blockId, alias } = analyzeMarkdownLink(link);
+  const fragment = blockId ? `#^${blockId}` : section ? `#${section}` : '';
+  return {
+    range: link.range,
+    newText: `${link.isEmbed ? '!' : ''}[[${target}${fragment}${
+      alias ? `|${alias}` : ''
+    }]]`,
+  };
+}
+
 export function computeWikilinkRenameEdits(
   workspace: FoamWorkspace,
   graph: FoamGraph,
@@ -41,7 +52,7 @@ export function computeWikilinkRenameEdits(
   for (const connection of graph.getBacklinks(oldUri)) {
     if (connection.link.type !== 'wikilink') continue;
 
-    const { target } = MarkdownLink.analyzeLink(connection.link);
+    const { target } = analyzeMarkdownLink(connection.link);
     let identifier: string;
     if (
       oldDirectoryIdentifier &&
@@ -59,9 +70,7 @@ export function computeWikilinkRenameEdits(
 
     edits.push({
       uri: connection.source,
-      edit: MarkdownLink.createUpdateLinkEdit(connection.link, {
-        target: identifier,
-      }),
+      edit: retargetWikilink(connection.link, identifier),
     });
   }
 

@@ -29,7 +29,7 @@ import type MarkdownIt from 'markdown-it';
 // - Has no markdown meaning
 // - Won't be split or modified by parsers
 // - Is extremely unlikely to appear in user content
-export const PIPE_PLACEHOLDER = '\uF8FF';
+const PIPE_PLACEHOLDER = '\uF8FF';
 
 /**
  * Regex to match wikilinks (and embeds) with at least one pipe.

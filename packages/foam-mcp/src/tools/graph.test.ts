@@ -80,24 +80,18 @@ describe('graph tools', () => {
       expect(distances['d.md']).toBe(2);
     }));
 
-  it('get_workspace_info returns counts', () =>
+  it('get_workspace_info returns counts and rankings', () =>
     withMcpServer(SEED, async ctx => {
       const info = await ctx.callToolJson<{
         note_count: number;
         connection_count: number;
         placeholder_count: number;
+        most_connected: Array<{ uri: string; link_count: number }>;
+        most_used_tags: Array<{ tag: string; count: number }>;
       }>('get_workspace_info');
       expect(info.note_count).toBe(5);
       expect(info.placeholder_count).toBe(1);
       expect(info.connection_count).toBeGreaterThan(0);
-    }));
-
-  it('get_workspace_info includes graph and tag rankings', () =>
-    withMcpServer(SEED, async ctx => {
-      const info = await ctx.callToolJson<{
-        most_connected: Array<{ uri: string; link_count: number }>;
-        most_used_tags: Array<{ tag: string; count: number }>;
-      }>('get_workspace_info');
       expect(info.most_connected[0].link_count).toBeGreaterThan(0);
       expect(info.most_used_tags).toEqual([]);
     }));

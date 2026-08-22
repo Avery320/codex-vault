@@ -59,7 +59,6 @@ export class FoamGraph implements IDisposable {
    *
    * @param workspace the target workspace
    * @param keepMonitoring whether to recompute the links when the workspace changes
-   * @param debounceFor how long to wait between change detection and graph update
    * @returns the FoamGraph
    */
   public static fromWorkspace(

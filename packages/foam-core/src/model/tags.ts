@@ -1,7 +1,7 @@
 import { FoamWorkspace } from './workspace';
 import { IDisposable } from '../common/lifecycle';
 import { Tag } from './note';
-import { Location } from './location';
+import { locationForObjectWithRange, type Location } from './location';
 
 export class FoamTags implements IDisposable {
   public readonly tags: Map<string, Location<Tag>[]> = new Map();
@@ -17,33 +17,26 @@ export class FoamTags implements IDisposable {
    * Computes all tags in the workspace and keep them up-to-date
    *
    * @param workspace the target workspace
-   * @param keepMonitoring whether to recompute the links when the workspace changes
    * @returns the FoamTags
    */
-  public static fromWorkspace(
-    workspace: FoamWorkspace,
-    keepMonitoring = false
-  ): FoamTags {
+  public static fromWorkspace(workspace: FoamWorkspace): FoamTags {
     const tags = new FoamTags(workspace);
     tags.update();
-
-    if (keepMonitoring) {
-      const updateTags = tags.update.bind(tags);
-      tags.disposables.push(
-        workspace.onDidAdd(updateTags),
-        workspace.onDidUpdate(updateTags),
-        workspace.onDidDelete(updateTags)
-      );
-    }
+    const updateTags = tags.update.bind(tags);
+    tags.disposables.push(
+      workspace.onDidAdd(updateTags),
+      workspace.onDidUpdate(updateTags),
+      workspace.onDidDelete(updateTags)
+    );
     return tags;
   }
 
-  update(): void {
+  private update(): void {
     this.tags.clear();
     for (const resource of this.workspace.resources()) {
       for (const tag of resource.tags) {
         const tagLocations = this.tags.get(tag.label) ?? [];
-        tagLocations.push(Location.forObjectWithRange(resource.uri, tag));
+        tagLocations.push(locationForObjectWithRange(resource.uri, tag));
         this.tags.set(tag.label, tagLocations);
       }
     }
