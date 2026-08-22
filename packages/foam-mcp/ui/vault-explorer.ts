@@ -14,9 +14,7 @@ import {
   type NoteSelection,
 } from './note-selection';
 import {
-  annotationsFromModelContextHostState,
   createSelectionModelContext,
-  MODEL_CONTEXT_HOST_STATE_KEY,
   type NoteAnnotation,
 } from './note-chat-context';
 import { createVaultMarkdownRenderer } from './vault-markdown';
@@ -1136,9 +1134,6 @@ app.onteardown = async () => {
 };
 app.onhostcontextchanged = context => {
   if (context.theme !== undefined) applyTheme(context.theme);
-  if (MODEL_CONTEXT_HOST_STATE_KEY in context) {
-    attachedAnnotations = annotationsFromModelContextHostState(context);
-  }
 };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopLiveUpdates();
@@ -1153,7 +1148,6 @@ void app.connect().then(() => {
   appConnected = true;
   const hostContext = app.getHostContext();
   applyTheme(hostContext?.theme);
-  attachedAnnotations = annotationsFromModelContextHostState(hostContext);
   syncLiveUpdates();
   void requestFullscreen();
 });

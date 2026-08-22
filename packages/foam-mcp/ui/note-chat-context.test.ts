@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  annotationsFromModelContextHostState,
   createSelectionModelContext,
-  MODEL_CONTEXT_HOST_STATE_KEY,
   type NoteAnnotation,
 } from './note-chat-context';
 
@@ -60,26 +58,9 @@ describe('note chat context', () => {
         },
       ],
     });
-    expect(context.presentation).toEqual({
-      composerAttachmentLayout: 'pill',
-      composerLabel: '2 則註解',
-    });
-  });
-
-  it('restores annotations from native host context and clears with it', () => {
-    const context = createSelectionModelContext([annotation]);
-    expect(
-      annotationsFromModelContextHostState({
-        [MODEL_CONTEXT_HOST_STATE_KEY]: {
-          structuredContent: context.structuredContent,
-          updateId: 'update-1',
-        },
-      })
-    ).toEqual([annotation]);
-    expect(
-      annotationsFromModelContextHostState({
-        [MODEL_CONTEXT_HOST_STATE_KEY]: null,
-      })
-    ).toEqual([]);
+    expect(Object.keys(context).sort()).toEqual([
+      'content',
+      'structuredContent',
+    ]);
   });
 });

@@ -1,7 +1,5 @@
 import type { NoteSelection } from './note-selection';
 
-export const MODEL_CONTEXT_HOST_STATE_KEY = 'openai/modelContext';
-
 export interface NoteAnnotation extends NoteSelection {
   comment?: string;
 }
@@ -9,10 +7,6 @@ export interface NoteAnnotation extends NoteSelection {
 export interface ModelContextPayload {
   content: Array<{ type: 'text'; text: string }>;
   structuredContent: Record<string, unknown>;
-  presentation: {
-    composerAttachmentLayout: 'pill';
-    composerLabel: string;
-  };
 }
 
 export function createSelectionModelContext(
@@ -23,54 +17,7 @@ export function createSelectionModelContext(
     structuredContent: {
       annotations: annotations.map(serializeAnnotation),
     },
-    presentation: {
-      composerAttachmentLayout: 'pill',
-      composerLabel: `${annotations.length} 則註解`,
-    },
   };
-}
-
-export function annotationsFromModelContextHostState(
-  hostContext: Record<string, unknown> | undefined
-): NoteAnnotation[] {
-  const state = hostContext?.[MODEL_CONTEXT_HOST_STATE_KEY];
-  if (!isRecord(state)) return [];
-  const structuredContent = state.structuredContent;
-  if (!isRecord(structuredContent)) return [];
-  const annotations = structuredContent.annotations;
-  if (!Array.isArray(annotations)) return [];
-  return annotations.flatMap(annotation => {
-    if (!isRecord(annotation)) return [];
-    const {
-      vault_id: vaultId,
-      vault_name: vaultName,
-      note_uri: noteUri,
-      quote,
-      comment,
-      start_line: startLine,
-      end_line: endLine,
-    } = annotation;
-    if (
-      typeof vaultName !== 'string' ||
-      typeof noteUri !== 'string' ||
-      typeof quote !== 'string' ||
-      typeof startLine !== 'number' ||
-      typeof endLine !== 'number'
-    ) {
-      return [];
-    }
-    return [
-      {
-        vaultId: typeof vaultId === 'string' ? vaultId : undefined,
-        vaultName,
-        noteUri,
-        quote,
-        comment: typeof comment === 'string' ? comment : undefined,
-        startLine,
-        endLine,
-      },
-    ];
-  });
 }
 
 function formatAnnotationText(annotations: readonly NoteAnnotation[]): string {
@@ -97,8 +44,4 @@ function serializeAnnotation(
     start_line: annotation.startLine,
     end_line: annotation.endLine,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

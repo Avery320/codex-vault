@@ -1,7 +1,7 @@
 # 產品契約
 
-本文件是 Codex Vault 的最高產品規格。`AGENTS.md` 定義開發流程，本文件定義
-什麼才算完成。兩者衝突時必須停止並請使用者確認，不得自行選擇替代方案。
+本文件記錄 Codex Vault 目前的產品方向與技術邊界。專案仍在早期階段，現階段
+優先維護 Markdown 解析、Vault 索引、搜尋與知識圖譜等核心演算法。
 
 ## 唯一產品目標
 
@@ -72,14 +72,13 @@ properties、backlinks、graph 與 model-context attachment，但 **不符合原
 目標**。
 
 目前安裝的 MCP Apps SDK 僅提供 `inline`、`fullscreen` 與 `pip`，plugin manifest
-也沒有原生側邊欄 mount。可施工與阻塞項目以[工程開發規格](engineering-spec.md)的
-程式證據為準。
+也沒有原生側邊欄 mount。現況以 repository 內的原始碼、公開宿主 API 與自動測試
+為準。
 
 在宿主承載與 composer bridge 證據確認前：
 
-- 凍結新的 Vault UI 功能開發。
-- 允許只讀架構調查、文件修正、工程規格已定義的非 UI core 清理，以及既有原型的
-  必要維護。
+- 優先開發 Markdown 解析、Vault 索引、搜尋與知識圖譜等宿主無關的核心演算法。
+- 允許架構調查、文件修正、非 UI core 清理，以及既有原型的必要維護。
 - 不得把 MCP App 原型重新定義為最終產品。
 
 ## 變更規則

@@ -1,6 +1,6 @@
 {
   "name": "codex-vault",
-  "version": "0.1.0+codex.20260822101759",
+  "version": "0.1.0+codex.20260822104900",
   "description": "Explore an Obsidian-compatible Markdown vault with Codex agents, backlinks, search, and an interactive knowledge graph.",
   "author": {
     "name": "Avery Tsai"
