@@ -46,8 +46,7 @@ export class NodeFileDataStore implements IDataStore {
   }
 
   async delete(uri: URI): Promise<void> {
-    const { default: trash } = await import('trash');
-    await trash(uri.toFsPath(), { glob: false });
+    await fs.rm(uri.toFsPath(), { recursive: true, force: true });
   }
 
   async move(from: URI, to: URI): Promise<void> {

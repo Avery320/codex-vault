@@ -2,7 +2,6 @@ export { CometMcpServer } from './server';
 export type { CometMcpServerOptions, CometMcpServerMode } from './server';
 export {
   createWorkspaceContext,
-  requireWorkspace,
   StaticWorkspaceProvider,
 } from './workspace-context';
 export type {

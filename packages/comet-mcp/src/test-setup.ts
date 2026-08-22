@@ -14,7 +14,6 @@ import {
   createWorkspaceContext,
   StaticWorkspaceProvider,
 } from './workspace-context';
-import { VaultChangeFeed } from './vault-change-feed';
 
 export interface McpTestContext {
   client: Client;
@@ -22,7 +21,6 @@ export interface McpTestContext {
   comet: Comet;
   dataStore: InMemoryDataStore;
   rootUri: URI;
-  changeFeed: VaultChangeFeed;
   callTool: (
     name: string,
     args?: Record<string, unknown>
@@ -149,7 +147,6 @@ export async function withMcpServer<T>(
     comet,
     dataStore,
     rootUri,
-    changeFeed: workspaceContext.changeFeed,
     callTool,
     callToolJson,
   };

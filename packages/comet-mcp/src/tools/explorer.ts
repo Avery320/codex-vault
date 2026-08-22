@@ -9,56 +9,11 @@ import { CometMcpWorkspaceProvider, VaultManager } from '../workspace-context';
 export const VAULT_EXPLORER_RESOURCE_URI =
   'ui://codex-vault/v7/vault-explorer.html';
 
-// Stay below the MCP SDK's default 60-second request timeout so the server
-// completes each wait cleanly before the host times it out.
-const LIVE_UPDATE_WAIT_MS = 50_000;
-
 export function registerExplorerTool(
   register: ToolRegistrar,
   workspaceProvider: CometMcpWorkspaceProvider,
   vaultManager?: VaultManager
 ): void {
-  register(
-    'wait_for_vault_change',
-    {
-      description:
-        'Wait for the active vault to change. Used internally by the COMET UI.',
-      inputSchema: {
-        vault_id: z.string(),
-        since_revision: z.number().int().nonnegative(),
-      },
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false,
-      },
-      _meta: {
-        ui: { visibility: ['app'] },
-      },
-    },
-    async (args, extra) => {
-      const active = workspaceProvider.getActive();
-      if (!active) {
-        return json({
-          revision: 0,
-          reset: true,
-        });
-      }
-      if (args.vault_id !== active.vault.id) {
-        return json({
-          revision: active.changeFeed.revision,
-          reset: true,
-        });
-      }
-      const change = await active.changeFeed.waitForChange(
-        args.since_revision,
-        LIVE_UPDATE_WAIT_MS,
-        extra.signal
-      );
-      return json(change);
-    }
-  );
 
   register(
     'get_vault_explorer_state',
@@ -183,7 +138,7 @@ async function buildExplorerState(
       note_count: files.length,
       connection_count: graph.links.length,
     },
-    revision: active.changeFeed.revision,
+    revision: 0,
     needs_vault_selection: false,
   };
 }

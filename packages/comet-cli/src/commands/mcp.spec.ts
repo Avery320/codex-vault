@@ -169,34 +169,9 @@ describe('comet mcp (CLI e2e)', () => {
           })) as { content: Array<{ text: string }> };
           expect(JSON.parse(before.content[0].text).note_count).toBe(1);
 
-          const explorerBefore = (await ctx.client.callTool({
-            name: 'get_vault_explorer_state',
-            arguments: {},
-          })) as unknown as {
-            structuredContent: {
-              active_vault: { id: string };
-              revision: number;
-            };
-          };
-          const changePromise = ctx.client.callTool({
-            name: 'wait_for_vault_change',
-            arguments: {
-              vault_id: explorerBefore.structuredContent.active_vault.id,
-              since_revision: explorerBefore.structuredContent.revision,
-            },
-          });
-
           // Add a file mid-session; chokidar should pick it up and the
           // graph should reflect it on the next tool call.
           writeFileSync(path.join(workspaceDir, 'fresh.md'), '# Fresh\n');
-
-          const change = (await changePromise) as {
-            content: Array<{ text: string }>;
-          };
-          expect(JSON.parse(change.content[0].text)).toMatchObject({
-            revision: explorerBefore.structuredContent.revision + 1,
-            reset: false,
-          });
 
           // Wait for the watcher debounce (100ms) plus chokidar's
           // awaitWriteFinish (50ms) plus filesystem latency. Poll up to 3s

@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import {
   createWorkspaceContext,
   CometMcpWorkspaceProvider,
@@ -10,14 +11,7 @@ import {
 } from '@comet/mcp';
 import { type ILogger, Logger } from '@comet/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
-import { pickVaultFolder } from '../support/folder-picker';
 import { NodeWatcher } from '../support/watcher';
-import {
-  parseArgs,
-  getFlag,
-  getString,
-  resolveWorkspaceDir,
-} from '../support/args';
 import { VaultRegistry } from '../support/vault-registry';
 import { NodeVaultWorkspaceManager } from '../support/vault-workspace-manager';
 
@@ -68,13 +62,29 @@ export interface McpArgs {
 }
 
 export function parseMcpArgs(argv: string[]): McpArgs {
-  const args = parseArgs(argv);
-  const vaultRegistryPath = getString(args, 'vault-registry');
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      workspace: { type: 'string' },
+      'vault-registry': { type: 'string' },
+      'obsidian-registry': { type: 'string' },
+      'allow-writes': { type: 'boolean', default: false },
+    },
+    strict: false,
+  });
+
+  const vaultRegistryPath = values['vault-registry'] as string | undefined;
+  const workspaceDir = vaultRegistryPath
+    ? undefined
+    : ((values.workspace as string | undefined) ??
+      process.env.COMET_WORKSPACE ??
+      process.cwd());
+
   return {
-    workspaceDir: vaultRegistryPath ? undefined : resolveWorkspaceDir(args),
+    workspaceDir,
     vaultRegistryPath,
-    obsidianRegistryPath: getString(args, 'obsidian-registry'),
-    allowWrites: getFlag(args, 'allow-writes'),
+    obsidianRegistryPath: values['obsidian-registry'] as string | undefined,
+    allowWrites: Boolean(values['allow-writes']),
   };
 }
 
@@ -143,7 +153,6 @@ export async function runMcpCommand(
   const server = new CometMcpServer({
     workspaceProvider,
     vaultManager,
-    pickVaultFolder: vaultManager ? pickVaultFolder : undefined,
     mode: args.allowWrites ? 'read-write' : 'read',
   });
 

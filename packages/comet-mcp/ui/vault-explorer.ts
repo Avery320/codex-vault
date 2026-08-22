@@ -183,7 +183,6 @@ let graphPreferences: GraphPreferences;
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
 let displayedReaderWidth = workspaceLayout.readerWidth;
 let appConnected = false;
-let liveSyncController: AbortController | null = null;
 
 graphElement.maxFitZoom = 2.2;
 
@@ -359,8 +358,6 @@ function setExplorerPayload(next: ExplorerPayload): void {
     notePathElement.textContent = activeFile.uri;
     notePathElement.title = activeFile.uri;
   }
-
-  syncLiveUpdates(vaultChanged);
 }
 
 function renderVault(next: ExplorerPayload): void {
@@ -727,72 +724,6 @@ async function refreshExplorerState(): Promise<void> {
   setExplorerPayload(parseToolJson<ExplorerPayload>(result));
 }
 
-function syncLiveUpdates(restart = false): void {
-  if (restart) stopLiveUpdates();
-  if (
-    liveSyncController ||
-    !appConnected ||
-    document.hidden ||
-    !payload?.active_vault
-  ) {
-    return;
-  }
-
-  const controller = new AbortController();
-  liveSyncController = controller;
-  void runLiveUpdates(controller);
-}
-
-function stopLiveUpdates(): void {
-  const controller = liveSyncController;
-  liveSyncController = null;
-  controller?.abort();
-}
-
-async function runLiveUpdates(controller: AbortController): Promise<void> {
-  const { signal } = controller;
-  try {
-    while (!signal.aborted) {
-      const current = payload;
-      if (!current?.active_vault) return;
-      const vaultId = current.active_vault.id;
-
-      try {
-        const result = await app.callServerTool(
-          {
-            name: 'wait_for_vault_change',
-            arguments: {
-              vault_id: vaultId,
-              since_revision: current.revision,
-            },
-          },
-          { signal, timeout: 55_000 }
-        );
-        if (signal.aborted) return;
-        const change = parseToolJson<VaultChangeSignal>(result);
-        if (payload?.active_vault?.id !== vaultId) continue;
-        if (change.revision !== current.revision || change.reset) {
-          const noteToRefresh = activeUri;
-          await refreshExplorerState();
-          if (
-            noteToRefresh &&
-            activeUri === noteToRefresh &&
-            payload?.active_vault?.id === vaultId
-          ) {
-            await refreshOpenNote(noteToRefresh);
-          }
-        }
-      } catch (error) {
-        if (signal.aborted) return;
-        console.warn('COMET live update failed; retrying.', error);
-        await new Promise(resolve => setTimeout(resolve, 1_000));
-      }
-    }
-  } finally {
-    if (liveSyncController === controller) liveSyncController = null;
-  }
-}
-
 function openVaultDialog(mode: VaultDialogMode): void {
   closeVaultMenu();
   dialogMode = mode;
@@ -1128,17 +1059,10 @@ document.addEventListener('click', event => {
 });
 
 app.ontoolresult = receiveToolResult;
-app.onteardown = async () => {
-  stopLiveUpdates();
-  return {};
-};
+app.onteardown = async () => ({});
 app.onhostcontextchanged = context => {
   if (context.theme !== undefined) applyTheme(context.theme);
 };
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) stopLiveUpdates();
-  else syncLiveUpdates();
-});
 
 graphPreferences = readGraphPreferences();
 updateGraphOutputs();
@@ -1148,6 +1072,5 @@ void app.connect().then(() => {
   appConnected = true;
   const hostContext = app.getHostContext();
   applyTheme(hostContext?.theme);
-  syncLiveUpdates();
   void requestFullscreen();
 });

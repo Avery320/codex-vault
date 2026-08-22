@@ -58,20 +58,20 @@ export class CometGraph extends LitElement {
   }
 
   updated(changed: Map<string, unknown>) {
-    let shouldRecomputeVisibleGraph = false;
-
-    if (changed.has('graphData')) {
-      this.graphModel = this.graphData
-        ? createGraphModel(this.graphData)
+    if (changed.has('graphData') || changed.has('graphStyle')) {
+      if (changed.has('graphData')) {
+        this.selectedNodeId = null;
+        this.hoverNodeId = null;
+        this.graphModel = this.graphData
+          ? createGraphModel(this.graphData)
+          : null;
+      }
+      this.visibleGraph = this.graphModel
+        ? computeVisibleGraph(this.graphModel, {
+            ...DEFAULT_NODE_TYPE_VISIBILITY,
+            ...this.graphStyle?.showNodesOfType,
+          })
         : null;
-      this._pruneInteractionState();
-      shouldRecomputeVisibleGraph = true;
-    }
-
-    if (changed.has('graphStyle')) shouldRecomputeVisibleGraph = true;
-
-    if (shouldRecomputeVisibleGraph) {
-      this._recomputeVisibleGraph();
     }
   }
 
@@ -112,32 +112,6 @@ export class CometGraph extends LitElement {
         composed: true,
       })
     );
-  }
-
-  private _pruneInteractionState() {
-    if (!this.graphModel) {
-      this.selectedNodeId = null;
-      this.hoverNodeId = null;
-      return;
-    }
-    if (
-      this.selectedNodeId &&
-      !this.graphModel.nodeInfo[this.selectedNodeId]
-    ) {
-      this.selectedNodeId = null;
-    }
-    if (this.hoverNodeId && !this.graphModel.nodeInfo[this.hoverNodeId]) {
-      this.hoverNodeId = null;
-    }
-  }
-
-  private _recomputeVisibleGraph() {
-    this.visibleGraph = this.graphModel
-      ? computeVisibleGraph(this.graphModel, {
-          ...DEFAULT_NODE_TYPE_VISIBILITY,
-          ...this.graphStyle?.showNodesOfType,
-        })
-      : null;
   }
 }
 

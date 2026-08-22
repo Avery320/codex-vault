@@ -23,7 +23,6 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
-    "chokidar": "^3.5.3",
-    "trash": "^10.1.1"
+    "chokidar": "^3.5.3"
   }
 }

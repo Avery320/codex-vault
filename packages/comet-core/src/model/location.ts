@@ -19,10 +19,3 @@ export interface Location<T> {
    */
   data: T;
 }
-
-export function locationForObjectWithRange<T extends { range: Range }>(
-  uri: URI,
-  data: T
-): Location<T> {
-  return { uri, range: data.range, data };
-}

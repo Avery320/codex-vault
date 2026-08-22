@@ -177,7 +177,7 @@ export class CometWorkspace implements IDisposable {
     const priority = this._directoryIndexPriority(resource.uri);
     if (priority === -1) return;
 
-    const dirPath = normalize(resource.uri.getDirectory().path);
+    const dirPath = normalizeCase(resource.uri.getDirectory().path);
     const currentOwnerUri = this._directoryIndex.get(dirPath);
     if (currentOwnerUri) {
       const currentPriority = this._directoryIndexPriority(currentOwnerUri);
@@ -190,17 +190,17 @@ export class CometWorkspace implements IDisposable {
     const priority = this._directoryIndexPriority(uri);
     if (priority === -1) return;
 
-    const dirPath = normalize(uri.getDirectory().path);
+    const dirPath = normalizeCase(uri.getDirectory().path);
     const currentOwnerUri = this._directoryIndex.get(dirPath);
     if (
       !currentOwnerUri ||
-      normalize(currentOwnerUri.path) !== normalize(uri.path)
+      normalizeCase(currentOwnerUri.path) !== normalizeCase(uri.path)
     )
       return;
 
     // Resource already removed from _resources — scan remaining for a next-best candidate
     const nextOwner = this.list()
-      .filter(r => normalize(r.uri.getDirectory().path) === dirPath)
+      .filter(r => normalizeCase(r.uri.getDirectory().path) === dirPath)
       .map(r => ({
         resource: r,
         priority: this._directoryIndexPriority(r.uri),
@@ -220,7 +220,7 @@ export class CometWorkspace implements IDisposable {
    * The directory path should be an absolute path string (e.g. resource.uri.getDirectory().path).
    */
   public findByDirectory(dirPath: string): Resource | null {
-    const ownerUri = this._directoryIndex.get(normalize(dirPath));
+    const ownerUri = this._directoryIndex.get(normalizeCase(dirPath));
     if (!ownerUri) return null;
     return this._resources.get(this.getTrieIdentifier(ownerUri)) ?? null;
   }
@@ -231,7 +231,7 @@ export class CometWorkspace implements IDisposable {
    * Results are sorted by path for deterministic ordering.
    */
   public listByDirectoryIdentifier(identifier: string): Resource[] {
-    const normalizedId = normalize(identifier);
+    const normalizedId = normalizeCase(identifier);
     const results: Resource[] = [];
     for (const [dirPath, uri] of this._directoryIndex.entries()) {
       if (dirPath === normalizedId || dirPath.endsWith('/' + normalizedId)) {
@@ -270,7 +270,7 @@ export class CometWorkspace implements IDisposable {
   public listByIdentifier(identifier: string): Resource[] {
     const needle = this.getTrieIdentifier(identifier);
     const mdNeedle =
-      getExtension(normalize(identifier)) !== this.defaultExtension
+      getExtension(normalizeCase(identifier)) !== this.defaultExtension
         ? this.getTrieIdentifier(identifier + this.defaultExtension)
         : undefined;
 
@@ -334,9 +334,9 @@ export class CometWorkspace implements IDisposable {
    * Use this when `comet.links.directory.completionStyle` is `"directory"`.
    */
   public getDirectoryIdentifier(forResource: URI): string | null {
-    const dirPath = normalize(forResource.getDirectory().path);
+    const dirPath = normalizeCase(forResource.getDirectory().path);
     const ownerUri = this._directoryIndex.get(dirPath);
-    if (!ownerUri || normalize(ownerUri.path) !== normalize(forResource.path)) {
+    if (!ownerUri || normalizeCase(ownerUri.path) !== normalizeCase(forResource.path)) {
       return null;
     }
     const otherDirPaths = Array.from(this._directoryIndex.keys()).filter(
@@ -359,7 +359,7 @@ export class CometWorkspace implements IDisposable {
       path = reference as string;
     }
 
-    let reversedPath = normalize(path).split('/').reverse().join('/');
+    let reversedPath = normalizeCase(path).split('/').reverse().join('/');
 
     if (reversedPath.indexOf('/') < 0) {
       reversedPath = reversedPath + '/';
@@ -522,4 +522,4 @@ export class CometWorkspace implements IDisposable {
   }
 }
 
-const normalize = (v: string) => v.toLocaleLowerCase();
+const normalizeCase = (v: string) => v.toLocaleLowerCase();

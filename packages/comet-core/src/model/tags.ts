@@ -1,7 +1,7 @@
 import { CometWorkspace } from './workspace';
 import { IDisposable } from '../common/lifecycle';
 import { Tag } from './note';
-import { locationForObjectWithRange, type Location } from './location';
+import { type Location } from './location';
 
 export class CometTags implements IDisposable {
   public readonly tags: Map<string, Location<Tag>[]> = new Map();
@@ -36,7 +36,7 @@ export class CometTags implements IDisposable {
     for (const resource of this.workspace.resources()) {
       for (const tag of resource.tags) {
         const tagLocations = this.tags.get(tag.label) ?? [];
-        tagLocations.push(locationForObjectWithRange(resource.uri, tag));
+        tagLocations.push({ uri: resource.uri, range: tag.range, data: tag });
         this.tags.set(tag.label, tagLocations);
       }
     }

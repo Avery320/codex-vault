@@ -19,7 +19,7 @@ export { buildGraphData } from './services/graph-data-builder';
 
 // Logging and lifecycle
 export { Logger, BaseLogger } from './utils/log';
-export type { ILogger, LogLevel, LogLevelThreshold } from './utils/log';
+export type { ILogger, LogLevel } from './utils/log';
 export type { IDisposable } from './common/lifecycle';
 export { Emitter } from './common/event';
 export type { Event } from './common/event';

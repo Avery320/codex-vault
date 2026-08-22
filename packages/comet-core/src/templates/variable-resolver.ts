@@ -1,8 +1,8 @@
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import isoWeekPlugin from 'dayjs/plugin/isoWeek';
+import slugger from 'github-slugger';
 import { CometError } from '../common/errors';
-import { toSlug } from '../utils/slug';
 
 dayjs.extend(isoWeekPlugin);
 dayjs.extend(advancedFormat);
@@ -119,7 +119,7 @@ function resolveCometVariable(
     case 'COMET_TITLE_SAFE':
       return title === undefined ? undefined : safeTemplateTitle(title);
     case 'COMET_SLUG':
-      return title === undefined ? undefined : toSlug(title);
+      return title === undefined ? undefined : slugger.slug(title);
     case 'COMET_SELECTED_TEXT':
       return '';
     case 'COMET_CURRENT_DIR':

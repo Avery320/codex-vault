@@ -42,7 +42,6 @@ describe('CometMcpServer lifecycle', () => {
           'get_workspace_info',
           'get_vault_explorer_state',
           'show_vault_explorer',
-          'wait_for_vault_change',
           // tags
           'list_tags',
           'add_tags',
@@ -145,42 +144,6 @@ describe('CometMcpServer lifecycle', () => {
       );
     }));
 
-  it('exposes an app-only change wait that resolves after a workspace update', () =>
-    withMcpServer(SEED, async ctx => {
-      const list = await ctx.client.listTools();
-      const tool = list.tools.find(
-        item => item.name === 'wait_for_vault_change'
-      );
-      expect(tool?._meta).toMatchObject({
-        ui: { visibility: ['app'] },
-      });
-
-      const before = (await ctx.client.callTool({
-        name: 'get_vault_explorer_state',
-        arguments: {},
-      })) as {
-        structuredContent: {
-          active_vault: { id: string };
-          revision: number;
-        };
-      };
-      const wait = ctx.callToolJson<{
-        revision: number;
-        reset: boolean;
-      }>('wait_for_vault_change', {
-        vault_id: before.structuredContent.active_vault.id,
-        since_revision: before.structuredContent.revision,
-      });
-
-      const uri = ctx.rootUri.joinPath('a.md');
-      ctx.dataStore.set(uri, '# Updated A\n\n[[b]]');
-      await ctx.comet.workspace.fetchAndSet(uri);
-
-      await expect(wait).resolves.toMatchObject({
-        revision: before.structuredContent.revision + 1,
-        reset: false,
-      });
-    }));
 
   it('treats frontmatter types as note metadata in the explorer graph', () =>
     withMcpServer(
