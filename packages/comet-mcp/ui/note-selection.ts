@@ -5,6 +5,15 @@ export interface NoteSelection {
   quote: string;
   startLine: number;
   endLine: number;
+  anchor: NoteSelectionAnchor;
+}
+
+export interface NoteSelectionAnchor {
+  contentSha256: string;
+  startPath: number[];
+  startOffset: number;
+  endPath: number[];
+  endOffset: number;
 }
 
 interface SourceLineRange {
@@ -20,13 +29,10 @@ interface NoteSelectionInput {
   quote: string;
   startLine: number;
   endLine: number;
+  anchor: NoteSelectionAnchor;
 }
 
-/**
- * Builds a stable, read-only selection anchor from rendered source lines.
- * Character offsets are intentionally omitted: markdown-it does not expose
- * reliable inline source offsets, and guessed offsets would make edits unsafe.
- */
+/** Builds model-facing source lines plus an exact, UI-only DOM anchor. */
 export function createNoteSelection(
   input: NoteSelectionInput
 ): NoteSelection | null {
@@ -46,7 +52,61 @@ export function createNoteSelection(
     quote,
     startLine,
     endLine,
+    anchor: input.anchor,
   };
+}
+
+export function createSelectionAnchor(
+  range: Range,
+  root: Element,
+  contentSha256: string
+): NoteSelectionAnchor | null {
+  const startPath = nodePath(range.startContainer, root);
+  const endPath = nodePath(range.endContainer, root);
+  if (!contentSha256 || !startPath || !endPath) return null;
+
+  return {
+    contentSha256,
+    startPath,
+    startOffset: range.startOffset,
+    endPath,
+    endOffset: range.endOffset,
+  };
+}
+
+export function restoreSelectionRange(
+  anchor: NoteSelectionAnchor,
+  root: Element,
+  contentSha256: string
+): Range | null {
+  if (anchor.contentSha256 !== contentSha256) return null;
+  const start = resolveNode(root, anchor.startPath);
+  const end = resolveNode(root, anchor.endPath);
+  if (!start || !end) return null;
+
+  try {
+    const range = document.createRange();
+    range.setStart(start, anchor.startOffset);
+    range.setEnd(end, anchor.endOffset);
+    return range.collapsed ? null : range;
+  } catch {
+    return null;
+  }
+}
+
+export function sameSelection(
+  left: NoteSelection,
+  right: NoteSelection
+): boolean {
+  return (
+    left.vaultId === right.vaultId &&
+    left.noteUri === right.noteUri &&
+    left.anchor.contentSha256 === right.anchor.contentSha256 &&
+    left.anchor.startOffset === right.anchor.startOffset &&
+    left.anchor.endOffset === right.anchor.endOffset &&
+    samePath(left.anchor.startPath, right.anchor.startPath) &&
+    samePath(left.anchor.endPath, right.anchor.endPath)
+  );
 }
 
 export function sourceLineRange(
@@ -88,5 +148,36 @@ function sourceLineElement(node: Node): HTMLElement | null {
     element?.closest<HTMLElement>(
       '[data-source-line-start][data-source-line-end]'
     ) ?? null
+  );
+}
+
+function nodePath(node: Node, root: Element): number[] | null {
+  const path: number[] = [];
+  let current: Node | null = node;
+  while (current && current !== root) {
+    const parent: ParentNode | null = current.parentNode;
+    if (!parent) return null;
+    const index = Array.prototype.indexOf.call(parent.childNodes, current);
+    if (index < 0) return null;
+    path.unshift(index);
+    current = parent as Node;
+  }
+  return current === root ? path : null;
+}
+
+function resolveNode(root: Element, path: readonly number[]): Node | null {
+  let current: Node = root;
+  for (const index of path) {
+    const next: ChildNode | undefined = current.childNodes[index];
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+}
+
+function samePath(left: readonly number[], right: readonly number[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
   );
 }

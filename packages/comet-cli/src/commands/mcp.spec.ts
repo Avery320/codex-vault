@@ -117,10 +117,10 @@ describe('comet mcp (CLI e2e)', () => {
           expect(html).toContain('id="annotation-comment"');
           expect(html).toContain('新增選填留言');
           expect(html).not.toContain('id="context-attachment"');
-          expect(html).not.toContain('composerAttachmentLayout');
+          expect(html).toContain('composerAttachmentLayout');
+          expect(html).toContain('composerLabel');
           expect(html).toContain(String.raw`\u5247\u8A3B\u89E3`);
-          expect(html).toContain(String.raw`\u4F7F\u7528\u8005\u7559\u8A00`);
-          expect(html).not.toContain('openai/modelContext');
+          expect(html).not.toContain(String.raw`\u4F7F\u7528\u8005\u7559\u8A00`);
           expect(html).not.toContain('source_excerpt');
           expect(html).not.toContain('詢問 Codex');
           expect(html).not.toContain('改善這段');

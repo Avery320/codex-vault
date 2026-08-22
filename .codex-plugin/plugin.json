@@ -1,6 +1,6 @@
 {
   "name": "codex-vault",
-  "version": "0.1.0+codex.20260822153154",
+  "version": "0.1.0+codex.20260822183417",
   "description": "COMET connects Codex to Obsidian-compatible Markdown memory and knowledge graphs.",
   "author": {
     "name": "Avery Tsai"

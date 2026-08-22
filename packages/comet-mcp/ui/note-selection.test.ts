@@ -1,7 +1,22 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from 'vitest';
-import { createNoteSelection, sourceLineRange } from './note-selection';
+import {
+  createNoteSelection,
+  createSelectionAnchor,
+  restoreSelectionRange,
+  sameSelection,
+  sourceLineRange,
+  type NoteSelectionAnchor,
+} from './note-selection';
+
+const anchor: NoteSelectionAnchor = {
+  contentSha256: 'hash-1',
+  startPath: [0, 0],
+  startOffset: 1,
+  endPath: [1, 0],
+  endOffset: 2,
+};
 
 describe('note selection', () => {
   it('creates a compact line-based selection', () => {
@@ -13,6 +28,7 @@ describe('note selection', () => {
       quote: 'selected one\nselected two',
       startLine: 2,
       endLine: 3,
+      anchor,
     });
 
     expect(selection).toEqual({
@@ -22,6 +38,7 @@ describe('note selection', () => {
       quote: 'selected one\nselected two',
       startLine: 2,
       endLine: 3,
+      anchor,
     });
   });
 
@@ -34,6 +51,7 @@ describe('note selection', () => {
         quote: '   ',
         startLine: 1,
         endLine: 1,
+        anchor,
       })
     ).toBeNull();
 
@@ -45,6 +63,7 @@ describe('note selection', () => {
         quote: 'only',
         startLine: -20,
         endLine: 100,
+        anchor,
       })
     ).toMatchObject({ startLine: 1, endLine: 1 });
   });
@@ -69,6 +88,48 @@ describe('note selection', () => {
       startLine: 2,
       endLine: 5,
     });
+  });
+
+  it('restores an exact DOM range while the rendered note is unchanged', () => {
+    document.body.innerHTML = [
+      '<div id="root">',
+      '  <p data-source-line-start="2" data-source-line-end="2">Alpha</p>',
+      '  <p data-source-line-start="3" data-source-line-end="3">Beta</p>',
+      '</div>',
+    ].join('');
+    const root = document.querySelector('#root')!;
+    const paragraphs = root.querySelectorAll('p');
+    const range = document.createRange();
+    range.setStart(paragraphs[0].firstChild!, 1);
+    range.setEnd(paragraphs[1].firstChild!, 2);
+
+    const saved = createSelectionAnchor(range, root, 'hash-1');
+    expect(saved).not.toBeNull();
+    expect(restoreSelectionRange(saved!, root, 'hash-1')?.toString()).toBe(
+      range.toString()
+    );
+    expect(restoreSelectionRange(saved!, root, 'changed')).toBeNull();
+  });
+
+  it('compares the exact anchored selection', () => {
+    const selection = createNoteSelection({
+      vaultId: 'vault-1',
+      vaultName: 'Notes',
+      noteUri: 'note.md',
+      lineCount: 2,
+      quote: 'Alpha',
+      startLine: 1,
+      endLine: 1,
+      anchor,
+    })!;
+
+    expect(sameSelection(selection, { ...selection })).toBe(true);
+    expect(
+      sameSelection(selection, {
+        ...selection,
+        anchor: { ...selection.anchor, startOffset: 2 },
+      })
+    ).toBe(false);
   });
 
   it('rejects collapsed and out-of-reader DOM selections', () => {

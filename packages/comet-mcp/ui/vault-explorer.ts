@@ -10,11 +10,15 @@ import {
 } from './vault-explorer-model';
 import {
   createNoteSelection,
+  createSelectionAnchor,
+  restoreSelectionRange,
+  sameSelection,
   sourceLineRange,
   type NoteSelection,
 } from './note-selection';
 import {
   createSelectionModelContext,
+  readSelectionModelContext,
   type NoteAnnotation,
 } from './note-chat-context';
 import { createVaultMarkdownRenderer } from './vault-markdown';
@@ -165,19 +169,22 @@ const annotationCommentElement = query<HTMLTextAreaElement>(
 );
 const annotationCancelElement = query<HTMLButtonElement>('#annotation-cancel');
 const annotationSubmitElement = query<HTMLButtonElement>('#annotation-submit');
+const annotationRemoveElement = query<HTMLButtonElement>('#annotation-remove');
+const annotationMarkersElement = query<HTMLDivElement>('#annotation-markers');
 
 let payload: ExplorerPayload | null = null;
 let activeUri: string | null = null;
 let activeNoteLineCount = 0;
+let activeNoteContentSha256: string | null = null;
 let pendingSelection: NoteSelection | null = null;
 let pendingSelectionRect: DOMRect | null = null;
 let attachedAnnotations: NoteAnnotation[] = [];
-let annotationSubmitInFlight = false;
+let activeAnnotationRanges = new Map<string, Range>();
+let editingAnnotationId: string | null = null;
+let annotationMutationInFlight = false;
 let searchTimer: number | undefined;
 let searchSequence = 0;
 let noteSequence = 0;
-let addSelectionPointerArmed = false;
-let selectionMenuAcceptPointerAfter = 0;
 let dialogMode: VaultDialogMode = 'register';
 let graphPreferences: GraphPreferences;
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
@@ -321,6 +328,7 @@ function setExplorerPayload(next: ExplorerPayload): void {
   if (vaultChanged) {
     activeUri = null;
     activeNoteLineCount = 0;
+    activeNoteContentSha256 = null;
     dismissSelectionCandidate(true);
     searchElement.value = '';
     searchSequence += 1;
@@ -346,6 +354,7 @@ function setExplorerPayload(next: ExplorerPayload): void {
   } else if (activeUri && !next.files.some(file => file.uri === activeUri)) {
     activeUri = null;
     activeNoteLineCount = 0;
+    activeNoteContentSha256 = null;
     dismissSelectionCandidate(true);
     graphElement.clearSelection();
     showEmptyDocument('從檔案列表或圖譜選擇一則筆記。');
@@ -467,6 +476,7 @@ async function openNote(uri: string): Promise<void> {
   const sequence = ++noteSequence;
   activeUri = uri;
   activeNoteLineCount = 0;
+  activeNoteContentSha256 = null;
   dismissSelectionCandidate(true);
   const file = payload.files.find(item => item.uri === uri);
   noteTitleElement.textContent = file?.title ?? uri;
@@ -490,16 +500,21 @@ async function loadNote(uri: string, sequence: number): Promise<void> {
       }),
     ]);
     if (sequence !== noteSequence) return;
-    const resource = parseToolJson<{ content: string }>(resourceResult);
+    const resource = parseToolJson<{
+      content: string;
+      content_sha256: string;
+    }>(resourceResult);
     const connections = parseToolJson<{
       backlinks: Array<{ uri: string; title: string }>;
     }>(connectionResult);
     activeNoteLineCount = resource.content.split(/\r\n?|\n/).length;
+    activeNoteContentSha256 = resource.content_sha256;
     renderMarkdown(resource.content);
     renderBacklinks(connections.backlinks);
   } catch (error) {
     if (sequence !== noteSequence) return;
     activeNoteLineCount = 0;
+    activeNoteContentSha256 = null;
     dismissSelectionCandidate(true);
     showEmptyDocument(errorMessage(error));
   }
@@ -524,11 +539,13 @@ function parseToolJson<T>(result: ToolResultLike): T {
 function renderMarkdown(source: string): void {
   markdownElement.classList.remove('empty');
   markdownElement.innerHTML = markdown.render(source);
+  renderAttachedAnnotations();
 }
 
 function showEmptyDocument(message: string): void {
   markdownElement.classList.add('empty');
   markdownElement.textContent = message;
+  renderAttachedAnnotations();
 }
 
 function renderBacklinks(
@@ -551,6 +568,7 @@ function captureNoteSelection(): void {
   if (
     !activeUri ||
     activeNoteLineCount === 0 ||
+    !activeNoteContentSha256 ||
     !browserSelection ||
     browserSelection.rangeCount !== 1 ||
     browserSelection.isCollapsed
@@ -559,8 +577,14 @@ function captureNoteSelection(): void {
     return;
   }
 
+  const range = browserSelection.getRangeAt(0);
   const sourceRange = sourceLineRange(browserSelection, markdownElement);
-  if (!sourceRange) {
+  const anchor = createSelectionAnchor(
+    range,
+    markdownElement,
+    activeNoteContentSha256
+  );
+  if (!sourceRange || !anchor) {
     dismissSelectionCandidate();
     return;
   }
@@ -573,20 +597,31 @@ function captureNoteSelection(): void {
     quote: browserSelection.toString(),
     startLine: sourceRange.startLine,
     endLine: sourceRange.endLine,
+    anchor,
   });
   if (!selection) {
     dismissSelectionCandidate();
     return;
   }
 
+  const existing = attachedAnnotations.find(annotation =>
+    sameSelection(annotation, selection)
+  );
+  if (existing) {
+    showAttachedAnnotationEditor(
+      existing,
+      visibleRangeRect(range) ?? range.getBoundingClientRect()
+    );
+    return;
+  }
+
   pendingSelection = selection;
-  showSelectionMenu(browserSelection.getRangeAt(0));
+  showSelectionMenu(range);
 }
 
 function showSelectionMenu(range: Range): void {
   selectionMenuElement.hidden = false;
   resetAnnotationEditor();
-  selectionMenuAcceptPointerAfter = performance.now() + 250;
   const rect = range.getBoundingClientRect();
   pendingSelectionRect = rect;
   positionSelectionMenu(rect);
@@ -614,8 +649,31 @@ function showAnnotationEditor(): void {
   if (!pendingSelection || !pendingSelectionRect) return;
   addSelectionElement.hidden = true;
   annotationFormElement.hidden = false;
+  annotationRemoveElement.hidden = true;
+  annotationSubmitElement.textContent = '加入對話';
   selectionMenuElement.classList.add('editing');
+  resizeAnnotationComment();
   positionSelectionMenu(pendingSelectionRect);
+  annotationCommentElement.focus();
+}
+
+function showAttachedAnnotationEditor(
+  annotation: NoteAnnotation,
+  rect: DOMRect
+): void {
+  dismissSelectionCandidate();
+  editingAnnotationId = annotation.id;
+  pendingSelectionRect = rect;
+  selectionMenuElement.hidden = false;
+  addSelectionElement.hidden = true;
+  annotationFormElement.hidden = false;
+  annotationRemoveElement.hidden = false;
+  annotationSubmitElement.textContent = '儲存';
+  annotationCommentElement.value = annotation.comment ?? '';
+  selectionMenuElement.classList.add('editing');
+  setActiveAnnotationMarker(annotation.id);
+  resizeAnnotationComment();
+  positionSelectionMenu(rect);
   annotationCommentElement.focus();
 }
 
@@ -623,9 +681,19 @@ function resetAnnotationEditor(): void {
   annotationFormElement.reset();
   annotationFormElement.hidden = true;
   addSelectionElement.hidden = false;
+  annotationRemoveElement.hidden = true;
+  annotationSubmitElement.textContent = '加入對話';
   annotationSubmitElement.disabled = false;
-  annotationSubmitInFlight = false;
+  annotationRemoveElement.disabled = false;
+  annotationCommentElement.style.removeProperty('height');
+  editingAnnotationId = null;
   selectionMenuElement.classList.remove('editing');
+  setActiveAnnotationMarker(null);
+}
+
+function resizeAnnotationComment(): void {
+  annotationCommentElement.style.height = 'auto';
+  annotationCommentElement.style.height = `${annotationCommentElement.scrollHeight}px`;
 }
 
 function dismissSelectionCandidate(clearBrowserSelection = false): void {
@@ -636,38 +704,198 @@ function dismissSelectionCandidate(clearBrowserSelection = false): void {
   if (clearBrowserSelection) window.getSelection()?.removeAllRanges();
 }
 
-async function attachSelectionToChat(): Promise<void> {
-  const selection = pendingSelection;
-  if (!selection || annotationSubmitInFlight) return;
+async function saveAnnotation(): Promise<void> {
+  if (annotationMutationInFlight) return;
   const comment = annotationCommentElement.value.replace(/\r\n?/g, '\n').trim();
-  const annotation: NoteAnnotation = {
-    ...selection,
-    comment: comment || undefined,
-  };
-  const nextAnnotations = [...attachedAnnotations, annotation];
-  annotationSubmitInFlight = true;
-  annotationSubmitElement.disabled = true;
-
-  if (await updateSelectionModelContext(nextAnnotations)) {
-    attachedAnnotations = nextAnnotations;
-    dismissSelectionCandidate(true);
-    setStatus(`已加入 Codex 聊天輸入框（${nextAnnotations.length} 則註解）`);
+  const existing = editingAnnotationId
+    ? attachedAnnotations.find(item => item.id === editingAnnotationId)
+    : undefined;
+  if (existing) {
+    const nextAnnotations = attachedAnnotations.map(annotation =>
+      annotation.id === existing.id
+        ? { ...annotation, comment: comment || undefined }
+        : annotation
+    );
+    if (await commitAnnotations(nextAnnotations, '已更新註解')) {
+      dismissSelectionCandidate(true);
+    }
     return;
   }
 
-  annotationSubmitInFlight = false;
-  annotationSubmitElement.disabled = false;
-  setStatus('無法加入聊天上下文，請再試一次。', true);
+  if (!pendingSelection) return;
+  const nextAnnotations = [
+    ...attachedAnnotations,
+    {
+      ...pendingSelection,
+      id: crypto.randomUUID(),
+      comment: comment || undefined,
+    },
+  ];
+  if (
+    await commitAnnotations(
+      nextAnnotations,
+      `已加入對話上下文（${nextAnnotations.length} 則註解）`
+    )
+  ) {
+    dismissSelectionCandidate(true);
+  }
 }
 
-async function updateSelectionModelContext(
-  annotations: readonly NoteAnnotation[]
+async function removeEditingAnnotation(): Promise<void> {
+  if (!editingAnnotationId || annotationMutationInFlight) return;
+  const nextAnnotations = attachedAnnotations.filter(
+    annotation => annotation.id !== editingAnnotationId
+  );
+  if (await commitAnnotations(nextAnnotations, '已移除註解')) {
+    dismissSelectionCandidate(true);
+  }
+}
+
+async function commitAnnotations(
+  nextAnnotations: NoteAnnotation[],
+  successMessage: string
 ): Promise<boolean> {
-  try {
-    await app.updateModelContext(createSelectionModelContext(annotations));
-    return true;
-  } catch {
+  if (annotationMutationInFlight) return false;
+  if (!appConnected || !app.getHostCapabilities()?.updateModelContext) {
+    setStatus('目前的 Codex Host 不支援加入對話上下文。', true);
     return false;
+  }
+
+  annotationMutationInFlight = true;
+  setAnnotationControlsDisabled(true);
+  try {
+    await app.updateModelContext(createSelectionModelContext(nextAnnotations));
+    applyAttachedAnnotations(nextAnnotations);
+    setStatus(successMessage);
+    return true;
+  } catch (error) {
+    setStatus(`無法更新對話上下文：${errorMessage(error)}`, true);
+    return false;
+  } finally {
+    annotationMutationInFlight = false;
+    setAnnotationControlsDisabled(false);
+  }
+}
+
+function applyAttachedAnnotations(annotations: readonly NoteAnnotation[]): void {
+  attachedAnnotations = [...annotations];
+  if (
+    editingAnnotationId &&
+    !attachedAnnotations.some(annotation => annotation.id === editingAnnotationId)
+  ) {
+    dismissSelectionCandidate(true);
+  }
+  renderAttachedAnnotations();
+}
+
+function applyHostModelContext(hostContext: Record<string, unknown>): void {
+  const annotations = readSelectionModelContext(hostContext);
+  if (annotations !== undefined) {
+    applyAttachedAnnotations(annotations ?? []);
+  }
+}
+
+function setAnnotationControlsDisabled(disabled: boolean): void {
+  annotationSubmitElement.disabled = disabled;
+  annotationRemoveElement.disabled = disabled;
+}
+
+function renderAttachedAnnotations(): void {
+  activeAnnotationRanges = new Map();
+  annotationMarkersElement.replaceChildren();
+  if ('highlights' in CSS) CSS.highlights.delete('comet-annotations');
+  if (!activeUri || !activeNoteContentSha256) return;
+
+  const activeVaultId = payload?.active_vault?.id;
+  for (const [index, annotation] of attachedAnnotations.entries()) {
+    if (
+      annotation.vaultId !== activeVaultId ||
+      annotation.noteUri !== activeUri
+    ) {
+      continue;
+    }
+    const range = restoreSelectionRange(
+      annotation.anchor,
+      markdownElement,
+      activeNoteContentSha256
+    );
+    if (!range) continue;
+    activeAnnotationRanges.set(annotation.id, range);
+    renderAnnotationMarker(annotation, index, range);
+  }
+
+  if (
+    activeAnnotationRanges.size > 0 &&
+    'highlights' in CSS &&
+    typeof Highlight !== 'undefined'
+  ) {
+    CSS.highlights.set(
+      'comet-annotations',
+      new Highlight(...activeAnnotationRanges.values())
+    );
+  }
+}
+
+function renderAnnotationMarker(
+  annotation: NoteAnnotation,
+  index: number,
+  range: Range
+): void {
+  const rect = visibleRangeRect(range);
+  if (!rect) return;
+  const documentRect = markdownElement.parentElement!.getBoundingClientRect();
+  const marker = document.createElement('button');
+  marker.type = 'button';
+  marker.className = 'annotation-marker';
+  marker.dataset.annotationId = annotation.id;
+  marker.textContent = String(index + 1);
+  marker.title = annotation.comment || annotation.quote;
+  marker.setAttribute('aria-label', `修改第 ${index + 1} 則註解`);
+  marker.style.left = `${clamp(
+    rect.right - documentRect.left + 5,
+    4,
+    Math.max(4, documentRect.width - 29)
+  )}px`;
+  marker.style.top = `${Math.max(4, rect.top - documentRect.top - 13)}px`;
+  marker.addEventListener('click', event => {
+    event.stopPropagation();
+    editAttachedAnnotation(annotation);
+  });
+  annotationMarkersElement.append(marker);
+}
+
+function editAttachedAnnotation(annotation: NoteAnnotation): void {
+  const range = activeAnnotationRanges.get(annotation.id);
+  const rect = range ? visibleRangeRect(range) : null;
+  if (rect) showAttachedAnnotationEditor(annotation, rect);
+}
+
+function visibleRangeRect(range: Range): DOMRect | null {
+  return (
+    Array.from(range.getClientRects()).find(
+      rect => rect.width > 0 || rect.height > 0
+    ) ?? null
+  );
+}
+
+function annotationAtPoint(x: number, y: number): NoteAnnotation | null {
+  for (const annotation of attachedAnnotations) {
+    const range = activeAnnotationRanges.get(annotation.id);
+    if (!range) continue;
+    for (const rect of range.getClientRects()) {
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return annotation;
+      }
+    }
+  }
+  return null;
+}
+
+function setActiveAnnotationMarker(id: string | null): void {
+  for (const marker of annotationMarkersElement.querySelectorAll<HTMLElement>(
+    '.annotation-marker'
+  )) {
+    marker.classList.toggle('active', marker.dataset.annotationId === id);
   }
 }
 
@@ -894,6 +1122,7 @@ function applyWorkspaceLayout(): void {
     button.classList.toggle('active', visible);
     button.setAttribute('aria-pressed', String(visible));
   }
+  renderAttachedAnnotations();
 }
 
 function startPaneResize(
@@ -944,6 +1173,12 @@ searchElement.addEventListener('input', () => {
 });
 
 markdownElement.addEventListener('click', event => {
+  const annotation = annotationAtPoint(event.clientX, event.clientY);
+  if (annotation) {
+    event.preventDefault();
+    editAttachedAnnotation(annotation);
+    return;
+  }
   const anchor = (event.target as Element).closest<HTMLAnchorElement>('a');
   if (!anchor) return;
   const href = anchor.getAttribute('href') ?? '';
@@ -970,28 +1205,26 @@ readerScrollElement.addEventListener('scroll', () =>
 selectionMenuElement.addEventListener('pointerdown', event => {
   event.stopPropagation();
 });
-addSelectionElement.addEventListener('pointerdown', () => {
-  addSelectionPointerArmed = true;
-});
-addSelectionElement.addEventListener('pointercancel', () => {
-  addSelectionPointerArmed = false;
-});
-addSelectionElement.addEventListener('click', event => {
-  const keyboardActivation = event.detail === 0;
-  const pointerActivationReady =
-    addSelectionPointerArmed &&
-    performance.now() >= selectionMenuAcceptPointerAfter;
-  addSelectionPointerArmed = false;
-  if (!keyboardActivation && !pointerActivationReady) return;
-  showAnnotationEditor();
-});
+addSelectionElement.addEventListener('click', showAnnotationEditor);
 annotationCancelElement.addEventListener('click', () =>
   dismissSelectionCandidate(true)
 );
 annotationFormElement.addEventListener('submit', event => {
   event.preventDefault();
-  void attachSelectionToChat();
+  void saveAnnotation();
 });
+annotationCommentElement.addEventListener('input', () => {
+  resizeAnnotationComment();
+  if (pendingSelectionRect) positionSelectionMenu(pendingSelectionRect);
+});
+annotationCommentElement.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  annotationFormElement.requestSubmit();
+});
+annotationRemoveElement.addEventListener('click', () =>
+  void removeEditingAnnotation()
+);
 
 graphElement.addEventListener('node-click', event => {
   const uri = (event as CustomEvent<string>).detail;
@@ -1062,6 +1295,7 @@ app.ontoolresult = receiveToolResult;
 app.onteardown = async () => ({});
 app.onhostcontextchanged = context => {
   if (context.theme !== undefined) applyTheme(context.theme);
+  applyHostModelContext(context);
 };
 
 graphPreferences = readGraphPreferences();
@@ -1072,5 +1306,7 @@ void app.connect().then(() => {
   appConnected = true;
   const hostContext = app.getHostContext();
   applyTheme(hostContext?.theme);
+  if (hostContext) applyHostModelContext(hostContext);
+  addSelectionElement.disabled = !app.getHostCapabilities()?.updateModelContext;
   void requestFullscreen();
 });

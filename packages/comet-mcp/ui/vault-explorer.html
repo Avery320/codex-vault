@@ -107,6 +107,11 @@
             </header>
             <div class="reader-scroll">
               <article class="document">
+                <div
+                  id="annotation-markers"
+                  class="annotation-markers"
+                  aria-label="已加入對話的註解"
+                ></div>
                 <div id="markdown" class="empty">
                   從檔案列表或圖譜選擇一則筆記。
                 </div>
@@ -121,12 +126,24 @@
               <form id="annotation-form" class="annotation-form" hidden>
                 <textarea
                   id="annotation-comment"
-                  rows="3"
+                  rows="2"
                   maxlength="4000"
                   placeholder="新增選填留言…"
                   aria-label="這段選取內容的留言"
                 ></textarea>
                 <div class="annotation-actions">
+                  <button
+                    id="annotation-remove"
+                    class="annotation-remove icon-action"
+                    type="button"
+                    title="移除註解"
+                    aria-label="移除註解"
+                    hidden
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+                    </svg>
+                  </button>
                   <button
                     id="annotation-cancel"
                     class="secondary"

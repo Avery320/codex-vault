@@ -15,6 +15,7 @@
   --color-green: #44cf6e;
   --interactive-accent: #7f6df2;
   --interactive-accent-hover: #8b7af5;
+  --annotation-highlight: rgba(127, 109, 242, 0.3);
   --danger: #fb6a70;
   --sidebar-width: 300px;
   --reader-width: 520px;
@@ -44,6 +45,7 @@
   --color-green: #08b94e;
   --interactive-accent: #6c5dd3;
   --interactive-accent-hover: #5d4fc2;
+  --annotation-highlight: rgba(108, 93, 211, 0.22);
   --danger: #d14d54;
 }
 
@@ -607,9 +609,10 @@ details > summary::-webkit-details-marker {
 
 .annotation-form textarea {
   width: 100%;
-  min-height: 76px;
+  min-height: 58px;
   max-height: 180px;
-  resize: vertical;
+  resize: none;
+  overflow-y: auto;
   padding: 9px 10px;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
@@ -635,6 +638,25 @@ details > summary::-webkit-details-marker {
   font-size: 11.5px;
 }
 
+.annotation-actions .annotation-remove {
+  margin-right: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.annotation-remove:hover {
+  background: var(--background-modifier-hover);
+}
+
+.annotation-remove:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .reader-scroll {
   min-height: 0;
   overflow: auto;
@@ -642,9 +664,49 @@ details > summary::-webkit-details-marker {
 }
 
 .document {
+  position: relative;
   width: min(760px, 100%);
   margin: 0 auto;
   padding: 38px clamp(28px, 5vw, 72px) 88px;
+}
+
+.annotation-markers {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.annotation-marker {
+  position: absolute;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid var(--background-primary);
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.32);
+  cursor: pointer;
+  pointer-events: auto;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.annotation-marker:hover,
+.annotation-marker.active {
+  background: var(--interactive-accent-hover);
+  transform: scale(1.06);
+}
+
+#markdown ::selection {
+  background: var(--annotation-highlight);
+}
+
+::highlight(comet-annotations) {
+  background: var(--annotation-highlight);
 }
 
 #markdown {
