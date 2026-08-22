@@ -2,7 +2,7 @@
 
 ## 啟動
 
-安裝或更新插件後，建立新的 Codex task，選擇 `@Codex Vault`，再要求開啟
+安裝或更新插件後，建立新的 Codex task，選擇 `@COMET`，再要求開啟
 Vault Explorer。舊 task 不會重新載入新版 MCP tools。
 
 ## Vault 管理

@@ -1,11 +1,11 @@
 # 產品契約
 
-本文件記錄 Codex Vault 目前的產品方向與技術邊界。專案仍在早期階段，現階段
+本文件記錄 COMET 目前的產品方向與技術邊界。專案仍在早期階段，現階段
 優先維護 Markdown 解析、Vault 索引、搜尋與知識圖譜等核心演算法。
 
 ## 唯一產品目標
 
-Codex Vault 必須成為 **Codex App 原生側邊欄中的 Obsidian 相容筆記介面**。
+COMET 必須成為 **Codex App 原生側邊欄中的 Obsidian 相容筆記介面**。
 使用者檢視與操作筆記時，Codex 原生聊天視窗及 composer 必須同時保持可用。
 
 側邊欄至少包含：

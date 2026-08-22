@@ -2,15 +2,15 @@
 
 ```text
 Codex App
-└─ Codex Vault plugin
+└─ COMET plugin
    └─ MCP server
-      ├─ @foam/cli：Node.js 與檔案系統入口
-      ├─ @foam/mcp：tools、vault 管理與 MCP App
-      ├─ @foam/core：Markdown 與 link graph
-      └─ @foam/graph-view：知識圖譜元件
+      ├─ @comet/cli：Node.js 與檔案系統入口
+      ├─ @comet/mcp：tools、vault 管理與 MCP App
+      ├─ @comet/core：Markdown 與 link graph
+      └─ @comet/graph-view：知識圖譜元件
 ```
 
-Codex host 管理 task、composer、模型與訊息送出；Codex Vault 只提供 vault UI、
+Codex host 管理 task、composer、模型與訊息送出；COMET 只提供 vault UI、
 MCP tools 與 model-context attachment。
 
 ## 註解
@@ -25,7 +25,7 @@ Read mode 不註冊 mutation tools。Read-write mode 使用 preview + SHA-256 co
 
 ## 即時同步
 
-Node watcher 更新 Foam workspace 後，revision feed 會喚醒 Explorer 唯一一個待命中的
+Node watcher 更新 Comet workspace 後，revision feed 會喚醒 Explorer 唯一一個待命中的
 app-only MCP request。Explorer 再取得同一個 canonical workspace state，更新檔案樹、
 reader、backlinks 與 graph。revision 讓等待建立前發生的事件不會漏接；背景與 teardown
 則使用 cancellation 清理待命 request。
@@ -37,11 +37,9 @@ reader、backlinks 與 graph。revision 讓等待建立前發生的事件不會�
 - 使用 Codex 私有註解資料模型。
 - 在既有 task 熱重載新版插件。
 
-`@foam/*` 名稱暫時保留以避免不完整的跨套件改名。
-
-根目錄的 `build`、`test`、`lint` 與 `clean` 執行上圖的 Codex Vault
-packages。原始 Foam VS Code extension 不在現行 source tree 或 build graph 中；需要
-追溯尚未搬移的行為時，請查閱 Git history 與上游 Foam repository。
+根目錄的 `build`、`test`、`lint` 與 `clean` 執行上圖的 COMET packages。上游來源
+不在現行 source tree 或 build graph 中；需要追溯尚未搬移的行為時，請查閱 Git
+history 與[來源及授權說明](fork-and-license.md)。
 
 ## Markdown renderer 遷移
 

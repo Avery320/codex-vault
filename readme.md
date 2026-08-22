@@ -1,6 +1,6 @@
-# Codex Vault
+# COMET
 
-Codex Vault 是 Codex 桌面 App 的本機插件，可閱讀 Obsidian 相容的 Markdown
+COMET 是 Codex 桌面 App 的本機插件，可閱讀 Obsidian 相容的 Markdown
 vault、搜尋筆記、查看 backlinks 與知識圖譜，並把選取內容加入聊天上下文。
 
 > [!IMPORTANT]
@@ -17,7 +17,7 @@ vault、搜尋筆記、查看 backlinks 與知識圖譜，並把選取內容加�
 
 ## 使用
 
-安裝後建立新的 Codex task，選擇 `@Codex Vault`，再輸入「開啟 Vault
+安裝後建立新的 Codex task，選擇 `@COMET`，再輸入「開啟 Vault
 Explorer」。插件更新後也必須使用新 task，既有 task 不會熱重載 MCP tools。
 
 加入註解：
@@ -44,8 +44,8 @@ git clone https://github.com/Avery320/codex-vault.git
 cd codex-vault
 yarn install
 yarn build
-yarn workspace @foam/mcp test
-yarn workspace @foam/graph-view test:unit
+yarn workspace @comet/mcp test
+yarn workspace @comet/graph-view test:unit
 ```
 
 已設定 personal marketplace 的環境可執行：
@@ -75,8 +75,8 @@ Codex UI。
 
 ## Fork 與授權
 
-Codex Vault 衍生自 [Foam](https://github.com/foambubble/foam)，沿用其 Markdown、
+COMET 衍生自 [Foam](https://github.com/foambubble/foam)，沿用其 Markdown、
 wikilink 與 graph 核心，並新增 Codex plugin、MCP App、多 vault 管理和聊天註解。
 
 本專案採 [MIT License](LICENSE)。上游、Microsoft-derived source 與第三方依賴
-歸屬見 [NOTICE.md](NOTICE.md)。Codex Vault 並非 OpenAI、Obsidian 或 Foam 官方產品。
+歸屬見 [NOTICE.md](NOTICE.md)。COMET 並非 OpenAI、Obsidian 或 Foam 官方產品。

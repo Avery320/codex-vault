@@ -1,6 +1,6 @@
 # Fork 與授權
 
-Codex Vault 衍生自 [foambubble/foam](https://github.com/foambubble/foam)：
+COMET 衍生自 [foambubble/foam](https://github.com/foambubble/foam)：
 
 - `origin`：`https://github.com/Avery320/codex-vault.git`
 - `upstream`：`https://github.com/foambubble/foam.git`
@@ -9,7 +9,7 @@ Codex Vault 衍生自 [foambubble/foam](https://github.com/foambubble/foam)：
 與 graph component。本 fork 新增 Codex plugin、MCP App、多 vault、安全寫入與聊天
 註解。
 
-`@foam/*` 是暫時保留的內部名稱。原始 Foam VS Code extension 已從現行 source tree
+現行程式碼使用 `@comet/*` namespace。原始 Foam VS Code extension 已從 source tree
 移除，仍可從 Git history 與上游 repository 追溯。
 
 ## 授權
@@ -25,4 +25,4 @@ MPL、BlueOak、CC0 等條款，不能簡化成「全部 MIT」。
 - `spawndamnit@3.0.1`：license 位於套件 LICENSE。
 - `gitconfiglocal@1.0.0`：只標示 `BSD`。
 
-Codex Vault 是獨立社群專案，不代表 OpenAI、Obsidian 或 Foam。
+COMET 是獨立社群專案，不代表 OpenAI、Obsidian 或 Foam。

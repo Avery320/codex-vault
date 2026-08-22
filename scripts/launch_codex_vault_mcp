@@ -2,13 +2,13 @@
 set -euo pipefail
 
 plugin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cli_entry="${plugin_dir}/packages/foam-cli/out/index.js"
+cli_entry="${plugin_dir}/packages/comet-cli/out/index.js"
 config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
 registry_path="${CODEX_VAULT_REGISTRY_PATH:-${config_home}/codex-vault/vaults.json}"
 obsidian_registry_path="${CODEX_OBSIDIAN_REGISTRY_PATH:-${HOME}/Library/Application Support/obsidian/obsidian.json}"
 
 if [[ ! -f "${cli_entry}" ]]; then
-  echo "Codex Vault is not built. Run 'yarn build' from ${plugin_dir}." >&2
+  echo "COMET is not built. Run 'yarn build' from ${plugin_dir}." >&2
   exit 1
 fi
 

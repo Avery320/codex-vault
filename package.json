@@ -1,7 +1,7 @@
 {
-  "name": "codex-vault",
+  "name": "comet",
   "version": "0.1.0",
-  "description": "A local Codex plugin for exploring and annotating Obsidian-compatible Markdown vaults.",
+  "description": "COMET connects Codex to Obsidian-compatible Markdown memory and knowledge graphs.",
   "repository": "https://github.com/Avery320/codex-vault.git",
   "homepage": "https://github.com/Avery320/codex-vault#readme",
   "bugs": {
@@ -21,7 +21,7 @@
     "test:unit": "lerna run test:unit",
     "test:e2e": "lerna run test:e2e",
     "lint": "lerna run lint",
-    "format": "prettier --write \"packages/foam-core/**/*.ts\" \"packages/foam-graph/**/*.ts\" \"packages/foam-mcp/**/*.ts\" \"packages/foam-cli/**/*.ts\"",
+    "format": "prettier --write \"packages/comet-core/**/*.ts\" \"packages/comet-graph/**/*.ts\" \"packages/comet-mcp/**/*.ts\" \"packages/comet-cli/**/*.ts\"",
     "mcp": "./scripts/launch_codex_vault_mcp"
   },
   "devDependencies": {

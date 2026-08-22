@@ -21,7 +21,7 @@ jobs:
       - run: yarn lint
 
   test:
-    name: Build and test Codex Vault
+    name: Build and test COMET
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:

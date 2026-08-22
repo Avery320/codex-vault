@@ -1,7 +1,7 @@
 {
   "name": "codex-vault",
-  "version": "0.1.0+codex.20260822140936",
-  "description": "Explore an Obsidian-compatible Markdown vault with Codex agents, backlinks, search, and an interactive knowledge graph.",
+  "version": "0.1.0+codex.20260822145542",
+  "description": "COMET connects Codex to Obsidian-compatible Markdown memory and knowledge graphs.",
   "author": {
     "name": "Avery Tsai"
   },
@@ -9,14 +9,15 @@
   "keywords": [
     "markdown",
     "obsidian",
+    "comet",
     "knowledge-graph",
     "mcp"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Codex Vault",
+    "displayName": "COMET",
     "shortDescription": "Search and explore your local Markdown knowledge graph.",
-    "longDescription": "Codex Vault adapts Foam's Markdown knowledge graph and MCP tools for local, agent-assisted note exploration in Codex. It starts in read-only mode and supports Obsidian-style wikilinks, backlinks, tags, and graph traversal.",
+    "longDescription": "COMET (Codex\u2013Obsidian Memory Exploration Toolkit) provides local Markdown exploration, backlinks, tags, and knowledge graphs through standard Codex MCP App capabilities. It starts in read-only mode.",
     "developerName": "Avery Tsai",
     "category": "Productivity",
     "capabilities": [
@@ -30,8 +31,8 @@
       "\u627e\u51fa Vault \u4e2d\u7684\u5b64\u7acb\u7b46\u8a18\u8207\u5931\u6548\u9023\u7d50\u3002"
     ],
     "brandColor": "#8250DF",
-    "composerIcon": "./assets/icon/FOAM_ICON_256.png",
-    "logo": "./assets/icon/FOAM_ICON_512.png"
+    "composerIcon": "./assets/icon/COMET_ICON_256.png",
+    "logo": "./assets/icon/COMET_ICON_512.png"
   },
   "mcpServers": "./.mcp.json"
 }

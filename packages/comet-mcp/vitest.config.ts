@@ -1,0 +1,31 @@
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      // Resolve @comet/core to TS source under vitest so the test-utils
+      // subpath export shares module identity with the main entry.
+      // Without this `instanceof URI` checks fail across module boundaries.
+      // Order matters: longer prefix first.
+      '@comet/core/markdown-renderer': path.join(
+        __dirname,
+        '../comet-core/src/markdown/renderer/index.ts'
+      ),
+      '@comet/core/test': path.join(
+        __dirname,
+        '../comet-core/test/test-utils.ts'
+      ),
+      '@comet/core': path.join(__dirname, '../comet-core/src/index.ts'),
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/**/*.test.ts', 'ui/**/*.test.ts'],
+    exclude: ['node_modules/**'],
+    testTimeout: 20000,
+    clearMocks: true,
+    reporters: process.env.CI ? ['dot'] : ['verbose'],
+  },
+});

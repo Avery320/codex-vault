@@ -10,7 +10,7 @@
         "CODEX_OBSIDIAN_REGISTRY_PATH",
         "CODEX_VAULT_ALLOW_WRITES",
         "CODEX_MCP_NODE_PATH",
-        "FOAM_LOG_LEVEL",
+        "COMET_LOG_LEVEL",
         "XDG_CONFIG_HOME",
         "PATH"
       ],

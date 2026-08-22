@@ -1,0 +1,29 @@
+{
+  "name": "@comet/cli",
+  "version": "0.46.1",
+  "description": "COMET Node.js and stdio MCP runtime adapter",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "yarn workspace @comet/mcp build",
+    "build": "node esbuild.js",
+    "clean": "rimraf out",
+    "test": "yarn test:unit && yarn test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "yarn build && vitest run --config vitest.e2e.config.ts",
+    "lint": "oxlint src"
+  },
+  "devDependencies": {
+    "@comet/core": "*",
+    "@comet/mcp": "*",
+    "@types/node": "^18.0.0",
+    "esbuild": "^0.28.1",
+    "oxlint": "^1.57.0",
+    "rimraf": "^3.0.2",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "trash": "^10.1.1"
+  }
+}

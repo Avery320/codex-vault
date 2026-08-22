@@ -1,0 +1,43 @@
+{
+  "name": "@comet/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "COMET MCP server, tools, and interactive explorer",
+  "license": "MIT",
+  "main": "out/index.js",
+  "types": "out/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./out/index.d.ts",
+      "default": "./out/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json && node build-ui.cjs",
+    "clean": "rimraf out",
+    "test": "yarn test:unit",
+    "test:unit": "vitest run",
+    "lint": "oxlint src ui"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "14.1.2",
+    "@types/node": "^18.0.0",
+    "esbuild": "^0.28.1",
+    "happy-dom": "^20.0.0",
+    "lit": "^3.0.0",
+    "oxlint": "^1.57.0",
+    "rimraf": "^3.0.2",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@comet/core": "*",
+    "@comet/graph-view": "*",
+    "@modelcontextprotocol/ext-apps": "1.1.2",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "diff": "9.0.0",
+    "markdown-it": "14.3.0",
+    "minisearch": "7.2.0",
+    "zod": "^4.0.0"
+  }
+}
