@@ -138,59 +138,6 @@ export function registerGraphTools(
     }
   );
 
-  // ─── get_graph_summary ─────────────────────────────────────────────────────
-  register(
-    'get_graph_summary',
-    {
-      description:
-        'Workspace-level metrics: counts, top connected notes, top tags.',
-      inputSchema: {},
-    },
-    async () => {
-      const { foam, rootUri } = requireWorkspace(workspaceProvider);
-      const allResources = foam.workspace.list();
-      const resourcesByPath = new Map(
-        allResources.map(resource => [resource.uri.path, resource])
-      );
-      const noteCount = allResources.filter(r => r.type === 'note').length;
-      const attachmentCount = allResources.length - noteCount;
-      const allConnections = foam.graph.getAllConnections();
-      const orphans = listOrphans(foam.workspace, foam.graph);
-
-      const linkCounts = new Map<string, number>();
-      for (const c of allConnections) {
-        linkCounts.set(c.source.path, (linkCounts.get(c.source.path) ?? 0) + 1);
-      }
-      const mostConnected = Array.from(linkCounts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([uriPath, count]) => {
-          const resource = resourcesByPath.get(uriPath);
-          return resource
-            ? {
-                uri: uriToOutputString(resource.uri, rootUri),
-                title: resource.title,
-                link_count: count,
-              }
-            : null;
-        })
-        .filter(x => x !== null);
-
-      const mostUsedTags = listTags(foam.tags, { limit: 10 });
-
-      return json({
-        note_count: noteCount,
-        attachment_count: attachmentCount,
-        connection_count: allConnections.length,
-        orphan_count: orphans.length,
-        placeholder_count: foam.graph.placeholders.size,
-        tag_count: foam.tags.tags.size,
-        most_connected: mostConnected,
-        most_used_tags: mostUsedTags,
-      });
-    }
-  );
-
   // ─── get_workspace_info ────────────────────────────────────────────────────
   register(
     'get_workspace_info',
@@ -202,6 +149,15 @@ export function registerGraphTools(
       const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const all = foam.workspace.list();
       const noteCount = all.filter(r => r.type === 'note').length;
+      const mostConnected = all
+        .map(resource => ({
+          uri: uriToOutputString(resource.uri, rootUri),
+          title: resource.title,
+          link_count: foam.graph.getConnections(resource.uri).length,
+        }))
+        .filter(resource => resource.link_count > 0)
+        .sort((a, b) => b.link_count - a.link_count)
+        .slice(0, 10);
       return json({
         root_dir: rootUri.path,
         note_count: noteCount,
@@ -211,6 +167,8 @@ export function registerGraphTools(
         placeholder_count: foam.graph.placeholders.size,
         connection_count: foam.graph.getAllConnections().length,
         resource_count: all.length,
+        most_connected: mostConnected,
+        most_used_tags: listTags(foam.tags, { limit: 10 }),
         read_only: readOnly,
       });
     }

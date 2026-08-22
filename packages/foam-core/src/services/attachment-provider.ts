@@ -1,6 +1,5 @@
 import { Resource } from '../model/note';
 import { URI } from '../model/uri';
-import { IDisposable } from '../common/lifecycle';
 import { ResourceProvider } from '../model/provider';
 
 const imageExtensions = [
@@ -45,15 +44,12 @@ const asResource = (uri: URI): Resource => {
     aliases: [],
     properties: { type: type },
     sections: [],
-    blocks: [],
     links: [],
     tags: [],
-    footnotes: [],
   };
 };
 
 export class AttachmentResourceProvider implements ResourceProvider {
-  private disposables: IDisposable[] = [];
   public readonly attachmentExtensions: string[];
 
   constructor(attachmentExtensions: string[] = []) {
@@ -66,22 +62,11 @@ export class AttachmentResourceProvider implements ResourceProvider {
     );
   }
 
-  async readAsMarkdown(uri: URI): Promise<string | null> {
-    if (imageExtensions.includes(uri.getExtension())) {
-      return `![${''}](${uri.toString()}|height=200)`;
-    }
-    return `### ${uri.getBasename()}`;
-  }
-
   async fetch(uri: URI) {
     return asResource(uri);
   }
 
   resolveLink(): URI {
     throw new Error('not supported');
-  }
-
-  dispose() {
-    this.disposables.forEach(d => d.dispose());
   }
 }

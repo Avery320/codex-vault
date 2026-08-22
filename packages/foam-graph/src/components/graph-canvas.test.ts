@@ -142,10 +142,16 @@ describe('node sizing', () => {
     const graph = {
       nodes: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'topic' }],
       nodeInfo: {
-        a: { id: 'a', type: 'note' },
-        b: { id: 'b', type: 'note' },
-        c: { id: 'c', type: 'note' },
-        topic: { id: 'topic', type: 'tag' },
+        a: { id: 'a', type: 'note', title: 'a', properties: {}, tags: [] },
+        b: { id: 'b', type: 'note', title: 'b', properties: {}, tags: [] },
+        c: { id: 'c', type: 'note', title: 'c', properties: {}, tags: [] },
+        topic: {
+          id: 'topic',
+          type: 'tag',
+          title: 'topic',
+          properties: {},
+          tags: [],
+        },
       },
       links: [
         { source: 'a', target: 'b' },
@@ -153,7 +159,7 @@ describe('node sizing', () => {
         { source: 'topic', target: 'b' },
         { source: 'b', target: 'b' },
       ],
-    } as VisibleGraph;
+    } satisfies VisibleGraph;
 
     expect(computeIncomingReferenceCounts(graph).get('b')).toBe(2);
   });

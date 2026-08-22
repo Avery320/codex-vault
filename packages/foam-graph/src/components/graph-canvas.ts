@@ -1,12 +1,20 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import ForceGraph from 'force-graph';
+import ForceGraph, {
+  type LinkObject,
+  type NodeObject,
+} from 'force-graph';
 import {
   forceX,
   forceY,
   forceCollide,
   forceManyBody,
   forceLink,
+} from 'd3-force';
+import type {
+  ForceCollide,
+  ForceLink,
+  ForceManyBody,
 } from 'd3-force';
 import { scaleLinear } from 'd3-scale';
 import { Painter } from '../lib/painter';
@@ -32,6 +40,15 @@ export interface ViewportPoint {
 export interface GraphBounds {
   x: [number, number];
   y: [number, number];
+}
+
+interface SimulationNode extends NodeObject {
+  id: string;
+}
+
+interface SimulationLink extends LinkObject<SimulationNode> {
+  source: string | SimulationNode;
+  target: string | SimulationNode;
 }
 
 export function measureGraphViewport(
@@ -151,7 +168,7 @@ export class GraphCanvas extends LitElement {
   @property({ type: Object }) visibleGraph: VisibleGraph | null = null;
   @property({ type: String }) selectedNodeId: string | null = null;
   @property({ type: String }) hoverNodeId: string | null = null;
-  @property({ type: Object }) style: ResolvedStyle = {} as ResolvedStyle;
+  @property({ type: Object }) graphStyle: ResolvedStyle = {} as ResolvedStyle;
   @property({ type: Object }) forces: Forces = {
     collide: 2,
     repel: 30,
@@ -166,7 +183,7 @@ export class GraphCanvas extends LitElement {
   // Mutable rendering state closed over by force-graph callbacks.
   private rs = {
     nodeInfo: {} as VisibleGraph['nodeInfo'],
-    data: { nodes: [] as { id: string }[], links: [] as GraphModelLink[] },
+    data: { nodes: [] as SimulationNode[], links: [] as SimulationLink[] },
     selectedNodeId: null as string | null,
     hoverNodeId: null as string | null,
     style: {} as ResolvedStyle,
@@ -181,7 +198,7 @@ export class GraphCanvas extends LitElement {
     .range([0, 1])
     .clamp(true);
 
-  private graphInstance: ReturnType<ReturnType<typeof ForceGraph>> | null =
+  private graphInstance: ForceGraph<SimulationNode, SimulationLink> | null =
     null;
   private firstGraphLoad = true;
   private resizeObserver: ResizeObserver | null = null;
@@ -200,8 +217,10 @@ export class GraphCanvas extends LitElement {
     });
     const painter = new Painter();
 
-    this.graphInstance = ForceGraph()(container)
-      .graphData(this.rs.data as any)
+    this.graphInstance = new ForceGraph<SimulationNode, SimulationLink>(
+      container
+    )
+      .graphData(this.rs.data)
       .backgroundColor(this.rs.style.background || '#202020')
       .linkHoverPrecision(8)
       .d3Force('x', forceX())
@@ -216,12 +235,14 @@ export class GraphCanvas extends LitElement {
       )
       .d3Force(
         'link',
-        forceLink(this.rs.data.links as any).distance(this.rs.forces.link || 30)
+        forceLink<SimulationNode, SimulationLink>(this.rs.data.links).distance(
+          this.rs.forces.link || 30
+        )
       )
       .d3VelocityDecay(1 - (this.rs.forces.velocityDecay ?? 0.4))
       .linkWidth(() => this.rs.style.lineWidth * this.rs.linkWidthMultiplier)
       .nodeCanvasObject(
-        (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+        (node, ctx, globalScale) => {
           const info = this.rs.nodeInfo[node.id];
           if (!info) return;
 
@@ -246,30 +267,29 @@ export class GraphCanvas extends LitElement {
 
           const labelPosition = graphPointToViewport(
             ctx.getTransform(),
-            node.x,
-            node.y + size + 1,
+            node.x ?? 0,
+            (node.y ?? 0) + size + 1,
             window.devicePixelRatio || 1
           );
 
           painter
-            .circle(node.x, node.y, size, fill, fill)
+            .circle(node.x ?? 0, node.y ?? 0, size, fill, fill)
             .screenText(
               info.title,
               labelPosition.x,
               labelPosition.y,
               this.rs.style.fontSize,
               this.rs.style.fontFamily,
-              textColor as any
+              textColor
             );
         }
       )
       .onRenderFramePost((ctx: CanvasRenderingContext2D) => {
         painter.paint(ctx);
       })
-      .linkColor((link: any) => {
-        const graphLink = link as GraphModelLink;
-        const sourceId = GraphModelLink.getNodeId(graphLink.source);
-        const targetId = GraphModelLink.getNodeId(graphLink.target);
+      .linkColor(link => {
+        const sourceId = GraphModelLink.getNodeId(link.source);
+        const targetId = GraphModelLink.getNodeId(link.target);
         const highlighted =
           sourceId === this.rs.selectedNodeId ||
           sourceId === this.rs.hoverNodeId ||
@@ -280,7 +300,7 @@ export class GraphCanvas extends LitElement {
           : this.rs.style.lineColor;
       })
       .nodePointerAreaPaint(
-        (node: any, color: string, ctx: CanvasRenderingContext2D) => {
+        (node, color, ctx) => {
           const info = this.rs.nodeInfo[node.id];
           if (!info) return;
           const size = computeNodeRadius(
@@ -289,16 +309,16 @@ export class GraphCanvas extends LitElement {
           );
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
+          ctx.arc(node.x ?? 0, node.y ?? 0, size, 0, 2 * Math.PI);
           ctx.fill();
         }
       )
-      .onNodeHover((node: any) => {
+      .onNodeHover(node => {
         const nodeId = node?.id ?? null;
         this._emit('canvas-node-hover', nodeId);
         container.style.cursor = node ? 'pointer' : 'default';
       })
-      .onNodeClick((node: any) => {
+      .onNodeClick(node => {
         this._emit('canvas-node-click', node.id);
       })
       .onBackgroundClick(() => this._emit('canvas-background-click', null));
@@ -318,13 +338,13 @@ export class GraphCanvas extends LitElement {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     window.removeEventListener('resize', this.onResize);
-    (this.graphInstance as any)?._destructor?.();
+    this.graphInstance?._destructor();
   }
 
   updated(changed: Map<string, unknown>) {
-    if (changed.has('style')) {
-      this.rs.style = this.style;
-      this.graphInstance?.backgroundColor(this.style.background);
+    if (changed.has('graphStyle')) {
+      this.rs.style = this.graphStyle;
+      this.graphInstance?.backgroundColor(this.graphStyle.background);
     }
 
     if (changed.has('selectedNodeId')) this.rs.selectedNodeId = this.selectedNodeId;
@@ -333,13 +353,19 @@ export class GraphCanvas extends LitElement {
     if (changed.has('forces')) {
       this.rs.forces = this.forces;
       if (this.graphInstance) {
-        (this.graphInstance.d3Force('collide') as any)?.radius(
+        (this.graphInstance.d3Force('collide') as ForceCollide<SimulationNode>)
+          ?.radius(
           this.graphInstance.nodeRelSize() * this.forces.collide
         );
-        (this.graphInstance.d3Force('charge') as any)?.strength(
-          -this.forces.repel
-        );
-        (this.graphInstance.d3Force('link') as any)?.distance(this.forces.link);
+        (
+          this.graphInstance.d3Force('charge') as ForceManyBody<SimulationNode>
+        )?.strength(-this.forces.repel);
+        (
+          this.graphInstance.d3Force('link') as ForceLink<
+            SimulationNode,
+            SimulationLink
+          >
+        )?.distance(this.forces.link);
         this.graphInstance.d3VelocityDecay(1 - this.forces.velocityDecay);
         this.graphInstance.d3ReheatSimulation();
       }
@@ -393,8 +419,7 @@ export class GraphCanvas extends LitElement {
       return;
     }
 
-    const graphInstance = this.graphInstance as any;
-    const bounds = graphInstance.getGraphBbox?.() as GraphBounds | null;
+    const bounds = this.graphInstance.getGraphBbox();
     if (!bounds) return;
 
     const center = {
@@ -444,8 +469,13 @@ export class GraphCanvas extends LitElement {
     }
 
     this.rs.data.links = visibleGraph.links.map(link => ({ ...link }));
-    this.graphInstance.graphData(this.rs.data as any);
-    (this.graphInstance.d3Force('link') as any)?.links(this.rs.data.links);
+    this.graphInstance.graphData(this.rs.data);
+    (
+      this.graphInstance.d3Force('link') as ForceLink<
+        SimulationNode,
+        SimulationLink
+      >
+    )?.links(this.rs.data.links);
   }
 
   private _emit(eventName: string, detail: unknown) {

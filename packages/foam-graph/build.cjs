@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs');
 const childProcess = require('child_process');
 const esbuild = require('esbuild');
 
@@ -24,7 +23,6 @@ async function buildLibTarget() {
     sourcesContent: false,
   });
   buildDeclarations();
-  writeComponentEntrypointDeclaration();
 }
 
 function buildDeclarations() {
@@ -36,25 +34,6 @@ function buildDeclarations() {
       path.join(dir, 'tsconfig.build.json'),
     ],
     { stdio: 'inherit' }
-  );
-}
-
-function writeComponentEntrypointDeclaration() {
-  // tsconfig.build.json intentionally emits declarations only for protocol.ts.
-  // Full declaration emit for the Lit component currently exposes unrelated
-  // internal graph typing issues, so keep the public component entrypoint as a
-  // minimal side-effect import declaration.
-  fs.writeFileSync(
-    path.join(packageOutDir, 'foam-graph.d.ts'),
-    [
-      "declare global {",
-      "  interface HTMLElementTagNameMap {",
-      "    'foam-graph': HTMLElement;",
-      "  }",
-      "}",
-      "export {};",
-      "",
-    ].join('\n')
   );
 }
 

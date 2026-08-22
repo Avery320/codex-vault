@@ -47,7 +47,7 @@ export { linksData, traverseGraph } from './commands/links';
 export type { LinkEntry, TraversalResult } from './commands/links';
 export { outlineData } from './commands/outline';
 export type { OutlineResult } from './commands/outline';
-export { searchWorkspace } from './commands/search';
+export { searchByProperty } from './commands/search';
 export type { SearchMatch } from './commands/search';
 export {
   noteShowData,
@@ -57,6 +57,7 @@ export {
 } from './commands/note';
 export type { NoteDetail } from './commands/note';
 export { renameTag } from './commands/rename';
+export { writeWorkspaceResource } from './services/workspace-mutation';
 export {
   mergeFrontmatter,
   addTagsToFrontmatter,

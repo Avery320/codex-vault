@@ -448,15 +448,6 @@ export class FoamWorkspace implements IDisposable {
     return resource;
   }
 
-  public readAsMarkdown(uri: URI): Promise<string | null> {
-    for (const provider of this.providers) {
-      if (provider.supports(uri)) {
-        return provider.readAsMarkdown(uri);
-      }
-    }
-    return Promise.resolve(null);
-  }
-
   public dispose(): void {
     this.onDidAddEmitter.dispose();
     this.onDidDeleteEmitter.dispose();

@@ -36,26 +36,6 @@ describe('Graph', () => {
     ]);
   });
 
-  it('should include resources and placeholders', () => {
-    const ws = createTestWorkspace();
-    ws.set(
-      createTestNote({
-        uri: '/page-a.md',
-        links: [{ slug: 'placeholder-link' }],
-      })
-    );
-    ws.set(createTestNote({ uri: '/file.pdf' }));
-
-    const graph = FoamGraph.fromWorkspace(ws);
-
-    expect(
-      graph
-        .getAllNodes()
-        .map(uri => uri.path)
-        .sort()
-    ).toEqual(['/file.pdf', '/page-a.md', 'placeholder-link']);
-  });
-
   it('should support multiple connections between the same resources', () => {
     const noteA = createTestNote({
       uri: '/path/to/note-a.md',
@@ -285,22 +265,6 @@ describe('Placeholders', () => {
     });
   });
 
-  it('should work with a placeholder named like a JS prototype property', () => {
-    const ws = createTestWorkspace();
-    const noteA = createTestNote({
-      uri: '/page-a.md',
-      links: [{ slug: 'constructor' }],
-    });
-    ws.set(noteA);
-    const graph = FoamGraph.fromWorkspace(ws);
-
-    expect(
-      graph
-        .getAllNodes()
-        .map(uri => uri.path)
-        .sort()
-    ).toEqual(['/page-a.md', 'constructor']);
-  });
 });
 
 describe('Regenerating graph after workspace changes', () => {
@@ -380,7 +344,7 @@ describe('Regenerating graph after workspace changes', () => {
     const graph2 = FoamGraph.fromWorkspace(ws);
 
     expect(() => ws.get(noteB.uri)).toThrow();
-    expect(graph2.contains(URI.placeholder('page-b'))).toBeTruthy();
+    expect(graph2.placeholders.has('page-b')).toBeTruthy();
   });
 
   it('should turn a placeholder into a connection when adding a resource matching a wikilink', () => {
@@ -395,7 +359,7 @@ describe('Regenerating graph after workspace changes', () => {
     expect(graph.getLinks(noteA.uri).map(l => l.target)).toEqual([
       URI.placeholder('page-b'),
     ]);
-    expect(graph.contains(URI.placeholder('page-b'))).toBeTruthy();
+    expect(graph.placeholders.has('page-b')).toBeTruthy();
 
     // add note-b
     const noteB = createTestNote({
@@ -432,9 +396,7 @@ describe('Regenerating graph after workspace changes', () => {
     const graph2 = FoamGraph.fromWorkspace(ws);
 
     expect(() => ws.get(noteB.uri)).toThrow();
-    expect(
-      graph2.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeTruthy();
+    expect(graph2.placeholders.has('/path/to/another/page-b.md')).toBeTruthy();
   });
 
   it('should turn a placeholder into a connection when adding a resource matching a direct link', () => {
@@ -472,9 +434,7 @@ describe('Regenerating graph after workspace changes', () => {
     });
     const ws = createTestWorkspace().set(noteA);
     const graph = FoamGraph.fromWorkspace(ws);
-    expect(
-      graph.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeTruthy();
+    expect(graph.placeholders.has('/path/to/another/page-b.md')).toBeTruthy();
 
     // update the note
     const noteABis = createTestNote({
@@ -484,9 +444,7 @@ describe('Regenerating graph after workspace changes', () => {
     ws.set(noteABis);
     const graph2 = FoamGraph.fromWorkspace(ws);
 
-    expect(
-      graph2.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeFalsy();
+    expect(graph2.placeholders.has('/path/to/another/page-b.md')).toBeFalsy();
   });
 });
 
@@ -608,9 +566,7 @@ describe('Updating graph on workspace state', () => {
     ws.delete(noteB.uri);
 
     expect(() => ws.get(noteB.uri)).toThrow();
-    expect(
-      graph.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeTruthy();
+    expect(graph.placeholders.has('/path/to/another/page-b.md')).toBeTruthy();
     ws.dispose();
     graph.dispose();
   });
@@ -627,9 +583,7 @@ describe('Updating graph on workspace state', () => {
     expect(graph.getLinks(noteA.uri).map(l => l.target)).toEqual([
       URI.placeholder('/path/to/another/page-b.md'),
     ]);
-    expect(
-      graph.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeTruthy();
+    expect(graph.placeholders.has('/path/to/another/page-b.md')).toBeTruthy();
 
     // add note-b
     const noteB = createTestNote({
@@ -652,9 +606,7 @@ describe('Updating graph on workspace state', () => {
     const ws = createTestWorkspace();
     ws.set(noteA);
     const graph = FoamGraph.fromWorkspace(ws, true);
-    expect(
-      graph.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeTruthy();
+    expect(graph.placeholders.has('/path/to/another/page-b.md')).toBeTruthy();
 
     // update the note
     const noteABis = createTestNote({
@@ -662,9 +614,7 @@ describe('Updating graph on workspace state', () => {
       links: [],
     });
     ws.set(noteABis);
-    expect(
-      graph.contains(URI.placeholder('/path/to/another/page-b.md'))
-    ).toBeFalsy();
+    expect(graph.placeholders.has('/path/to/another/page-b.md')).toBeFalsy();
     ws.dispose();
     graph.dispose();
   });

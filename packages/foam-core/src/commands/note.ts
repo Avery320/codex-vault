@@ -1,7 +1,3 @@
-import {
-  TextEdit,
-  WorkspaceTextEdit,
-} from '../services/text-edit';
 import { computeWikilinkRenameEdits } from '../services/link-integrity';
 import { Resolver } from '../templates/variable-resolver';
 import { parseFoamTemplate } from '../utils/template-frontmatter-parser';
@@ -10,8 +6,13 @@ import { FoamGraph } from '../model/graph';
 import { Resource } from '../model/note';
 import { FoamWorkspace } from '../model/workspace';
 import { URI } from '../model/uri';
-import { IDataStore } from '../services/datastore';
 import { FoamError } from '../common/errors';
+import {
+  applyWorkspaceTextEdits,
+  deleteWorkspaceResource,
+  moveWorkspaceResource,
+  writeWorkspaceResource,
+} from '../services/workspace-mutation';
 import { mergeFrontmatter } from './frontmatter';
 import {
   getBasename,
@@ -72,30 +73,6 @@ export function noteShowData(
   };
 }
 
-// ─── Internal helper ──────────────────────────────────────────────────────────
-
-async function applyEditsToFiles(
-  edits: WorkspaceTextEdit[],
-  dataStore: IDataStore
-): Promise<void> {
-  for (const { uri, edits: fileEdits } of WorkspaceTextEdit.groupByUri(edits)) {
-    const content = await dataStore.read(uri);
-    if (content === null) {
-      // The edit target disappeared between graph computation and apply,
-      // or the datastore couldn't read it. Either way, applying edits to
-      // empty content would silently truncate / recreate the file — fail
-      // loudly so the caller can surface the I/O problem.
-      throw new FoamError(
-        'io_error',
-        `Cannot apply edits: failed to read ${uri.toFsPath()}`,
-        { uri: uri.toFsPath() }
-      );
-    }
-    const updated = TextEdit.apply(content, fileEdits);
-    await dataStore.write(uri, updated);
-  }
-}
-
 // ─── Write: create ────────────────────────────────────────────────────────────
 
 /**
@@ -112,7 +89,6 @@ async function applyEditsToFiles(
  */
 export async function noteCreate(
   foam: Foam,
-  dataStore: IDataStore,
   opts: {
     title?: string;
     dir?: string;
@@ -121,6 +97,7 @@ export async function noteCreate(
     properties?: Record<string, string>;
   }
 ): Promise<NoteCreateResult> {
+  const dataStore = foam.services.dataStore;
   const rootUri = foam.workspace.roots[0];
   const title =
     opts.title ??
@@ -205,7 +182,7 @@ export async function noteCreate(
     );
   }
 
-  await dataStore.write(targetUri, content);
+  await writeWorkspaceResource(foam, targetUri, content);
 
   const id = getBasename(targetUri.path).replace(/\.md$/, '');
   return { id, uri: targetUri, content };
@@ -221,12 +198,12 @@ export async function noteCreate(
  * `invalid_input` if source equals destination.
  */
 export async function noteMove(
-  workspace: FoamWorkspace,
-  graph: FoamGraph,
-  dataStore: IDataStore,
+  foam: Foam,
   resource: Resource,
   newUri: URI
 ): Promise<NoteMoveResult> {
+  const { workspace, graph } = foam;
+  const dataStore = foam.services.dataStore;
   const oldUri = resource.uri;
 
   if (oldUri.isEqual(newUri)) {
@@ -245,15 +222,10 @@ export async function noteMove(
   }
 
   const edits = computeWikilinkRenameEdits(workspace, graph, oldUri, newUri);
-  await applyEditsToFiles(edits, dataStore);
-
-  await dataStore.move(oldUri, newUri);
+  await applyWorkspaceTextEdits(foam, edits);
 
   const oldId = workspace.getIdentifier(oldUri);
-
-  // Rebuild workspace state for the moved file so identifiers update
-  workspace.delete(oldUri);
-  workspace.set({ ...resource, uri: newUri });
+  await moveWorkspaceResource(foam, oldUri, newUri);
   const newId = workspace.getIdentifier(newUri);
 
   return {
@@ -268,8 +240,8 @@ export async function noteMove(
 // ─── Write: delete ────────────────────────────────────────────────────────────
 
 export async function noteDelete(
-  dataStore: IDataStore,
+  foam: Foam,
   resource: Resource
 ): Promise<void> {
-  await dataStore.delete(resource.uri);
+  await deleteWorkspaceResource(foam, resource.uri);
 }

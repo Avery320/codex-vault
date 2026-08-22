@@ -1,8 +1,10 @@
-import { TextEdit, WorkspaceTextEdit } from '../services/text-edit';
-import { TagEdit } from '../services/tag-edit';
-import { FoamTags } from '../model/tags';
-import { IDataStore } from '../services/datastore';
+import type { Foam } from '../model/foam';
+import type { Location } from '../model/location';
+import type { Tag } from '../model/note';
+import type { WorkspaceTextEdit } from '../services/text-edit';
+import { applyWorkspaceTextEdits } from '../services/workspace-mutation';
 import { FoamError } from '../common/errors';
+import { WORD_REGEX } from '../utils/hashtags';
 
 export interface RenameTagResult {
   old_tag: string;
@@ -10,52 +12,71 @@ export interface RenameTagResult {
   updated_notes: number;
 }
 
-async function applyEditsToFiles(
-  edits: WorkspaceTextEdit[],
-  dataStore: IDataStore
-): Promise<void> {
-  for (const { uri, edits: fileEdits } of WorkspaceTextEdit.groupByUri(edits)) {
-    const content = await dataStore.read(uri);
-    if (content === null) {
-      throw new FoamError(
-        'io_error',
-        `Cannot apply edits: failed to read ${uri.toFsPath()}`,
-        { uri: uri.toFsPath() }
-      );
-    }
-    await dataStore.write(uri, TextEdit.apply(content, fileEdits));
-  }
+function replacementFor(
+  location: Location<Tag>,
+  oldLabel: string,
+  newLabel: string
+) {
+  const rangeLength =
+    location.range.end.character - location.range.start.character;
+  return rangeLength === oldLabel.length + 1 ? `#${newLabel}` : newLabel;
 }
 
 export async function renameTag(
-  tags: FoamTags,
-  dataStore: IDataStore,
+  foam: Foam,
   oldTag: string,
   newTag: string,
   force: boolean
 ): Promise<RenameTagResult> {
   const cleanOld = oldTag.startsWith('#') ? oldTag.slice(1) : oldTag;
   const cleanNew = newTag.startsWith('#') ? newTag.slice(1) : newTag;
-  const validation = TagEdit.validateTagRename(tags, cleanOld, cleanNew);
+  const tags = foam.tags.tags;
 
-  if (!validation.isValid || (validation.isMerge && !force)) {
+  if (!tags.has(cleanOld)) {
     throw new FoamError(
       'invalid_input',
-      validation.message ?? 'Invalid tag rename.',
-      validation.isMerge ? { isMerge: true } : undefined
+      `Tag "${cleanOld}" does not exist in the workspace.`
+    );
+  }
+  if (!cleanNew) {
+    throw new FoamError('invalid_input', 'New tag label cannot be empty.');
+  }
+  if (cleanNew.match(WORD_REGEX)?.[0] !== cleanNew) {
+    throw new FoamError('invalid_input', 'Invalid tag label.');
+  }
+  if (cleanOld === cleanNew) {
+    throw new FoamError(
+      'invalid_input',
+      'New tag name is the same as the current name.'
+    );
+  }
+  if (tags.has(cleanNew) && !force) {
+    throw new FoamError(
+      'invalid_input',
+      `Tag "${cleanNew}" already exists. Pass force to merge tags.`,
+      { isMerge: true }
     );
   }
 
-  const result = TagEdit.createHierarchicalRenameEdits(
-    tags,
-    cleanOld,
-    cleanNew
-  );
-  await applyEditsToFiles(result.edits, dataStore);
+  const edits: WorkspaceTextEdit[] = [];
+  for (const [label, locations] of tags) {
+    if (label !== cleanOld && !label.startsWith(`${cleanOld}/`)) continue;
+    const replacement = cleanNew + label.slice(cleanOld.length);
+    for (const location of locations) {
+      edits.push({
+        uri: location.uri,
+        edit: {
+          range: location.range,
+          newText: replacementFor(location, label, replacement),
+        },
+      });
+    }
+  }
+  await applyWorkspaceTextEdits(foam, edits);
 
   return {
     old_tag: cleanOld,
     new_tag: cleanNew,
-    updated_notes: new Set(result.edits.map(edit => edit.uri.toFsPath())).size,
+    updated_notes: new Set(edits.map(edit => edit.uri.toFsPath())).size,
   };
 }

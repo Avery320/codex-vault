@@ -37,6 +37,21 @@ describe('graph tools', () => {
       expect(orphans.map(o => o.uri)).toEqual(['e.md']);
     }));
 
+  it('get_deadends excludes orphan notes', () =>
+    withMcpServer(
+      {
+        'source.md': '# Source\n\n[[target]]',
+        'target.md': '# Target',
+        'orphan.md': '# Orphan',
+      },
+      async ctx => {
+        const deadends = await ctx.callToolJson<Array<{ uri: string }>>(
+          'get_deadends'
+        );
+        expect(deadends.map(note => note.uri)).toEqual(['target.md']);
+      }
+    ));
+
   it('get_placeholders returns broken wikilink targets', () =>
     withMcpServer(SEED, async ctx => {
       const placeholders = await ctx.callToolJson<
@@ -75,5 +90,15 @@ describe('graph tools', () => {
       expect(info.note_count).toBe(5);
       expect(info.placeholder_count).toBe(1);
       expect(info.connection_count).toBeGreaterThan(0);
+    }));
+
+  it('get_workspace_info includes graph and tag rankings', () =>
+    withMcpServer(SEED, async ctx => {
+      const info = await ctx.callToolJson<{
+        most_connected: Array<{ uri: string; link_count: number }>;
+        most_used_tags: Array<{ tag: string; count: number }>;
+      }>('get_workspace_info');
+      expect(info.most_connected[0].link_count).toBeGreaterThan(0);
+      expect(info.most_used_tags).toEqual([]);
     }));
 });

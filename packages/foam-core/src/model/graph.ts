@@ -3,7 +3,6 @@ import { URI } from './uri';
 import { FoamWorkspace } from './workspace';
 import { IDisposable } from '../common/lifecycle';
 import { Logger } from '../utils/log';
-import { Emitter } from '../common/event';
 
 export type Connection = {
   source: URI;
@@ -28,26 +27,12 @@ export class FoamGraph implements IDisposable {
    */
   public readonly backlinks: Map<string, Connection[]> = new Map();
 
-  private onDidUpdateEmitter = new Emitter<void>();
-  onDidUpdate = this.onDidUpdateEmitter.event;
-
   /**
    * List of disposables to destroy with the workspace
    */
   private disposables: IDisposable[] = [];
 
   constructor(private readonly workspace: FoamWorkspace) {}
-
-  public contains(uri: URI): boolean {
-    return this.getConnections(uri).length > 0;
-  }
-
-  public getAllNodes(): URI[] {
-    return [
-      ...Array.from(this.placeholders.values()),
-      ...this.workspace.list().map(r => r.uri),
-    ];
-  }
 
   public getAllConnections(): Connection[] {
     return Array.from(this.links.values()).flat();
@@ -85,9 +70,8 @@ export class FoamGraph implements IDisposable {
     graph.update();
     if (keepMonitoring) {
       // Incremental handlers, not a full rebuild — see onResource* below. Each
-      // touches only the affected connections, then fires onDidUpdate. They are
-      // NOT debounced: debouncing coalesces events, but incremental updates need
-      // every event (each carries a distinct diff to apply).
+      // touches only the affected connections. They are not debounced because
+      // every event carries a distinct diff to apply.
       graph.disposables.push(
         workspace.onDidAdd(resource => graph.onResourceAdded(resource)),
         workspace.onDidUpdate(({ old, new: updated }) =>
@@ -116,7 +100,6 @@ export class FoamGraph implements IDisposable {
 
     const end = Date.now();
     Logger.debug(`Graph updated in ${end - start}ms`);
-    this.onDidUpdateEmitter.fire();
   }
 
   /**
@@ -127,7 +110,6 @@ export class FoamGraph implements IDisposable {
   private onResourceUpdated(old: Resource, updated: Resource) {
     this.disconnectResource(old.uri);
     this.connectResource(updated);
-    this.onDidUpdateEmitter.fire();
   }
 
   /**
@@ -140,7 +122,6 @@ export class FoamGraph implements IDisposable {
   private onResourceAdded(resource: Resource) {
     this.reconnectAffectedPlaceholderSources();
     this.connectResource(resource);
-    this.onDidUpdateEmitter.fire();
   }
 
   /**
@@ -152,7 +133,6 @@ export class FoamGraph implements IDisposable {
     const affectedSources = this.sourcesLinkingTo(resource.uri);
     this.disconnectResource(resource.uri);
     this.reconnectSources(affectedSources);
-    this.onDidUpdateEmitter.fire();
   }
 
   /** Distinct source URIs whose links currently point at `target.path`. */
@@ -261,7 +241,6 @@ export class FoamGraph implements IDisposable {
   }
 
   public dispose(): void {
-    this.onDidUpdateEmitter.dispose();
     this.disposables.forEach(d => d.dispose());
     this.disposables = [];
   }

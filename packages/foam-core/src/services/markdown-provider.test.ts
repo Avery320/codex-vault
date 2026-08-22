@@ -1,5 +1,4 @@
 import { createMarkdownParser } from './markdown-parser';
-import { MarkdownResourceProvider } from './markdown-provider';
 import { Logger } from '../utils/log';
 import { URI } from '../model/uri';
 import { FoamGraph } from '../model/graph';
@@ -7,7 +6,6 @@ import {
   createTestNote,
   createTestWorkspace,
   getRandomURI,
-  InMemoryDataStore,
 } from '../../test/test-utils';
 
 Logger.setLevel('error');
@@ -740,76 +738,5 @@ describe('External link resolution', () => {
     // No placeholders for external links
     expect(graph.placeholders.size).toEqual(0);
     graph.dispose();
-  });
-});
-
-describe('readAsMarkdown with block fragments', () => {
-  const mdParser = createMarkdownParser([]);
-
-  it('should return only the block content for a paragraph block', async () => {
-    const dataStore = new InMemoryDataStore();
-    const uri = URI.file('/root/note.md');
-    dataStore.set(
-      uri,
-      'First paragraph\n\nTarget paragraph ^myblock\n\nLast paragraph'
-    );
-    const provider = new MarkdownResourceProvider(dataStore, mdParser);
-    const result = await provider.readAsMarkdown(
-      uri.with({ fragment: '^myblock' })
-    );
-    expect(result).toContain('Target paragraph');
-    expect(result).not.toContain('First paragraph');
-    expect(result).not.toContain('Last paragraph');
-    // ^id marker should be stripped from output
-    expect(result).not.toContain('^myblock');
-  });
-
-  it('should return list item and sub-items for a list block', async () => {
-    const dataStore = new InMemoryDataStore();
-    const uri = URI.file('/root/note.md');
-    dataStore.set(
-      uri,
-      '- Other item\n- Parent item ^listblock\n  - Child 1\n  - Child 2\n- Another item'
-    );
-    const provider = new MarkdownResourceProvider(dataStore, mdParser);
-    const result = await provider.readAsMarkdown(
-      uri.with({ fragment: '^listblock' })
-    );
-    expect(result).toContain('Parent item');
-    expect(result).toContain('Child 1');
-    expect(result).toContain('Child 2');
-    expect(result).not.toContain('Other item');
-    expect(result).not.toContain('Another item');
-    expect(result).not.toContain('^listblock');
-  });
-
-  it('should return full section content for a heading block', async () => {
-    const dataStore = new InMemoryDataStore();
-    const uri = URI.file('/root/note.md');
-    dataStore.set(
-      uri,
-      '# Before\n\nSome text\n\n## My Heading ^headblock\n\nSection content\n\n# After'
-    );
-    const provider = new MarkdownResourceProvider(dataStore, mdParser);
-    const result = await provider.readAsMarkdown(
-      uri.with({ fragment: '^headblock' })
-    );
-    expect(result).toContain('My Heading');
-    expect(result).toContain('Section content');
-    expect(result).not.toContain('Before');
-    expect(result).not.toContain('After');
-    expect(result).not.toContain('^headblock');
-  });
-
-  it('should return full document when block fragment is not found', async () => {
-    const dataStore = new InMemoryDataStore();
-    const uri = URI.file('/root/note.md');
-    const content = 'A paragraph\n\nAnother paragraph';
-    dataStore.set(uri, content);
-    const provider = new MarkdownResourceProvider(dataStore, mdParser);
-    const result = await provider.readAsMarkdown(
-      uri.with({ fragment: '^ghost' })
-    );
-    expect(result).toEqual(content);
   });
 });

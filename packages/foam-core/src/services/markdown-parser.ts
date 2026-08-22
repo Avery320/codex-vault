@@ -6,8 +6,6 @@ import frontmatterPlugin from 'remark-frontmatter';
 import { parse as parseYAML } from 'yaml';
 import visit from 'unist-util-visit';
 import {
-  BlockType,
-  Footnote,
   NoteLinkDefinition,
   Resource,
   ResourceLink,
@@ -43,7 +41,6 @@ export function createMarkdownParser(
     tagsPlugin,
     aliasesPlugin,
     sectionsPlugin,
-    blocksPlugin,
     ...extraPlugins,
   ];
 
@@ -73,11 +70,9 @@ export function createMarkdownParser(
         properties: {},
         title: '',
         sections: [],
-        blocks: [],
         tags: [],
         aliases: [],
         links: [],
-        footnotes: [],
       };
 
       const localDefinitions: NoteLinkDefinition[] = [];
@@ -112,11 +107,7 @@ export function createMarkdownParser(
         if (node.type === 'definition') {
           const label: string = (node as any).label ?? '';
           if (label.startsWith('^')) {
-            // Footnote definitions ([^label]: text) are parsed as definition nodes
-            // by remark-parse; skip them to avoid treating footnotes as link definitions.
-            // Footnote positions are captured via regex scan after tree traversal
-            // because remark-parse v8 doesn't reliably emit footnote definition nodes
-            // for multi word content.
+            // Footnote definitions are not regular link definitions.
             return;
           }
           localDefinitions.push({
@@ -174,49 +165,6 @@ export function createMarkdownParser(
           link.type === 'external' ||
           !ResourceLink.isUnresolvedReference(link)
       );
-
-      // remark-parse v8 has no footnote plugin, so we scan the raw source for
-      // both definitions ([^id]: ...) and references ([^id]).
-      // AST-based reference detection via linkReference nodes is unreliable
-      // because consecutive refs like [^1][^2] are parsed as a single
-      // reference-style link, silently dropping the first reference.
-      const footnoteMap = new Map<string, Footnote>();
-      const markdownLines = markdown.split('\n');
-      for (let i = 0; i < markdownLines.length; i++) {
-        const line = markdownLines[i];
-        const defMatch = line.match(FOOTNOTE_DEF_RE);
-        if (defMatch) {
-          const id = defMatch[1];
-          const existing = footnoteMap.get(id);
-          if (existing) {
-            existing.definitionRange ??= Range.create(i, 0, i, line.length);
-          } else {
-            footnoteMap.set(id, {
-              id,
-              definitionRange: Range.create(i, 0, i, line.length),
-              references: [],
-            });
-          }
-          continue; // skip reference scan on definition lines
-        }
-        FOOTNOTE_REF_RE.lastIndex = 0;
-        let m: RegExpExecArray;
-        while ((m = FOOTNOTE_REF_RE.exec(line)) !== null) {
-          const id = m[1];
-          const ref = Range.create(i, m.index, i, m.index + m[0].length);
-          const entry = footnoteMap.get(id);
-          if (entry) {
-            entry.references.push(ref);
-          } else {
-            footnoteMap.set(id, {
-              id,
-              definitionRange: null,
-              references: [ref],
-            });
-          }
-        }
-      }
-      note.footnotes = Array.from(footnoteMap.values());
 
       Logger.debug('Result:', note);
       return note;
@@ -370,213 +318,6 @@ const sectionsPlugin: ParserPlugin = {
   },
 };
 
-// Captures the whitespace character before the anchor so we can distinguish
-// same-line ( ) from own-line (\n) markers.
-const BLOCK_ANCHOR_REGEX = /(\s)\^([a-zA-Z0-9-]+)$/;
-// Matches a paragraph that contains *only* a block anchor (full-line syntax).
-const STANDALONE_BLOCK_ANCHOR_RE = /^\^([a-zA-Z0-9-]+)$/;
-
-/**
- * Returns the direct text content of a node, without descending into
- * child list items or other nested block elements. For list items,
- * only the text of the first paragraph child is considered so that
- * anchors on sub-items are not attributed to the parent.
- */
-const getDirectText = (node: Node): string => {
-  if (node.type === 'listItem') {
-    const firstPara = (node as any).children?.find(
-      (c: any) => c.type === 'paragraph'
-    );
-    return firstPara ? getTextFromChildren(firstPara) : '';
-  }
-  return getTextFromChildren(node);
-};
-
-const BLOCK_NODE_TYPES: Record<string, BlockType> = {
-  paragraph: 'paragraph',
-  listItem: 'list-item',
-  blockquote: 'blockquote',
-  heading: 'heading',
-};
-
-// Block types where the ^id appears on its own line *after* the block (as a
-// sibling paragraph in the remark AST).
-const FULL_LINE_SIBLING_TYPES: Record<string, BlockType> = {
-  code: 'code',
-  table: 'table',
-  blockquote: 'blockquote',
-};
-
-const blocksPlugin: ParserPlugin = {
-  name: 'blocks',
-  visit: (node, note, noteSource) => {
-    const blockType = BLOCK_NODE_TYPES[node.type];
-    if (!blockType) {
-      return;
-    }
-    const text = getDirectText(node);
-    const match = BLOCK_ANCHOR_REGEX.exec(text);
-    if (!match) {
-      return;
-    }
-    const [, whitespace, id] = match;
-
-    // Full-line block ID on a list item: the ^id is on its own line and remark
-    // absorbs it via lazy continuation into the last listItem's paragraph.
-    // Skip both the listItem and the paragraph — onDidVisitTree registers the list.
-    if (
-      whitespace === '\n' &&
-      (blockType === 'list-item' || blockType === 'paragraph')
-    ) {
-      return;
-    }
-
-    const startLine = node.position!.start.line - 1; // convert AST 1-based to 0-based
-    // A listItem and its first-paragraph child both start on the same line and
-    // carry the same anchor. Skip the paragraph once the listItem is registered.
-    // Using start line (not end line) handles nested subitems that extend the
-    // parent listItem's end line beyond the anchor line.
-    if (
-      note.blocks.some(b => b.id === id && b.range.start.line === startLine)
-    ) {
-      return;
-    }
-
-    // Full-line block ID on a blockquote: remark absorbs the ^id via lazy
-    // continuation, so the blockquote's end line includes the ^id line. Adjust
-    // the range to exclude that line so embeds don't include the raw marker.
-    const pos =
-      whitespace === '\n' && blockType === 'blockquote'
-        ? {
-            ...node.position!,
-            end: {
-              ...node.position!.end,
-              line: node.position!.end.line - 1,
-            },
-          }
-        : node.position!;
-
-    // The marker end position: for list-items the ^id is on the first
-    // paragraph's line, not necessarily the listItem's last line.
-    const markerEndPos =
-      blockType === 'list-item'
-        ? (node as any).children?.find((c: any) => c.type === 'paragraph')
-            ?.position?.end ?? node.position!.end
-        : node.position!.end;
-
-    const markerRange =
-      whitespace === '\n' && blockType === 'blockquote'
-        ? // Own-line marker: the ^id is on the last line, possibly prefixed by "> ".
-          // Find the actual column by scanning the source line.
-          (() => {
-            const markerLine = node.position!.end.line - 1; // 0-indexed
-            const sourceLine = noteSource.split('\n')[markerLine] ?? '';
-            const markerCol = sourceLine.indexOf(`^${id}`);
-            const col = markerCol >= 0 ? markerCol : 0;
-            return Range.create(
-              markerLine,
-              col,
-              markerLine,
-              col + id.length + 1
-            );
-          })()
-        : // Inline marker: '^id' at the end of the element's last line (space excluded).
-          Range.create(
-            markerEndPos.line - 1,
-            markerEndPos.column - 1 - (id.length + 1), // '^' + id
-            markerEndPos.line - 1,
-            markerEndPos.column - 1
-          );
-
-    note.blocks.push({
-      id,
-      type: blockType,
-      range: astPositionToFoamRange(pos),
-      markerRange,
-    });
-  },
-
-  onDidVisitTree: (tree, note) => {
-    // Handle full-line block IDs for block types where the ^id appears as a
-    // standalone sibling paragraph immediately after the target block (code,
-    // table) or is absorbed into the last list item (list).
-    visit(tree, (parentNode: any) => {
-      if (!Array.isArray(parentNode.children)) {
-        return;
-      }
-      const children: any[] = parentNode.children;
-
-      for (let i = 0; i < children.length; i++) {
-        const current = children[i];
-
-        // Case A: code/table — remark places the ^id as the next sibling paragraph.
-        // Allow up to one blank line between the block and the ^id paragraph so
-        // markdown formatters that insert blank lines don't break the syntax.
-        if (FULL_LINE_SIBLING_TYPES[current.type]) {
-          const next = children[i + 1];
-          if (
-            next?.type === 'paragraph' &&
-            next.position.start.line <= current.position.end.line + 2
-          ) {
-            const nextText = getTextFromChildren(next).trim();
-            const idMatch = STANDALONE_BLOCK_ANCHOR_RE.exec(nextText);
-            if (idMatch) {
-              const id = idMatch[1];
-              if (!note.blocks.some(b => b.id === id)) {
-                note.blocks.push({
-                  id,
-                  type: FULL_LINE_SIBLING_TYPES[current.type],
-                  range: astPositionToFoamRange(current.position),
-                  // Marker is the ^id paragraph on its own line.
-                  markerRange: Range.create(
-                    next.position.start.line - 1,
-                    0,
-                    next.position.start.line - 1,
-                    id.length + 1
-                  ),
-                });
-              }
-            }
-          }
-        }
-
-        // Case B: list — remark absorbs the ^id into the last listItem's text
-        // as a new line. Register the ID for the *full list* instead.
-        if (current.type === 'list') {
-          const items: any[] = current.children ?? [];
-          const lastItem = items[items.length - 1];
-          if (!lastItem) continue;
-          const text = getDirectText(lastItem);
-          const match = /\n\^([a-zA-Z0-9-]+)$/.exec(text);
-          if (!match) continue;
-          const id = match[1];
-          if (note.blocks.some(b => b.id === id)) continue;
-          // Range covers the whole list minus the ^id line.
-          const adjustedPos = {
-            ...current.position,
-            end: {
-              ...current.position.end,
-              line: current.position.end.line - 1,
-            },
-          };
-          note.blocks.push({
-            id,
-            type: 'list',
-            range: astPositionToFoamRange(adjustedPos),
-            // Marker is ^id on the original last line of the list.
-            markerRange: Range.create(
-              current.position.end.line - 1,
-              0,
-              current.position.end.line - 1,
-              id.length + 1
-            ),
-          });
-        }
-      }
-    });
-  },
-};
-
 const titlePlugin: ParserPlugin = {
   name: 'title',
   visit: (node, note) => {
@@ -678,9 +419,7 @@ const wikilinkPlugin: ParserPlugin = {
     if (node.type === 'linkReference') {
       const identifier: string = (node as any).identifier ?? '';
       if (identifier.startsWith('^')) {
-        // Footnote references ([^label]) are parsed as linkReference nodes
-        // by remark-parse; skip them to avoid treating footnotes as links.
-        // Footnote positions are captured via regex scan after tree traversal.
+        // Footnote references are not regular links.
         return;
       }
       const literalContent = noteSource.substring(
@@ -699,11 +438,6 @@ const wikilinkPlugin: ParserPlugin = {
     }
   },
 };
-
-// Matches a footnote definition line: [^id]: content
-const FOOTNOTE_DEF_RE = /^[ ]{0,3}\[\^([^\]]+)\]:/;
-// Matches a footnote reference: [^id]
-const FOOTNOTE_REF_RE = /\[\^([^\]]+)\]/g;
 
 const handleError = (
   plugin: ParserPlugin,

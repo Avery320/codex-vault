@@ -3,15 +3,11 @@ import {
   FoamError,
   addTagsToFrontmatter,
   removeTagsFromFrontmatter,
-  listNotes,
   listTags,
   renameTag,
+  writeWorkspaceResource,
 } from '@foam/core';
-import {
-  parseUriInput,
-  serializeNoteItem,
-  uriToOutputString,
-} from '../serializers';
+import { parseUriInput, uriToOutputString } from '../serializers';
 import type { ToolRegistrar } from '../server';
 import { json } from '../tool-result';
 import {
@@ -44,27 +40,6 @@ export function registerTagTools(
     }
   );
 
-  // ─── search_by_tag ─────────────────────────────────────────────────────────
-  register(
-    'search_by_tag',
-    {
-      description: 'Find resources tagged with the given tag.',
-      inputSchema: {
-        tag: z.string(),
-        limit: z.number().int().positive().optional(),
-      },
-    },
-    async args => {
-      const { foam, rootUri } = requireWorkspace(workspaceProvider);
-      const cleanTag = args.tag.startsWith('#') ? args.tag.slice(1) : args.tag;
-      const matches = listNotes(foam.workspace, {
-        tag: cleanTag,
-        limit: args.limit,
-      });
-      return json(matches.map(match => serializeNoteItem(match, rootUri)));
-    }
-  );
-
   if (readOnly) {
     return;
   }
@@ -81,7 +56,7 @@ export function registerTagTools(
       },
     },
     async args => {
-      const { dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       const existing = await dataStore.read(uri);
       if (existing === null) {
@@ -92,7 +67,7 @@ export function registerTagTools(
         );
       }
       const { content, tags } = addTagsToFrontmatter(existing, args.tags);
-      await dataStore.write(uri, content);
+      await writeWorkspaceResource(foam, uri, content);
       return json({ uri: uriToOutputString(uri, rootUri), tags });
     }
   );
@@ -108,7 +83,7 @@ export function registerTagTools(
       },
     },
     async args => {
-      const { dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
       const uri = parseUriInput(args.uri, rootUri);
       const existing = await dataStore.read(uri);
       if (existing === null) {
@@ -119,7 +94,7 @@ export function registerTagTools(
         );
       }
       const { content, tags } = removeTagsFromFrontmatter(existing, args.tags);
-      await dataStore.write(uri, content);
+      await writeWorkspaceResource(foam, uri, content);
       return json({ uri: uriToOutputString(uri, rootUri), tags });
     }
   );
@@ -137,10 +112,9 @@ export function registerTagTools(
       },
     },
     async args => {
-      const { foam, dataStore } = requireWorkspace(workspaceProvider);
+      const { foam } = requireWorkspace(workspaceProvider);
       const result = await renameTag(
-        foam.tags,
-        dataStore,
+        foam,
         args.old_tag,
         args.new_tag,
         args.force === true

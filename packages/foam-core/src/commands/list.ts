@@ -127,7 +127,10 @@ export function listDeadends(
     .list()
     .filter(r => {
       if (excludeTypes.includes(r.type)) return false;
-      return graph.getLinks(r.uri).length === 0;
+      return (
+        graph.getBacklinks(r.uri).length > 0 &&
+        graph.getLinks(r.uri).length === 0
+      );
     })
     .map(r => ({
       id: workspace.getIdentifier(r.uri),

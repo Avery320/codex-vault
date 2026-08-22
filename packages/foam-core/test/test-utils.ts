@@ -133,7 +133,6 @@ export const createTestNote = (params: {
         level: 1,
         range: Range.create(0, 0, 1, 0),
       })) ?? [],
-    blocks: [],
     tags:
       params.tags?.map(t => ({
         label: t,
@@ -174,7 +173,6 @@ export const createTestNote = (params: {
               };
         })
       : [],
-    footnotes: [],
   };
 };
 

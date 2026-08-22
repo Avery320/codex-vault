@@ -46,7 +46,6 @@ const parser: ResourceParser = {
 
 const provider: ResourceProvider = {
   supports: () => true,
-  readAsMarkdown: async () => null,
   fetch: async uri => createTestNote({ uri: uri.path }),
   resolveLink: () => {
     throw new Error('resolveLink should not be called in these tests');

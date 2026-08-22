@@ -1,14 +1,10 @@
 import { FoamWorkspace } from './workspace';
 import { IDisposable } from '../common/lifecycle';
-import { Emitter } from '../common/event';
 import { Tag } from './note';
 import { Location } from './location';
 
 export class FoamTags implements IDisposable {
   public readonly tags: Map<string, Location<Tag>[]> = new Map();
-
-  private onDidUpdateEmitter = new Emitter<void>();
-  onDidUpdate = this.onDidUpdateEmitter.event;
 
   /**
    * List of disposables to destroy with the tags
@@ -51,7 +47,6 @@ export class FoamTags implements IDisposable {
         this.tags.set(tag.label, tagLocations);
       }
     }
-    this.onDidUpdateEmitter.fire();
   }
 
   dispose(): void {

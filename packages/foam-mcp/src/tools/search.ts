@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { searchWorkspace } from '@foam/core';
+import { searchByProperty } from '@foam/core';
 import { serializeSearchMatch } from '../serializers';
 import type { ToolRegistrar } from '../server';
 import { json } from '../tool-result';
@@ -23,23 +23,9 @@ export function registerSearchTools(
       },
     },
     async args => {
-      const { foam, rootUri, searchIndex } =
-        requireWorkspace(workspaceProvider);
+      const { rootUri, searchIndex } = requireWorkspace(workspaceProvider);
       const limit = args.limit ?? 20;
-      const metadataMatches = searchWorkspace(foam.workspace, {
-        query: args.query,
-        limit,
-      });
-      const contentMatches = await searchIndex.search(args.query, limit);
-      const seen = new Set<string>();
-      const matches = [...metadataMatches, ...contentMatches]
-        .filter(match => {
-          const id = match.uri.toString();
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
-        })
-        .slice(0, limit);
+      const matches = await searchIndex.search(args.query, limit);
       return json(matches.map(m => serializeSearchMatch(m, rootUri)));
     }
   );
@@ -57,10 +43,12 @@ export function registerSearchTools(
     },
     async args => {
       const { foam, rootUri } = requireWorkspace(workspaceProvider);
-      const matches = searchWorkspace(foam.workspace, {
-        properties: [{ key: args.property, value: args.value }],
-        limit: args.limit,
-      });
+      const matches = searchByProperty(
+        foam.workspace,
+        args.property,
+        args.value,
+        args.limit
+      );
       return json(matches.map(m => serializeSearchMatch(m, rootUri)));
     }
   );

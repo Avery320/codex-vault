@@ -223,6 +223,14 @@ describe('resource tools', () => {
           uri: 'a.md',
         })).content
       ).toContain('[[renamed]]');
+      const resources = await ctx.callToolJson<Array<{ uri: string }>>(
+        'list_resources'
+      );
+      expect(resources.map(resource => resource.uri).sort()).toEqual([
+        'a.md',
+        'renamed.md',
+        'subdir/c.md',
+      ]);
     }));
 
   it('delete_resource without confirm returns invalid_input', () =>
@@ -246,6 +254,12 @@ describe('resource tools', () => {
       expect(result.trashed).toBe(true);
       const read = await ctx.callTool('read_resource', { uri: 'subdir/c.md' });
       expect(read.isError).toBe(true);
+      const resources = await ctx.callToolJson<Array<{ uri: string }>>(
+        'list_resources'
+      );
+      expect(resources.map(resource => resource.uri)).not.toContain(
+        'subdir/c.md'
+      );
     }));
 });
 

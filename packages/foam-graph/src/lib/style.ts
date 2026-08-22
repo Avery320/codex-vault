@@ -17,9 +17,11 @@ export function resolveStyle(
       payload.style?.lineColor ||
       payload.style?.node?.note ||
       defaults.lineColor,
-    node: {
-      ...defaults.node,
-      ...payload.style?.node,
-    },
+    node: Object.fromEntries(
+      Object.entries({
+        ...defaults.node,
+        ...payload.style?.node,
+      }).filter((entry): entry is [string, string] => entry[1] !== undefined)
+    ) as ResolvedStyle['node'],
   };
 }

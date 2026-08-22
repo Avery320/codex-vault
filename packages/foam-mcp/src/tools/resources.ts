@@ -12,6 +12,7 @@ import {
   noteMove,
   resolveNote,
   mergeFrontmatter,
+  writeWorkspaceResource,
 } from '@foam/core';
 import {
   parseUriInput,
@@ -217,7 +218,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       let uri: URI | undefined;
       if (args.path) {
         uri = parseUriInput(args.path, rootUri);
@@ -226,18 +227,13 @@ export function registerResourceTools(
         }
       }
 
-      const result = await noteCreate(
-        foam,
-        dataStore,
-        {
-          title: args.title,
-          dir: args.dir,
-          uri,
-          content: args.content,
-          properties: args.properties,
-        }
-      );
-      await foam.workspace.fetchAndSet(result.uri);
+      const result = await noteCreate(foam, {
+        title: args.title,
+        dir: args.dir,
+        uri,
+        content: args.content,
+        properties: args.properties,
+      });
       const resource = foam.workspace.find(result.uri);
       return json({
         uri: uriToOutputString(result.uri, rootUri),
@@ -289,8 +285,7 @@ export function registerResourceTools(
         );
       }
       const nextContent = buildNextContent(currentContent, args);
-      await dataStore.write(uri, nextContent);
-      await foam.workspace.fetchAndSet(uri);
+      await writeWorkspaceResource(foam, uri, nextContent);
       return json({
         uri: uriToOutputString(uri, rootUri),
         previous_content_sha256: currentHash,
@@ -311,7 +306,7 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       if (args.confirm !== true) {
         throw new FoamError(
           'invalid_input',
@@ -320,7 +315,7 @@ export function registerResourceTools(
       }
       const uri = parseUriInput(args.uri, rootUri);
       const resource = resolveNote(foam.workspace, { uri });
-      await noteDelete(dataStore, resource);
+      await noteDelete(foam, resource);
       return json({
         deleted: true,
         trashed: true,
@@ -340,17 +335,11 @@ export function registerResourceTools(
       },
     },
     async args => {
-      const { foam, dataStore, rootUri } = requireWorkspace(workspaceProvider);
+      const { foam, rootUri } = requireWorkspace(workspaceProvider);
       const oldUri = parseUriInput(args.uri, rootUri);
       const newUri = parseUriInput(args.new_path, rootUri);
       const resource = resolveNote(foam.workspace, { uri: oldUri });
-      const result = await noteMove(
-        foam.workspace,
-        foam.graph,
-        dataStore,
-        resource,
-        newUri
-      );
+      const result = await noteMove(foam, resource, newUri);
       return json({
         old_uri: uriToOutputString(result.old_uri, rootUri),
         new_uri: uriToOutputString(result.new_uri, rootUri),

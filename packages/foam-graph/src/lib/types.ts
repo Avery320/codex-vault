@@ -8,7 +8,7 @@ export interface GraphModelLink {
 }
 
 export const GraphModelLink = {
-  getNodeId(endpoint: GraphModelLink['source']): string {
+  getNodeId(endpoint: string | { id: string }): string {
     return typeof endpoint === 'object' ? endpoint.id : endpoint;
   },
 };

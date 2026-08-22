@@ -81,7 +81,7 @@ export class FoamGraph extends LitElement {
         .visibleGraph=${this.visibleGraph}
         .selectedNodeId=${this.selectedNodeId}
         .hoverNodeId=${this.hoverNodeId}
-        .style=${this.resolvedStyle}
+        .graphStyle=${this.resolvedStyle}
         .forces=${this.forces}
         .labels=${this.labels}
         .nodeSizeMultiplier=${this.nodeSizeMultiplier}
