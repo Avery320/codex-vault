@@ -1,4 +1,4 @@
 interface:
   display_name: "Vault Knowledge"
   short_description: "Search and analyze a local Markdown knowledge graph"
-  default_prompt: "Search my vault and synthesize the most relevant linked notes."
+  default_prompt: "Use $vault-knowledge to open the Codex Vault explorer for the current project."
