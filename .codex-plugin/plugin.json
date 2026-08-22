@@ -1,6 +1,6 @@
 {
   "name": "codex-vault",
-  "version": "0.1.0+codex.20260822092711",
+  "version": "0.1.0+codex.20260822100836",
   "description": "Explore an Obsidian-compatible Markdown vault with Codex agents, backlinks, search, and an interactive knowledge graph.",
   "author": {
     "name": "Avery Tsai"
@@ -31,7 +31,7 @@
     ],
     "brandColor": "#8250DF",
     "composerIcon": "./assets/icon/FOAM_ICON_256.png",
-    "logo": "./assets/icon/FOAM_ICON_256.png"
+    "logo": "./assets/icon/FOAM_ICON_512.png"
   },
   "mcpServers": "./.mcp.json"
 }
