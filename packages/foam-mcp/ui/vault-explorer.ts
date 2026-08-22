@@ -983,7 +983,9 @@ function startPaneResize(
   document.body.classList.add('resizing-panes');
 
   const move = (moveEvent: PointerEvent): void => {
-    workspaceLayout[property] = startWidth + moveEvent.clientX - startX;
+    const delta = moveEvent.clientX - startX;
+    workspaceLayout[property] =
+      startWidth + (kind === 'sidebar' ? -delta : delta);
     applyWorkspaceLayout();
   };
   const finish = (): void => {

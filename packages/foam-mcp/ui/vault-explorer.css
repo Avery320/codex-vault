@@ -82,27 +82,27 @@ summary:focus-visible {
 .shell {
   display: grid;
   grid-template-columns:
-    48px var(--sidebar-width) var(--pane-resizer-width)
-    minmax(0, 1fr);
+    minmax(0, 1fr) var(--pane-resizer-width) var(--sidebar-width)
+    48px;
   width: 100%;
   height: 100%;
   background: var(--background-primary);
 }
 
 .shell.sidebar-hidden {
-  grid-template-columns: 48px 0 0 minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 0 0 48px;
 }
 
 .ribbon {
   z-index: 4;
   display: flex;
-  grid-column: 1;
+  grid-column: 4;
   grid-row: 1;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   padding: 8px 5px;
-  border-right: 1px solid var(--background-modifier-border);
+  border-left: 1px solid var(--background-modifier-border);
   background: var(--background-secondary-alt);
 }
 
@@ -158,7 +158,7 @@ summary:focus-visible {
   position: relative;
   z-index: 3;
   display: grid;
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   grid-template-rows: 44px 42px minmax(0, 1fr) auto;
   min-width: 0;
@@ -183,7 +183,7 @@ summary:focus-visible {
 }
 
 .sidebar-resizer {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 1;
 }
 
@@ -473,7 +473,7 @@ details > summary::-webkit-details-marker {
 .main {
   position: relative;
   display: grid;
-  grid-column: 4;
+  grid-column: 1;
   grid-row: 1;
   grid-template-rows: minmax(0, 1fr) 22px;
   min-width: 0;
@@ -1162,12 +1162,12 @@ dialog::backdrop {
   .shell,
   .shell.sidebar-hidden {
     grid-template-columns:
-      46px var(--sidebar-width) var(--pane-resizer-width)
-      minmax(0, 1fr);
+      minmax(0, 1fr) var(--pane-resizer-width) var(--sidebar-width)
+      46px;
   }
 
   .shell.sidebar-hidden {
-    grid-template-columns: 46px 0 0 minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 0 0 46px;
   }
 
   .workspace {
@@ -1194,17 +1194,17 @@ dialog::backdrop {
 @media (max-width: 680px) {
   .shell,
   .shell.sidebar-hidden {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 42px;
   }
 
   .ribbon {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
   }
 
   .sidebar,
   .main {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
   }
 
@@ -1219,7 +1219,6 @@ dialog::backdrop {
 
   .shell.showing-files .sidebar {
     display: grid;
-    border-right: 0;
   }
 
   .shell.showing-files .main {
