@@ -2,10 +2,8 @@ import { GraphModelLink } from './types';
 import type {
   GraphModel,
   GraphModelNode,
-  GraphScope,
   ResolvedStyle,
 } from './types';
-import { getFocusSubset } from './graph-utils';
 
 export interface VisibleGraph {
   nodeInfo: Record<string, GraphModelNode>;
@@ -18,22 +16,13 @@ const BUILTIN_TYPES = new Set([...ALWAYS_KEEP_TYPES, 'note']);
 
 export function computeVisibleGraph(
   graphModel: GraphModel,
-  showNodesOfType: Record<string, boolean>,
-  focusNodeId: string | null,
-  graphScope: GraphScope
+  showNodesOfType: Record<string, boolean>
 ): VisibleGraph {
   const nodeIds = new Set(
     Object.values(graphModel.nodeInfo)
       .filter(node => showNodesOfType[node.type])
       .map(node => node.id)
   );
-
-  if (focusNodeId && graphScope !== 'full') {
-    const focusSet = getFocusSubset(graphModel, focusNodeId, graphScope.depth);
-    for (const id of nodeIds) {
-      if (!focusSet.has(id)) nodeIds.delete(id);
-    }
-  }
 
   const nodeInfo: Record<string, GraphModelNode> = {};
   const nodes = [...nodeIds].map(id => {

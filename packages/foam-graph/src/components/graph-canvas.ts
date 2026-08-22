@@ -86,13 +86,11 @@ export function computeLabelFontSize(
 export function computeLabelOpacity(
   state: string,
   globalScale: number,
-  fillOpacity: number,
   getOpacity: (scale: number) => number,
   labels: Labels
 ): number {
   if (labels === 'always' || state === 'highlighted') return 1;
-  const opacity = getOpacity(globalScale);
-  return state === 'regular' ? opacity : Math.min(opacity, fillOpacity);
+  return getOpacity(globalScale);
 }
 
 export function computeFitZoom(
@@ -273,7 +271,6 @@ export class GraphCanvas extends LitElement {
           const opacity = computeLabelOpacity(
             state,
             globalScale,
-            fill.opacity,
             scale => this.getNodeLabelOpacity(scale),
             this.labels
           );

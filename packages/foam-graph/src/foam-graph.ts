@@ -15,7 +15,6 @@ import type {
   Forces,
   Labels,
   Selection,
-  GraphScope,
   LinkAnimation,
   GraphStates,
 } from './lib/types';
@@ -36,8 +35,6 @@ export class FoamGraph extends LitElement {
   // Public API
   @property({ type: Object }) graphData: GraphData | null = null;
   @property({ type: Object }) graphStyle: GraphStyle | null = null;
-  @property({ type: String }) focusNodeId: string | null = null;
-  @property({ type: Object }) graphScope: GraphScope = 'full';
   @property({ type: Number }) maxFitZoom: number | null = null;
   @property({ type: Object }) labels: Labels = { fade: 0 };
   @property({ type: Object }) forces: Forces = {
@@ -48,7 +45,6 @@ export class FoamGraph extends LitElement {
   };
   @property({ type: Number }) linkWidthMultiplier: number = 2;
   @property({ type: Object }) selection: Selection = {
-    neighborDepth: 1,
     centerOnSelect: true,
     zoomOnSelect: true,
   };
@@ -75,12 +71,6 @@ export class FoamGraph extends LitElement {
 
   private get resolvedStyle(): ResolvedStyle {
     return resolveStyle(this.graphStyle, getDefaultStyle());
-  }
-
-  private get visibleFocusNodeId(): string | null {
-    if (this.focusNodeId) return this.focusNodeId;
-    if (this.graphScope === 'full') return null;
-    return [...this.selectedNodeIds][0] ?? null;
   }
 
   updated(changed: Map<string, unknown>) {
@@ -113,10 +103,6 @@ export class FoamGraph extends LitElement {
         this.resolvedStyle,
         this.showNodesOfType
       );
-      shouldRecomputeVisibleGraph = true;
-    }
-
-    if (changed.has('focusNodeId') || changed.has('graphScope')) {
       shouldRecomputeVisibleGraph = true;
     }
 
@@ -171,7 +157,6 @@ export class FoamGraph extends LitElement {
   clearSelection() {
     this.selectedNodeIds = new Set();
     this._recomputeGraphStates();
-    this._recomputeVisibleGraphIfSelectionAffectsScope();
   }
 
   private _onCanvasNodeClick(detail: { nodeId: string; append: boolean }) {
@@ -196,7 +181,6 @@ export class FoamGraph extends LitElement {
     next.add(nodeId);
     this.selectedNodeIds = next;
     this._recomputeGraphStates();
-    this._recomputeVisibleGraphIfSelectionAffectsScope();
   }
 
   private _pruneInteractionState() {
@@ -217,12 +201,7 @@ export class FoamGraph extends LitElement {
 
   private _recomputeVisibleGraph() {
     this.visibleGraph = this.graphModel
-      ? computeVisibleGraph(
-          this.graphModel,
-          this.showNodesOfType,
-          this.visibleFocusNodeId,
-          this.graphScope
-        )
+      ? computeVisibleGraph(this.graphModel, this.showNodesOfType)
       : null;
   }
 
@@ -231,16 +210,9 @@ export class FoamGraph extends LitElement {
       ? computeGraphStates(
           this.graphModel,
           this.selectedNodeIds,
-          this.hoverNodeId,
-          this.selection.neighborDepth
+          this.hoverNodeId
         )
       : null;
-  }
-
-  private _recomputeVisibleGraphIfSelectionAffectsScope() {
-    if (!this.focusNodeId && this.graphScope !== 'full') {
-      this._recomputeVisibleGraph();
-    }
   }
 }
 

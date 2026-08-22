@@ -1,4 +1,4 @@
-import { rgb, hsl } from 'd3-color';
+import { rgb } from 'd3-color';
 import type { RGBColor } from 'd3-color';
 import type { GraphModelNode, ResolvedStyle } from './types';
 
@@ -39,7 +39,7 @@ export function getTypeColor(type: string, style: ResolvedStyle): string {
 
 export function getNodeFillAndBorder(
   nodeInfo: GraphModelNode,
-  state: 'regular' | 'highlighted' | 'lessened',
+  state: 'regular' | 'highlighted',
   style: ResolvedStyle,
   colorMode: 'none' | 'directory' | 'type'
 ): { fill: RGBColor; border: RGBColor } {
@@ -60,10 +60,6 @@ export function getNodeFillAndBorder(
   switch (state) {
     case 'regular':
       return { fill: typeFill, border: typeFill };
-    case 'lessened': {
-      const transparent = typeFill.copy({ opacity: 0.05 }) as RGBColor;
-      return { fill: transparent, border: transparent };
-    }
     case 'highlighted': {
       const highlight = rgb(style.highlightedForeground);
       return { fill: highlight, border: highlight };
@@ -73,7 +69,7 @@ export function getNodeFillAndBorder(
 
 export function getNodeLabelColor(
   fill: RGBColor,
-  state: 'regular' | 'highlighted' | 'lessened',
+  state: 'regular' | 'highlighted',
   opacity: number,
   style: ResolvedStyle
 ): RGBColor {
@@ -84,7 +80,7 @@ export function getNodeLabelColor(
 }
 
 export function getLinkColor(
-  linkState: 'regular' | 'highlighted' | 'lessened',
+  linkState: 'regular' | 'highlighted',
   style: ResolvedStyle
 ): string {
   switch (linkState) {
@@ -92,7 +88,5 @@ export function getLinkColor(
       return style.lineColor;
     case 'highlighted':
       return style.highlightedForeground;
-    case 'lessened':
-      return hsl(style.lineColor).copy({ opacity: 0.05 }).toString();
   }
 }

@@ -34,6 +34,7 @@ describe('NodeVaultWorkspaceManager', () => {
       server = new FoamMcpServer({
         workspaceProvider: manager,
         vaultManager: manager,
+        pickVaultFolder: async () => vaultB,
         mode: 'read',
       });
       const [clientTransport, serverTransport] =
@@ -53,8 +54,16 @@ describe('NodeVaultWorkspaceManager', () => {
           'create_vault',
           'select_vault',
           'forget_vault',
+          'pick_vault_folder',
         ])
       );
+      const picked = await client.callTool({
+        name: 'pick_vault_folder',
+        arguments: {},
+      });
+      expect(picked.content).toEqual([
+        { type: 'text', text: JSON.stringify({ path: vaultB }) },
+      ]);
       expect(await listResourceUris(client)).toEqual(['alpha.md']);
       await client.callTool({
         name: 'select_vault',

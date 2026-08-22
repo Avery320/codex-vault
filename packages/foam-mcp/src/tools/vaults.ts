@@ -6,7 +6,8 @@ import { VaultManager } from '../workspace-context';
 
 export function registerVaultTools(
   register: ToolRegistrar,
-  vaultManager: VaultManager
+  vaultManager: VaultManager,
+  pickVaultFolder?: () => Promise<string | null>
 ): void {
   register(
     'list_vaults',
@@ -116,4 +117,25 @@ export function registerVaultTools(
       });
     }
   );
+
+  if (pickVaultFolder) {
+    register(
+      'pick_vault_folder',
+      {
+        description:
+          'Open the operating system folder picker for the Codex Vault UI.',
+        inputSchema: {},
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+        _meta: {
+          ui: { visibility: ['app'] },
+        },
+      },
+      async () => json({ path: await pickVaultFolder() })
+    );
+  }
 }

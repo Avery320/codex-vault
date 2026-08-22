@@ -1,9 +1,6 @@
 import type { NodeInfo } from '../protocol';
 
-export interface GraphModelNode extends NodeInfo {
-  neighbors: string[];
-  links: GraphModelLink[];
-}
+export type GraphModelNode = NodeInfo;
 
 export interface GraphModelLink {
   source: string | GraphModelNode;
@@ -44,8 +41,8 @@ export interface ResolvedStyle {
   colorMode: 'none' | 'directory' | 'type';
 }
 
-export type NodeState = 'regular' | 'highlighted' | 'lessened';
-export type LinkState = 'regular' | 'highlighted' | 'lessened';
+export type NodeState = 'regular' | 'highlighted';
+export type LinkState = 'regular' | 'highlighted';
 
 export interface GraphStates {
   nodeStates: Map<string, NodeState>;
@@ -62,12 +59,9 @@ export interface Forces {
 
 export type LinkAnimation = 'forward' | 'off' | 'reverse';
 
-export type GraphScope = 'full' | { depth: number };
-
 export type Labels = 'always' | { fade: number };
 
 export interface Selection {
-  neighborDepth: number;
   centerOnSelect: boolean;
   zoomOnSelect: boolean;
 }

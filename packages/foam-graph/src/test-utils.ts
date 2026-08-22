@@ -25,8 +25,6 @@ export const makeNode = (overrides: Partial<GraphModelNode> = {}): GraphModelNod
   title: 'Note',
   properties: {},
   tags: [],
-  neighbors: [],
-  links: [],
   ...overrides,
 });
 

@@ -34,6 +34,8 @@ export interface FoamMcpServerOptions {
   mode: FoamMcpServerMode;
   /** Optional multi-vault operations exposed by Codex Vault. */
   vaultManager?: VaultManager;
+  /** Optional native folder picker supplied by the Node runtime. */
+  pickVaultFolder?: () => Promise<string | null>;
 }
 
 const READ_ONLY_INSTRUCTIONS =
@@ -80,7 +82,7 @@ export class FoamMcpServer {
     registerResourceTools(register, opts.workspaceProvider, readOnly);
     registerTagTools(register, opts.workspaceProvider, readOnly);
     if (opts.vaultManager) {
-      registerVaultTools(register, opts.vaultManager);
+      registerVaultTools(register, opts.vaultManager, opts.pickVaultFolder);
     }
     registerVaultExplorerResource(this.mcp);
   }

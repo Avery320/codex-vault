@@ -65,7 +65,7 @@ describe('FoamMcpServer lifecycle', () => {
       const tool = list.tools.find(item => item.name === 'show_vault_explorer');
 
       expect(tool?._meta).toMatchObject({
-        ui: { resourceUri: 'ui://codex-vault/v4/vault-explorer.html' },
+        ui: { resourceUri: 'ui://codex-vault/v5/vault-explorer.html' },
       });
       expect(tool?.annotations).toMatchObject({
         readOnlyHint: true,
@@ -77,7 +77,7 @@ describe('FoamMcpServer lifecycle', () => {
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://codex-vault/v4/vault-explorer.html',
+            uri: 'ui://codex-vault/v5/vault-explorer.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ])
@@ -92,6 +92,12 @@ describe('FoamMcpServer lifecycle', () => {
       expect(html).toEqual(expect.stringContaining('id="graph-settings"'));
       expect(html).toEqual(
         expect.stringContaining('id="graph-settings-toggle"')
+      );
+      expect(html).toEqual(
+        expect.stringContaining('id="choose-vault-folder"')
+      );
+      expect(html).not.toEqual(
+        expect.stringContaining('id="graph-local-toggle"')
       );
       expect(html).not.toEqual(
         expect.stringContaining('id="selection-dialog"')

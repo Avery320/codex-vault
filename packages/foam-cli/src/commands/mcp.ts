@@ -10,6 +10,7 @@ import {
 } from '@foam/mcp';
 import { Logger } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
+import { pickVaultFolder } from '../support/folder-picker';
 import { NodeWatcher } from '../support/watcher';
 import {
   parseArgs,
@@ -143,6 +144,7 @@ export async function runMcpCommand(
   const server = new FoamMcpServer({
     workspaceProvider,
     vaultManager,
+    pickVaultFolder: vaultManager ? pickVaultFolder : undefined,
     mode: args.allowWrites ? 'read-write' : 'read',
   });
 

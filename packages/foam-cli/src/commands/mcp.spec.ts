@@ -93,7 +93,7 @@ describe('foam mcp (CLI e2e)', () => {
           const explorer = list.tools.find(
             tool => tool.name === 'show_vault_explorer'
           );
-          const resourceUri = 'ui://codex-vault/v4/vault-explorer.html';
+          const resourceUri = 'ui://codex-vault/v5/vault-explorer.html';
 
           expect(explorer?._meta).toMatchObject({
             ui: { resourceUri },

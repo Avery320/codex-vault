@@ -49,8 +49,6 @@ interface FoamGraphElement extends HTMLElement {
   graphData: GraphData | null;
   graphStyle: Record<string, unknown> | null;
   maxFitZoom: number | null;
-  graphScope: 'full' | { depth: number };
-  focusNodeId: string | null;
   labels: { fade: number };
   forces: {
     collide: number;
@@ -62,10 +60,10 @@ interface FoamGraphElement extends HTMLElement {
   linkWidthMultiplier: number;
   animateLinks: 'forward' | 'off' | 'reverse';
   selection: {
-    neighborDepth: number;
     centerOnSelect: boolean;
     zoomOnSelect: boolean;
   };
+  selectNote(noteId: string): void;
   clearSelection(): void;
 }
 
@@ -86,11 +84,9 @@ interface GraphPreferences {
   linkWidth: number;
   repel: number;
   linkDistance: number;
-  localDepth: number;
 }
 
 type VaultDialogMode = 'register' | 'create';
-type GraphMode = 'global' | 'local';
 type LayoutMode = 'desktop' | 'compact' | 'mobile';
 type WorkspacePane = 'files' | 'reader' | 'graph';
 
@@ -138,6 +134,9 @@ const vaultDialogTitle = query<HTMLElement>('#vault-dialog-title');
 const vaultForm = query<HTMLFormElement>('#vault-form');
 const pathField = query<HTMLLabelElement>('#path-field');
 const pathInput = query<HTMLInputElement>('#vault-folder-path');
+const chooseVaultFolderElement = query<HTMLButtonElement>(
+  '#choose-vault-folder'
+);
 const nameField = query<HTMLLabelElement>('#name-field');
 const nameInput = query<HTMLInputElement>('#vault-folder-name');
 const dialogErrorElement = query<HTMLDivElement>('#dialog-error');
@@ -146,7 +145,6 @@ const graphSettingsElement = query<HTMLFormElement>('#graph-settings');
 const graphSettingsToggleElement = query<HTMLButtonElement>(
   '#graph-settings-toggle'
 );
-const graphLocalToggleElement = query<HTMLButtonElement>('#graph-local-toggle');
 const graphFilterElement = query<HTMLInputElement>('#graph-filter');
 const graphShowTagsElement = query<HTMLInputElement>('#graph-show-tags');
 const graphShowAttachmentsElement = query<HTMLInputElement>(
@@ -163,7 +161,6 @@ const graphRepelElement = query<HTMLInputElement>('#graph-repel');
 const graphLinkDistanceElement = query<HTMLInputElement>(
   '#graph-link-distance'
 );
-const graphDepthElement = query<HTMLInputElement>('#graph-depth');
 const filesViewElement = query<HTMLButtonElement>('#toggle-sidebar');
 const noteViewElement = query<HTMLButtonElement>('#show-note');
 const graphViewElement = query<HTMLButtonElement>('#toggle-graph');
@@ -189,7 +186,6 @@ let noteSequence = 0;
 let addSelectionPointerArmed = false;
 let selectionMenuAcceptPointerAfter = 0;
 let dialogMode: VaultDialogMode = 'register';
-let graphMode: GraphMode = 'global';
 let graphPreferences: GraphPreferences;
 let displayedSidebarWidth = workspaceLayout.sidebarWidth;
 let displayedReaderWidth = workspaceLayout.readerWidth;
@@ -198,7 +194,6 @@ let liveSyncController: AbortController | null = null;
 
 graphElement.maxFitZoom = 2.2;
 graphElement.selection = {
-  neighborDepth: 1,
   centerOnSelect: false,
   zoomOnSelect: false,
 };
@@ -235,7 +230,7 @@ function applyGraphPreferences(): void {
       background: 'transparent',
       fontFamily: color('--font-interface'),
       lineColor: color('--background-modifier-border-hover'),
-      highlightedForeground: color('--text-normal'),
+      highlightedForeground: color('--interactive-accent'),
       node: {
         note: color('--text-muted'),
         image: color('--text-muted'),
@@ -255,19 +250,6 @@ function applyGraphPreferences(): void {
     link: graphPreferences.linkDistance,
     velocityDecay: 0.4,
   };
-  applyGraphScope();
-}
-
-function applyGraphScope(): void {
-  const local = graphMode === 'local' && activeUri !== null;
-  graphElement.focusNodeId = local ? activeUri : null;
-  graphElement.graphScope = local
-    ? { depth: graphPreferences.localDepth }
-    : 'full';
-  graphLocalToggleElement.classList.toggle('active', local);
-  graphLocalToggleElement.disabled = activeUri === null;
-  graphLocalToggleElement.setAttribute('aria-pressed', String(local));
-  graphLocalToggleElement.title = local ? '顯示全域圖譜' : '聚焦目前筆記';
 }
 
 function updateGraphOutputs(): void {
@@ -285,9 +267,6 @@ function updateGraphOutputs(): void {
   query<HTMLOutputElement>('#graph-link-distance-value').value = String(
     graphPreferences.linkDistance
   );
-  query<HTMLOutputElement>('#graph-depth-value').value = String(
-    graphPreferences.localDepth
-  );
 }
 
 function readGraphPreferences(): GraphPreferences {
@@ -302,7 +281,6 @@ function readGraphPreferences(): GraphPreferences {
     linkWidth: Number(graphLinkWidthElement.value),
     repel: Number(graphRepelElement.value),
     linkDistance: Number(graphLinkDistanceElement.value),
-    localDepth: Number(graphDepthElement.value),
   };
 }
 
@@ -328,12 +306,6 @@ function setGraphSettingsOpen(open: boolean): void {
     'aria-label',
     open ? '關閉圖譜設定' : '開啟圖譜設定'
   );
-}
-
-function setGraphMode(mode: GraphMode): void {
-  if (mode === 'local' && activeUri === null) return;
-  graphMode = mode;
-  applyGraphScope();
 }
 
 function isExplorerPayload(value: unknown): value is ExplorerPayload {
@@ -389,6 +361,7 @@ function setExplorerPayload(next: ExplorerPayload): void {
     activeUri = null;
     activeNoteLineCount = 0;
     dismissSelectionCandidate(true);
+    graphElement.clearSelection();
     showEmptyDocument('從檔案列表或圖譜選擇一則筆記。');
   }
   const activeFile = activeUri
@@ -516,8 +489,7 @@ async function openNote(uri: string): Promise<void> {
   notePathElement.textContent = uri;
   notePathElement.title = uri;
   selectActiveFile(uri);
-  applyGraphScope();
-  graphElement.clearSelection();
+  graphElement.selectNote(uri);
   showEmptyDocument('正在讀取筆記…');
   backlinksElement.hidden = true;
 
@@ -887,6 +859,23 @@ function closeVaultDialog(): void {
   else vaultDialog.removeAttribute('open');
 }
 
+async function chooseVaultFolder(): Promise<void> {
+  chooseVaultFolderElement.disabled = true;
+  dialogErrorElement.textContent = '';
+  try {
+    const result = await app.callServerTool({
+      name: 'pick_vault_folder',
+      arguments: {},
+    });
+    const selected = parseToolJson<{ path: string | null }>(result).path;
+    if (selected) pathInput.value = selected;
+  } catch (error) {
+    dialogErrorElement.textContent = errorMessage(error);
+  } finally {
+    chooseVaultFolderElement.disabled = false;
+  }
+}
+
 function toggleVaultMenu(): void {
   vaultMenuElement.hidden = !vaultMenuElement.hidden;
 }
@@ -1089,9 +1078,6 @@ graphElement.addEventListener('node-click', event => {
   if (payload?.files.some(file => file.uri === uri)) void openNote(uri);
 });
 
-graphLocalToggleElement.addEventListener('click', () =>
-  setGraphMode(graphMode === 'local' ? 'global' : 'local')
-);
 graphSettingsToggleElement.addEventListener('click', () =>
   setGraphSettingsOpen(graphSettingsElement.hidden)
 );
@@ -1128,6 +1114,9 @@ query<HTMLButtonElement>('#create-new').addEventListener('click', () =>
 query<HTMLButtonElement>('#dialog-cancel').addEventListener(
   'click',
   closeVaultDialog
+);
+chooseVaultFolderElement.addEventListener('click', () =>
+  void chooseVaultFolder()
 );
 vaultForm.addEventListener('submit', event => {
   event.preventDefault();

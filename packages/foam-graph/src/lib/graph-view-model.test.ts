@@ -89,25 +89,24 @@ describe('deriveNodeTypeFilters', () => {
 });
 
 describe('computeVisibleGraph', () => {
-  it('returns only nodes within focused graph scope', () => {
+  it('returns only enabled node types and their links', () => {
     const graph = createGraphModel(
       makeGraph({
         nodeInfo: {
           a: { id: 'a', type: 'note', title: 'A', properties: {}, tags: [] },
-          b: { id: 'b', type: 'note', title: 'B', properties: {}, tags: [] },
+          b: { id: 'b', type: 'image', title: 'B', properties: {}, tags: [] },
           c: { id: 'c', type: 'note', title: 'C', properties: {}, tags: [] },
-          d: { id: 'd', type: 'note', title: 'D', properties: {}, tags: [] },
         },
         links: [
           { source: 'a', target: 'b' },
-          { source: 'b', target: 'c' },
+          { source: 'a', target: 'c' },
         ],
       })
     );
 
-    const visible = computeVisibleGraph(graph, { note: true }, 'a', { depth: 1 });
+    const visible = computeVisibleGraph(graph, { note: true, image: false });
 
-    expect(visible.nodes.map(node => node.id).sort()).toEqual(['a', 'b']);
-    expect(visible.links).toEqual([{ source: 'a', target: 'b' }]);
+    expect(visible.nodes.map(node => node.id).sort()).toEqual(['a', 'c']);
+    expect(visible.links).toEqual([{ source: 'a', target: 'c' }]);
   });
 });

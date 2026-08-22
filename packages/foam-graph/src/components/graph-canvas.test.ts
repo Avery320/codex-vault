@@ -64,18 +64,18 @@ describe('computeLabelFontSize', () => {
 
 describe('computeLabelOpacity', () => {
   it('keeps labels fully visible when always-show labels is enabled', () => {
-    expect(computeLabelOpacity('regular', 0.5, 0.4, () => 0, 'always')).toBe(1);
+    expect(computeLabelOpacity('regular', 0.5, () => 0, 'always')).toBe(1);
   });
 
   it('preserves regular zoom-dependent label fading by default', () => {
     expect(
-      computeLabelOpacity('regular', 0.5, 0.4, () => 0.25, { fade: 0 })
+      computeLabelOpacity('regular', 0.5, () => 0.25, { fade: 0 })
     ).toBe(0.25);
   });
 
   it('keeps highlighted labels fully visible by default', () => {
     expect(
-      computeLabelOpacity('highlighted', 0.5, 0.4, () => 0, { fade: 0 })
+      computeLabelOpacity('highlighted', 0.5, () => 0, { fade: 0 })
     ).toBe(1);
   });
 });
