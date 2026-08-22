@@ -21,6 +21,5 @@ export function resolveStyle(
       ...defaults.node,
       ...payload.style?.node,
     },
-    colorMode: payload.colorMode ?? defaults.colorMode,
   };
 }

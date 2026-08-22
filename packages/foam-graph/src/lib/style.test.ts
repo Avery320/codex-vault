@@ -51,14 +51,4 @@ describe('resolveStyle', () => {
     );
     expect(result.lineColor).toBe('#aabbcc');
   });
-
-  it('applies colorMode from payload', () => {
-    const result = resolveStyle({ colorMode: 'directory' }, defaults);
-    expect(result.colorMode).toBe('directory');
-  });
-
-  it('keeps default colorMode when payload does not specify one', () => {
-    const result = resolveStyle({ style: { background: '#ff0000' } }, defaults);
-    expect(result.colorMode).toBe(defaults.colorMode);
-  });
 });

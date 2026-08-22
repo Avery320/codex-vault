@@ -58,11 +58,6 @@ interface FoamGraphElement extends HTMLElement {
   };
   nodeSizeMultiplier: number;
   linkWidthMultiplier: number;
-  animateLinks: 'forward' | 'off' | 'reverse';
-  selection: {
-    centerOnSelect: boolean;
-    zoomOnSelect: boolean;
-  };
   selectNote(noteId: string): void;
   clearSelection(): void;
 }
@@ -193,10 +188,6 @@ let appConnected = false;
 let liveSyncController: AbortController | null = null;
 
 graphElement.maxFitZoom = 2.2;
-graphElement.selection = {
-  centerOnSelect: false,
-  zoomOnSelect: false,
-};
 
 function applyTheme(theme: string | undefined): void {
   const resolved = theme === 'light' ? 'light' : 'dark';
@@ -218,7 +209,6 @@ function applyGraphPreferences(): void {
   const theme = getComputedStyle(document.documentElement);
   const color = (name: string): string => theme.getPropertyValue(name).trim();
   graphElement.graphStyle = {
-    colorMode: 'type',
     showNodesOfType: {
       note: true,
       tag: graphPreferences.showTags,
@@ -243,7 +233,6 @@ function applyGraphPreferences(): void {
   graphElement.labels = { fade: graphPreferences.textFade };
   graphElement.nodeSizeMultiplier = graphPreferences.nodeSize;
   graphElement.linkWidthMultiplier = graphPreferences.linkWidth;
-  graphElement.animateLinks = 'off';
   graphElement.forces = {
     collide: 1,
     repel: graphPreferences.repel,

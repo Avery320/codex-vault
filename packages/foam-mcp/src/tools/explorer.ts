@@ -7,7 +7,7 @@ import { FoamMcpWorkspaceProvider, VaultManager } from '../workspace-context';
 
 // MCP App hosts cache UI by URI; bump this path when the bundled UI changes.
 export const VAULT_EXPLORER_RESOURCE_URI =
-  'ui://codex-vault/v5/vault-explorer.html';
+  'ui://codex-vault/v6/vault-explorer.html';
 
 // Stay below the MCP SDK's default 60-second request timeout so the server
 // completes each wait cleanly before the host times it out.

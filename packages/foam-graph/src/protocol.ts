@@ -30,7 +30,6 @@ export interface StyleConfig {
   fontFamily?: string;
   lineColor?: string;
   lineWidth?: number;
-  particleWidth?: number;
   highlightedForeground?: string;
   node?: {
     note?: string;
@@ -42,6 +41,5 @@ export interface StyleConfig {
 
 export interface GraphStyle {
   style?: StyleConfig;
-  colorMode?: 'none' | 'directory' | 'type';
   showNodesOfType?: Record<string, boolean>;
 }

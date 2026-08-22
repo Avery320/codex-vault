@@ -2,91 +2,16 @@ import { rgb } from 'd3-color';
 import type { RGBColor } from 'd3-color';
 import type { GraphModelNode, ResolvedStyle } from './types';
 
-export function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-  }
-  return Math.abs(hash);
-}
-
-export function hashToHSL(hash: number): string {
-  const hue = hash % 360;
-  const saturation = 50 + (hash % 20);
-  const lightness = 50 + ((hash >> 8) % 20);
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
-
-export function getDirectoryColor(nodeId: string): string {
-  let currentPath = nodeId;
-  const lastSegment = currentPath.split('/').pop();
-  if (lastSegment?.includes('.')) {
-    currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-  }
-  if (currentPath.length > 0 && !currentPath.endsWith('/')) {
-    currentPath += '/';
-  }
-  return hashToHSL(hashString(currentPath));
-}
-
-export function getTypeColor(type: string, style: ResolvedStyle): string {
-  if (style.node[type] !== undefined) {
-    return style.node[type];
-  }
-  return hashToHSL(hashString(type));
-}
-
-export function getNodeFillAndBorder(
+export function getNodeColor(
   nodeInfo: GraphModelNode,
-  state: 'regular' | 'highlighted',
-  style: ResolvedStyle,
-  colorMode: 'none' | 'directory' | 'type'
-): { fill: RGBColor; border: RGBColor } {
-  let baseColor: string;
-
-  if (nodeInfo.properties.color) {
-    baseColor = nodeInfo.properties.color as string;
-  } else if (colorMode === 'none') {
-    baseColor = style.node['note'];
-  } else if (colorMode === 'directory' && nodeInfo.type !== 'placeholder' && nodeInfo.type !== 'tag') {
-    baseColor = getDirectoryColor(nodeInfo.id);
-  } else {
-    baseColor = getTypeColor(nodeInfo.type, style);
-  }
-
-  const typeFill = rgb(baseColor);
-
-  switch (state) {
-    case 'regular':
-      return { fill: typeFill, border: typeFill };
-    case 'highlighted': {
-      const highlight = rgb(style.highlightedForeground);
-      return { fill: highlight, border: highlight };
-    }
-  }
-}
-
-export function getNodeLabelColor(
-  fill: RGBColor,
-  state: 'regular' | 'highlighted',
-  opacity: number,
+  highlighted: boolean,
   style: ResolvedStyle
 ): RGBColor {
-  if (state === 'highlighted') {
-    return rgb(style.highlightedForeground).copy({ opacity }) as RGBColor;
-  }
-  return fill.copy({ opacity }) as RGBColor;
-}
-
-export function getLinkColor(
-  linkState: 'regular' | 'highlighted',
-  style: ResolvedStyle
-): string {
-  switch (linkState) {
-    case 'regular':
-      return style.lineColor;
-    case 'highlighted':
-      return style.highlightedForeground;
-  }
+  if (highlighted) return rgb(style.highlightedForeground);
+  const customColor = nodeInfo.properties.color;
+  const color =
+    typeof customColor === 'string'
+      ? customColor
+      : style.node[nodeInfo.type] ?? style.node.note;
+  return rgb(color);
 }

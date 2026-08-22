@@ -42,49 +42,21 @@ describe('foam-graph', () => {
 
     (element as any).updated(new Map([['graphData', null]]));
     const visibleGraph = (element as any).visibleGraph;
-    const graphStates = (element as any).graphStates;
 
     element.labels = { fade: 1 };
     element.render();
 
     expect((element as any).visibleGraph).toBe(visibleGraph);
-    expect((element as any).graphStates).toBe(graphStates);
   });
 
-  it('recomputes graph states when hover changes', () => {
-    const element = new FoamGraph();
-    element.graphData = makeGraph({
-      nodeInfo: {
-        note: {
-          id: 'note',
-          type: 'note',
-          title: 'Note',
-          properties: {},
-          tags: [],
-        },
-      },
-    });
-
-    (element as any).updated(new Map([['graphData', null]]));
-    (element as any).hoverNodeId = 'note';
-    (element as any).updated(new Map([['hoverNodeId', null]]));
-
-    expect((element as any).graphStates.nodeStates.get('note')).toBe(
-      'highlighted'
-    );
-  });
-
-  it('updates selection state from canvas events', () => {
+  it('updates the single selected node from canvas events', () => {
     const element = new FoamGraph();
 
-    (element as any)._onCanvasNodeClick({ nodeId: 'note-a', append: false });
-    expect([...(element as any).selectedNodeIds]).toEqual(['note-a']);
+    (element as any)._onCanvasNodeClick('note-a');
+    expect((element as any).selectedNodeId).toBe('note-a');
 
-    (element as any)._onCanvasNodeClick({ nodeId: 'note-b', append: true });
-    expect([...(element as any).selectedNodeIds]).toEqual(['note-a', 'note-b']);
-
-    (element as any)._onCanvasBackgroundClick({ append: false });
-    expect((element as any).selectedNodeIds.size).toBe(0);
+    (element as any)._onCanvasNodeClick('note-b');
+    expect((element as any).selectedNodeId).toBe('note-b');
   });
 
   it('keeps public node-click event detail as the node id string', () => {
@@ -94,18 +66,18 @@ describe('foam-graph', () => {
       detail = (event as CustomEvent).detail;
     });
 
-    (element as any)._onCanvasNodeClick({ nodeId: 'note-a', append: false });
+    (element as any)._onCanvasNodeClick('note-a');
 
     expect(detail).toBe('note-a');
   });
 
   it('clears a persistent graph selection', () => {
     const element = new FoamGraph();
-    (element as any)._onCanvasNodeClick({ nodeId: 'note-a', append: false });
+    (element as any)._onCanvasNodeClick('note-a');
 
     element.clearSelection();
 
-    expect((element as any).selectedNodeIds.size).toBe(0);
+    expect((element as any).selectedNodeId).toBeNull();
   });
 
   it('passes labels setting to the canvas', () => {

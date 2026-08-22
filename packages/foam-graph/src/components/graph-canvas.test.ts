@@ -4,7 +4,6 @@ import {
   computeFitZoom,
   computeIncomingReferenceCounts,
   computeLabelOpacity,
-  computeLabelFontSize,
   computeNodeRadius,
   graphPointToViewport,
   measureGraphViewport,
@@ -52,30 +51,20 @@ describe('measureGraphViewport', () => {
   });
 });
 
-describe('computeLabelFontSize', () => {
-  it('keeps label font size independent from graph zoom', () => {
-    expect(computeLabelFontSize(12, 1)).toBe(12);
-  });
-
-  it('applies the configured label size multiplier', () => {
-    expect(computeLabelFontSize(12, 1.5)).toBe(18);
-  });
-});
-
 describe('computeLabelOpacity', () => {
   it('keeps labels fully visible when always-show labels is enabled', () => {
-    expect(computeLabelOpacity('regular', 0.5, () => 0, 'always')).toBe(1);
+    expect(computeLabelOpacity(false, 0.5, () => 0, 'always')).toBe(1);
   });
 
   it('preserves regular zoom-dependent label fading by default', () => {
     expect(
-      computeLabelOpacity('regular', 0.5, () => 0.25, { fade: 0 })
+      computeLabelOpacity(false, 0.5, () => 0.25, { fade: 0 })
     ).toBe(0.25);
   });
 
   it('keeps highlighted labels fully visible by default', () => {
     expect(
-      computeLabelOpacity('highlighted', 0.5, () => 0, { fade: 0 })
+      computeLabelOpacity(true, 0.5, () => 0, { fade: 0 })
     ).toBe(1);
   });
 });

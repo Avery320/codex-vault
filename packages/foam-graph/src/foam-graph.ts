@@ -1,12 +1,8 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property, query, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { getDefaultStyle } from './lib/defaults';
-import { createGraphModel, computeGraphStates } from './lib/graph-utils';
-import {
-  computeVisibleGraph,
-  deriveNodeTypeFilters,
-  type VisibleGraph,
-} from './lib/graph-view-model';
+import { createGraphModel } from './lib/graph-utils';
+import { computeVisibleGraph, type VisibleGraph } from './lib/graph-view-model';
 import { resolveStyle } from './lib/style';
 import type { GraphData, GraphStyle } from './protocol';
 import type {
@@ -14,12 +10,16 @@ import type {
   ResolvedStyle,
   Forces,
   Labels,
-  Selection,
-  LinkAnimation,
-  GraphStates,
 } from './lib/types';
-import type { GraphCanvas } from './components/graph-canvas';
 import './components/graph-canvas';
+
+const DEFAULT_NODE_TYPE_VISIBILITY: Record<string, boolean> = {
+  placeholder: true,
+  image: false,
+  attachment: false,
+  note: true,
+  tag: true,
+};
 
 @customElement('foam-graph')
 export class FoamGraph extends LitElement {
@@ -43,31 +43,15 @@ export class FoamGraph extends LitElement {
     link: 30,
     velocityDecay: 0.4,
   };
+  @property({ type: Number }) nodeSizeMultiplier: number = 2;
   @property({ type: Number }) linkWidthMultiplier: number = 2;
-  @property({ type: Object }) selection: Selection = {
-    centerOnSelect: true,
-    zoomOnSelect: true,
-  };
-
-  @query('foam-graph-canvas') private canvas!: GraphCanvas;
 
   // Internal app state
   @state() private graphModel: GraphModel | null = null;
-  @state() private selectedNodeIds = new Set<string>();
+  @state() private selectedNodeId: string | null = null;
   @state() private hoverNodeId: string | null = null;
-  @state() private showNodesOfType: Record<string, boolean> = {
-    placeholder: true,
-    image: false,
-    attachment: false,
-    note: true,
-    tag: true,
-  };
-  @state() private nodeFontSizeMultiplier: number = 1;
-  @state() private nodeSizeMultiplier: number = 2;
-  @state() private animateLinks: LinkAnimation = 'forward';
-  // Pipeline: GraphData -> GraphModel -> VisibleGraph plus GraphStates for rendering.
+  // Pipeline: GraphData -> GraphModel -> VisibleGraph for rendering.
   @state() private visibleGraph: VisibleGraph | null = null;
-  @state() private graphStates: GraphStates | null = null;
 
   private get resolvedStyle(): ResolvedStyle {
     return resolveStyle(this.graphStyle, getDefaultStyle());
@@ -75,7 +59,6 @@ export class FoamGraph extends LitElement {
 
   updated(changed: Map<string, unknown>) {
     let shouldRecomputeVisibleGraph = false;
-    let shouldRecomputeGraphStates = false;
 
     if (changed.has('graphData')) {
       this.graphModel = this.graphData
@@ -83,38 +66,12 @@ export class FoamGraph extends LitElement {
         : null;
       this._pruneInteractionState();
       shouldRecomputeVisibleGraph = true;
-      shouldRecomputeGraphStates = true;
     }
 
-    if (changed.has('graphStyle') && this.graphStyle?.showNodesOfType) {
-      this.showNodesOfType = {
-        ...this.showNodesOfType,
-        ...this.graphStyle.showNodesOfType,
-      };
-      shouldRecomputeVisibleGraph = true;
-    }
-
-    if (
-      (changed.has('graphData') || changed.has('graphStyle')) &&
-      this.graphModel
-    ) {
-      this.showNodesOfType = deriveNodeTypeFilters(
-        this.graphModel,
-        this.resolvedStyle,
-        this.showNodesOfType
-      );
-      shouldRecomputeVisibleGraph = true;
-    }
-
-    if (changed.has('selection') || changed.has('hoverNodeId')) {
-      shouldRecomputeGraphStates = true;
-    }
+    if (changed.has('graphStyle')) shouldRecomputeVisibleGraph = true;
 
     if (shouldRecomputeVisibleGraph) {
       this._recomputeVisibleGraph();
-    }
-    if (shouldRecomputeGraphStates) {
-      this._recomputeGraphStates();
     }
   }
 
@@ -122,78 +79,53 @@ export class FoamGraph extends LitElement {
     return html`
       <foam-graph-canvas
         .visibleGraph=${this.visibleGraph}
-        .graphStates=${this.graphStates}
+        .selectedNodeId=${this.selectedNodeId}
+        .hoverNodeId=${this.hoverNodeId}
         .style=${this.resolvedStyle}
         .forces=${this.forces}
         .labels=${this.labels}
-        .nodeFontSizeMultiplier=${this.nodeFontSizeMultiplier}
         .nodeSizeMultiplier=${this.nodeSizeMultiplier}
         .linkWidthMultiplier=${this.linkWidthMultiplier}
-        .animateLinks=${this.animateLinks}
         .maxFitZoom=${this.maxFitZoom}
-        @canvas-node-click=${(e: CustomEvent) =>
+        @canvas-node-click=${(e: CustomEvent<string>) =>
           this._onCanvasNodeClick(e.detail)}
         @canvas-node-hover=${(e: CustomEvent) => (this.hoverNodeId = e.detail)}
-        @canvas-background-click=${(e: CustomEvent) =>
-          this._onCanvasBackgroundClick(e.detail)}
+        @canvas-background-click=${() => this.clearSelection()}
       ></foam-graph-canvas>
     `;
   }
 
   selectNote(noteId: string) {
-    this._selectNode(noteId, false);
-    if (!this.visibleGraph?.nodeInfo[noteId]) return;
-    if (this.selection.centerOnSelect) {
-      this.canvas?.centerOnNode(
-        noteId,
-        this.selection.zoomOnSelect ? 3 : undefined,
-        300
-      );
-    } else if (this.selection.zoomOnSelect) {
-      this.canvas?.zoom(3, 300);
-    }
+    this.selectedNodeId = noteId;
   }
 
   clearSelection() {
-    this.selectedNodeIds = new Set();
-    this._recomputeGraphStates();
+    this.selectedNodeId = null;
   }
 
-  private _onCanvasNodeClick(detail: { nodeId: string; append: boolean }) {
-    this._selectNode(detail.nodeId, detail.append);
+  private _onCanvasNodeClick(nodeId: string) {
+    this.selectedNodeId = nodeId;
     this.dispatchEvent(
       new CustomEvent('node-click', {
-        detail: detail.nodeId,
+        detail: nodeId,
         bubbles: true,
         composed: true,
       })
     );
   }
 
-  private _onCanvasBackgroundClick(detail: { append: boolean }) {
-    if (!detail.append) {
-      this.clearSelection();
-    }
-  }
-
-  private _selectNode(nodeId: string, append: boolean) {
-    const next = append ? new Set(this.selectedNodeIds) : new Set<string>();
-    next.add(nodeId);
-    this.selectedNodeIds = next;
-    this._recomputeGraphStates();
-  }
-
   private _pruneInteractionState() {
     if (!this.graphModel) {
-      this.selectedNodeIds = new Set();
+      this.selectedNodeId = null;
       this.hoverNodeId = null;
       return;
     }
-    this.selectedNodeIds = new Set(
-      [...this.selectedNodeIds].filter(
-        id => this.graphModel!.nodeInfo[id] != null
-      )
-    );
+    if (
+      this.selectedNodeId &&
+      !this.graphModel.nodeInfo[this.selectedNodeId]
+    ) {
+      this.selectedNodeId = null;
+    }
     if (this.hoverNodeId && !this.graphModel.nodeInfo[this.hoverNodeId]) {
       this.hoverNodeId = null;
     }
@@ -201,17 +133,10 @@ export class FoamGraph extends LitElement {
 
   private _recomputeVisibleGraph() {
     this.visibleGraph = this.graphModel
-      ? computeVisibleGraph(this.graphModel, this.showNodesOfType)
-      : null;
-  }
-
-  private _recomputeGraphStates() {
-    this.graphStates = this.graphModel
-      ? computeGraphStates(
-          this.graphModel,
-          this.selectedNodeIds,
-          this.hoverNodeId
-        )
+      ? computeVisibleGraph(this.graphModel, {
+          ...DEFAULT_NODE_TYPE_VISIBILITY,
+          ...this.graphStyle?.showNodesOfType,
+        })
       : null;
   }
 }

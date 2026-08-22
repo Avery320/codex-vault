@@ -11,12 +11,6 @@ export const GraphModelLink = {
   getNodeId(endpoint: GraphModelLink['source']): string {
     return typeof endpoint === 'object' ? endpoint.id : endpoint;
   },
-
-  getKey(link: GraphModelLink): string {
-    return `${GraphModelLink.getNodeId(
-      link.source
-    )}->${GraphModelLink.getNodeId(link.target)}`;
-  },
 };
 
 export interface GraphModel {
@@ -30,7 +24,6 @@ export interface ResolvedStyle {
   fontFamily: string;
   lineColor: string;
   lineWidth: number;
-  particleWidth: number;
   highlightedForeground: string;
   node: {
     note: string;
@@ -38,16 +31,6 @@ export interface ResolvedStyle {
     tag: string;
     [key: string]: string;
   };
-  colorMode: 'none' | 'directory' | 'type';
-}
-
-export type NodeState = 'regular' | 'highlighted';
-export type LinkState = 'regular' | 'highlighted';
-
-export interface GraphStates {
-  nodeStates: Map<string, NodeState>;
-  /** Keyed by "sourceId->targetId" for identity-safe lookup across copied link objects. */
-  linkStates: Map<string, LinkState>;
 }
 
 export interface Forces {
@@ -57,11 +40,4 @@ export interface Forces {
   velocityDecay: number;
 }
 
-export type LinkAnimation = 'forward' | 'off' | 'reverse';
-
 export type Labels = 'always' | { fade: number };
-
-export interface Selection {
-  centerOnSelect: boolean;
-  zoomOnSelect: boolean;
-}

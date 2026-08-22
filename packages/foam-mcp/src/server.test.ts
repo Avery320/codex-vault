@@ -65,7 +65,7 @@ describe('FoamMcpServer lifecycle', () => {
       const tool = list.tools.find(item => item.name === 'show_vault_explorer');
 
       expect(tool?._meta).toMatchObject({
-        ui: { resourceUri: 'ui://codex-vault/v5/vault-explorer.html' },
+        ui: { resourceUri: 'ui://codex-vault/v6/vault-explorer.html' },
       });
       expect(tool?.annotations).toMatchObject({
         readOnlyHint: true,
@@ -77,7 +77,7 @@ describe('FoamMcpServer lifecycle', () => {
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://codex-vault/v5/vault-explorer.html',
+            uri: 'ui://codex-vault/v6/vault-explorer.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ])
