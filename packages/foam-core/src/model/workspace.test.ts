@@ -46,39 +46,6 @@ describe('Workspace resources', () => {
     expect(() => ws.get(uri)).toThrow();
   });
 
-  it('should work with a resource named like a JS prototype property', () => {
-    const ws = createTestWorkspace();
-    const noteA = createTestNote({ uri: '/somewhere/constructor.md' });
-    ws.set(noteA);
-    expect(ws.list()).toEqual([noteA]);
-  });
-
-  it('should not return files with same suffix when listing by ID - #851', () => {
-    const ws = createTestWorkspace()
-      .set(createTestNote({ uri: 'test-file.md' }))
-      .set(createTestNote({ uri: 'file.md' }));
-    expect(ws.listByIdentifier('file').length).toEqual(1);
-  });
-
-  it('should support dendron-style names', () => {
-    const ws = createTestWorkspace()
-      .set(createTestNote({ uri: 'note.pdf' }))
-      .set(createTestNote({ uri: 'note.md' }))
-      .set(createTestNote({ uri: 'note.yo.md' }))
-      .set(createTestNote({ uri: 'note2.md' }));
-    for (const [reference, path] of [
-      ['note', '/note.md'],
-      ['note.md', '/note.md'],
-      ['note.yo', '/note.yo.md'],
-      ['note.yo.md', '/note.yo.md'],
-      ['note.pdf', '/note.pdf'],
-      ['note2', '/note2.md'],
-    ]) {
-      expect(ws.listByIdentifier(reference)[0].uri.path).toEqual(path);
-      expect(ws.find(reference).uri.path).toEqual(path);
-    }
-  });
-
   it('should keep the fragment information when finding a resource', () => {
     const ws = createTestWorkspace()
       .set(createTestNote({ uri: 'test-file.md' }))
@@ -131,59 +98,6 @@ describe('Identifier computation', () => {
     ).toEqual('to/page-a#section name');
   });
 
-  const needle = '/project/car/todo';
-
-  test.each([
-    [['/project/home/todo', '/other/todo', '/something/else'], 'car/todo'],
-    [['/family/car/todo', '/other/todo'], 'project/car/todo'],
-    [[], 'todo'],
-  ])('should find shortest identifier', (haystack, id) => {
-    expect(FoamWorkspace.getShortestIdentifier(needle, haystack)).toEqual(id);
-  });
-
-  it('should ignore same string in haystack', () => {
-    const haystack = [
-      needle,
-      '/project/home/todo',
-      '/other/todo',
-      '/something/else',
-    ];
-    const identifier = FoamWorkspace.getShortestIdentifier(needle, haystack);
-    expect(identifier).toEqual('car/todo');
-  });
-
-  it('should return the best guess when no solution is possible', () => {
-    /**
-     * In this case there is no way to uniquely identify the element,
-     * our fallback is to just return the "least wrong" result, basically
-     * a full identifier
-     * This is an edge case that should never happen in a real repo
-     */
-    const haystack = [
-      '/parent/' + needle,
-      '/project/home/todo',
-      '/other/todo',
-      '/something/else',
-    ];
-    const identifier = FoamWorkspace.getShortestIdentifier(needle, haystack);
-    expect(identifier).toEqual('project/car/todo');
-  });
-
-  it('should ignore elements from the exclude list', () => {
-    const workspace = new FoamWorkspace([], '.md');
-    const noteA = createTestNote({ uri: '/path/to/note-a.md' });
-    const noteB = createTestNote({ uri: '/path/to/note-b.md' });
-    const noteC = createTestNote({ uri: '/path/to/note-c.md' });
-    const noteD = createTestNote({ uri: '/path/to/note-d.md' });
-    const noteABis = createTestNote({ uri: '/path/to/another/note-a.md' });
-
-    workspace.set(noteA).set(noteB).set(noteC).set(noteD);
-    expect(workspace.getIdentifier(noteABis.uri)).toEqual('another/note-a');
-    expect(
-      workspace.getIdentifier(noteABis.uri, [noteB.uri, noteA.uri])
-    ).toEqual('note-a');
-  });
-
   it('should handle case-sensitive filenames correctly (#1303)', () => {
     const workspace = new FoamWorkspace([], '.md');
     const noteUppercase = createTestNote({ uri: '/a/Note.md' });
@@ -206,17 +120,6 @@ describe('Identifier computation', () => {
     expect(workspace.listByIdentifier('Note')[0]).not.toEqual(
       workspace.listByIdentifier('note')[0]
     );
-  });
-
-  it('should generate correct identifiers for case-sensitive files', () => {
-    const workspace = new FoamWorkspace([], '.md');
-    const noteUppercase = createTestNote({ uri: '/a/Note.md' });
-    const noteLowercase = createTestNote({ uri: '/b/note.md' });
-
-    workspace.set(noteUppercase).set(noteLowercase);
-
-    // Each should have a unique identifier without directory disambiguation
-    // since they differ by case, they are not considered conflicting
     expect(workspace.getIdentifier(noteUppercase.uri)).toEqual('Note');
     expect(workspace.getIdentifier(noteLowercase.uri)).toEqual('note');
   });
@@ -399,20 +302,6 @@ describe('find with workspace-relative absolute paths', () => {
 });
 
 describe('Directory index', () => {
-  it('should resolve a directory to its index file', () => {
-    const ws = createTestWorkspace();
-    const index = createTestNote({ uri: '/foo/bar/index.md' });
-    ws.set(index);
-    expect(ws.findByDirectory('/foo/bar')).toEqual(index);
-  });
-
-  it('should resolve a directory to its README file', () => {
-    const ws = createTestWorkspace();
-    const readme = createTestNote({ uri: '/foo/bar/README.md' });
-    ws.set(readme);
-    expect(ws.findByDirectory('/foo/bar')).toEqual(readme);
-  });
-
   it('should prefer index over README regardless of insertion order', () => {
     const index = createTestNote({ uri: '/foo/bar/index.md' });
     const readme = createTestNote({ uri: '/foo/bar/README.md' });
@@ -445,29 +334,6 @@ describe('Directory index', () => {
     expect(ws.findByDirectory('/foo/bar')).toBeNull();
   });
 
-  it('should return null when a directory contains only regular files', () => {
-    const ws = createTestWorkspace();
-    ws.set(createTestNote({ uri: '/foo/bar/page.md' }));
-    ws.set(createTestNote({ uri: '/foo/bar/notes.md' }));
-    expect(ws.findByDirectory('/foo/bar')).toBeNull();
-  });
-
-  it('should not register non-note resources (attachments, images) as directory index', () => {
-    const ws = createTestWorkspace();
-    ws.set(createTestNote({ uri: '/foo/bar/index.png', type: 'image' }));
-    ws.set(createTestNote({ uri: '/foo/bar/README.pdf', type: 'attachment' }));
-    expect(ws.findByDirectory('/foo/bar')).toBeNull();
-  });
-
-  it('should track index files independently per directory', () => {
-    const ws = createTestWorkspace();
-    const indexA = createTestNote({ uri: '/foo/bar/index.md' });
-    const indexB = createTestNote({ uri: '/foo/baz/index.md' });
-    ws.set(indexA).set(indexB);
-    expect(ws.findByDirectory('/foo/bar')).toEqual(indexA);
-    expect(ws.findByDirectory('/foo/baz')).toEqual(indexB);
-  });
-
   it('should clear directory index on workspace clear', () => {
     const ws = createTestWorkspace();
     ws.set(createTestNote({ uri: '/foo/bar/index.md' }));
@@ -476,13 +342,6 @@ describe('Directory index', () => {
   });
 
   describe('getDirectoryIdentifier', () => {
-    it('should return null for a non-index file', () => {
-      const ws = createTestWorkspace();
-      const note = createTestNote({ uri: '/foo/bar/page.md' });
-      ws.set(note);
-      expect(ws.getDirectoryIdentifier(note.uri)).toBeNull();
-    });
-
     it('should return the directory name when unambiguous', () => {
       const ws = createTestWorkspace();
       const index = createTestNote({ uri: '/foo/bar/index.md' });

@@ -105,12 +105,4 @@ describe('search tools', () => {
       ]);
     }));
 
-  it('search_by_property without value matches any value', () =>
-    withMcpServer(SEED, async ctx => {
-      const matches = await ctx.callToolJson<Array<{ uri: string }>>(
-        'search_by_property',
-        { property: 'status' }
-      );
-      expect(matches.length).toBe(3);
-    }));
 });

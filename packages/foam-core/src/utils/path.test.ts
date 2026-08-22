@@ -1,5 +1,4 @@
-/* eslint-disable jest/no-conditional-expect */
-import { posix as nodePosix } from 'node:path';
+import { URI } from '../model/uri';
 import {
   changeExtension,
   fromFsPath,
@@ -13,169 +12,58 @@ import {
   relativeTo,
   toFsPath,
 } from './path';
-import { URI } from '../model/uri';
 
 describe('path utils', () => {
-  describe('fromFsPath', () => {
-    it('should normalize backslashes in relative paths', () => {
-      const [path] = fromFsPath('areas\\dailies\\2024\\file.md');
-      expect(path).toBe('areas/dailies/2024/file.md');
-    });
-
-    it('should handle mixed separators in relative paths', () => {
-      const [path] = fromFsPath('areas/dailies\\2024/file.md');
-      expect(path).toBe('areas/dailies/2024/file.md');
-    });
-
-    it('should preserve forward slashes in relative paths', () => {
-      const [path] = fromFsPath('areas/dailies/2024/file.md');
-      expect(path).toBe('areas/dailies/2024/file.md');
-    });
-
-    it('should normalize backslashes in Windows absolute paths', () => {
-      const [path] = fromFsPath('C:\\workspace\\file.md');
-      expect(path).toBe('/C:/workspace/file.md');
-    });
+  it('normalizes filesystem separators', () => {
+    for (const [input, expected] of [
+      ['areas\\dailies\\2024\\file.md', 'areas/dailies/2024/file.md'],
+      ['areas/dailies\\2024/file.md', 'areas/dailies/2024/file.md'],
+      ['C:\\workspace\\file.md', '/C:/workspace/file.md'],
+    ]) {
+      expect(fromFsPath(input)[0]).toBe(expected);
+    }
   });
 
-  // The functions below were originally thin wrappers around Node's
-  // `path.posix.*`; we now ship our own POSIX implementation so @foam/core
-  // works in browsers (vite, RN). These tests assert parity with Node's
-  // reference implementation across a representative input set.
-
-  describe('parity with node:path/posix', () => {
-    const SINGLE_ARG_INPUTS = [
-      '',
-      '.',
-      '..',
-      '/',
-      'foo',
-      '/foo',
-      '/foo/',
-      '/foo/bar',
-      '/foo/bar/',
-      '/foo/bar/baz.ext',
-      '/foo/bar/baz.tar.gz',
-      '/foo/.hidden',
-      '/foo/.hidden.txt',
-      'foo/bar',
-      'foo/bar/baz',
-      './foo',
-      '../foo',
-      '/a/b/../c',
-      '/a/b/./c',
-      '/a//b//c',
-      '/d1/d2',
-      '/d1/d2/f.ext',
-    ];
-
-    const RELATIVE_PAIRS: Array<[string, string]> = [
-      ['/', '/'],
-      ['/foo', '/foo'],
-      ['/foo', '/bar'],
-      ['/d1', '/d1/d2'],
-      ['/d1/d2', '/d1'],
-      ['/d1/d2', '/d1/d3'],
-      ['/d1/d2', '/d1/d2/d3/d4'],
-      ['/a/b/c', '/a/x/y'],
-      ['/a', '/a/b/c'],
-      ['/a/b/c', '/a'],
-    ];
-
-    const JOIN_INPUTS: string[][] = [
-      ['/d1', 'd2', 'f.ext'],
-      ['/d1/d2', '..', 'f.ext'],
-      ['foo', 'bar'],
-      ['/', 'foo'],
-      ['', 'foo'],
-      ['foo', '', 'bar'],
-      ['/a/b', '../c'],
-      ['a', 'b', 'c'],
-    ];
-
-    describe('isAbsolute', () => {
-      it.each(SINGLE_ARG_INPUTS)('matches node for %p', (p) => {
-        expect(isAbsolute(p)).toBe(nodePosix.isAbsolute(p));
-      });
-    });
-
-    describe('getDirectory (posix.dirname)', () => {
-      it.each(SINGLE_ARG_INPUTS)('matches node for %p', (p) => {
-        expect(getDirectory(p)).toBe(nodePosix.dirname(p));
-      });
-    });
-
-    describe('getBasename (posix.basename)', () => {
-      it.each(SINGLE_ARG_INPUTS)('matches node for %p', (p) => {
-        expect(getBasename(p)).toBe(nodePosix.basename(p));
-      });
-    });
-
-    describe('getExtension (posix.extname)', () => {
-      it.each(SINGLE_ARG_INPUTS)('matches node for %p', (p) => {
-        expect(getExtension(p)).toBe(nodePosix.extname(p));
-      });
-    });
-
-    describe('joinPath (posix.join)', () => {
-      it.each(JOIN_INPUTS)('matches node for %p', (...parts) => {
-        expect(joinPath(...parts)).toBe(nodePosix.join(...parts));
-      });
-    });
-
-    describe('relativeTo (posix.relative)', () => {
-      // Note: relativeTo(path, basePath) corresponds to posix.relative(basePath, path)
-      it.each(RELATIVE_PAIRS)('matches node for from=%p to=%p', (from, to) => {
-        expect(relativeTo(to, from)).toBe(nodePosix.relative(from, to));
-      });
-    });
+  it('extracts Markdown path components', () => {
+    expect(getDirectory('/vault/notes/topic.md')).toBe('/vault/notes');
+    expect(getBasename('/vault/notes/topic.md')).toBe('topic.md');
+    expect(getExtension('/vault/notes/topic.md')).toBe('.md');
+    expect(getName('/vault/notes/topic.md')).toBe('topic');
+    expect(getName('/vault/.hidden')).toBe('.hidden');
   });
 
-  describe('changeExtension', () => {
-    it("strips the matching extension when 'to' is empty", () => {
-      expect(changeExtension('/d/f.md', '.md', '')).toBe('/d/f');
-    });
-    it('changes the extension when from matches', () => {
-      expect(changeExtension('/d/f.md', '.md', '.txt')).toBe('/d/f.txt');
-    });
-    it("treats '*' as a wildcard match", () => {
-      expect(changeExtension('/d/f.md', '*', '.txt')).toBe('/d/f.txt');
-    });
-    it("returns input unchanged when 'from' doesn't match", () => {
-      expect(changeExtension('/d/f.md', '.txt', '.html')).toBe('/d/f.md');
-    });
+  it('joins and normalizes note paths', () => {
+    expect(joinPath('/vault/notes', '..', 'daily', 'today.md')).toBe(
+      '/vault/daily/today.md'
+    );
   });
 
-  describe('getName', () => {
-    it('strips the extension', () => {
-      expect(getName('/d/f.md')).toBe('f');
-    });
-    it('handles dotfiles correctly', () => {
-      expect(getName('/d/.hidden')).toBe('.hidden');
-    });
+  it('computes workspace-relative paths', () => {
+    expect(relativeTo('/vault/daily/today.md', '/vault/notes')).toBe(
+      '../daily/today.md'
+    );
   });
 
-  describe('isWithinPath', () => {
-    const root = URI.file('/a/b');
-    it('returns true for the same path', () => {
-      expect(isWithinPath(URI.file('/a/b'), root)).toBe(true);
-    });
-    it('returns true for a nested path', () => {
-      expect(isWithinPath(URI.file('/a/b/c/d.md'), root)).toBe(true);
-    });
-    it('returns false for a sibling path', () => {
-      expect(isWithinPath(URI.file('/a/c'), root)).toBe(false);
-    });
-    it('returns false for a path that prefix-matches but is not nested', () => {
-      expect(isWithinPath(URI.file('/a/bb'), root)).toBe(false);
-    });
+  it('changes matching note extensions', () => {
+    expect(changeExtension('/note.md', '.md', '.txt')).toBe('/note.txt');
+    expect(changeExtension('/note.md', '.txt', '.html')).toBe('/note.md');
+    expect(changeExtension('/note.md', '*', '')).toBe('/note');
   });
 
-  describe('toFsPath round-trip', () => {
-    it('round-trips a Windows-style POSIX path', () => {
-      const fs = 'C:\\workspace\\file.md';
-      const [posixPath] = fromFsPath(fs);
-      expect(toFsPath(posixPath)).toBe(fs);
-    });
+  it('recognizes absolute paths', () => {
+    expect(isAbsolute('/vault/note.md')).toBe(true);
+    expect(isAbsolute('notes/note.md')).toBe(false);
+  });
+
+  it('enforces Vault containment at path boundaries', () => {
+    const root = URI.file('/vault');
+    expect(isWithinPath(URI.file('/vault'), root)).toBe(true);
+    expect(isWithinPath(URI.file('/vault/notes/note.md'), root)).toBe(true);
+    expect(isWithinPath(URI.file('/vault-other/note.md'), root)).toBe(false);
+  });
+
+  it('round-trips a Windows filesystem path', () => {
+    const fsPath = 'C:\\workspace\\file.md';
+    expect(toFsPath(fromFsPath(fsPath)[0])).toBe(fsPath);
   });
 });

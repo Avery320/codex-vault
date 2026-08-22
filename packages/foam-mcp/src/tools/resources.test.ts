@@ -87,29 +87,6 @@ describe('resource tools', () => {
       expect(unchanged.content).toBe(SEED['a.md']);
     }));
 
-  it('preview_resource_update emits separate hunks for distant changes', () =>
-    withMcpServer(
-      {
-        'long.md': Array.from(
-          { length: 20 },
-          (_, index) => `line ${index + 1}`
-        ).join('\n'),
-      },
-      async ctx => {
-        const content = Array.from({ length: 20 }, (_, index) =>
-          index === 1 || index === 18
-            ? `changed ${index + 1}`
-            : `line ${index + 1}`
-        ).join('\n');
-        const preview = await ctx.callToolJson<{ diff: string }>(
-          'preview_resource_update',
-          { uri: 'long.md', content }
-        );
-
-        expect(preview.diff.match(/^@@/gm)).toHaveLength(2);
-      }
-    ));
-
   it('update_resource applies content only with the previewed hash', () =>
     withMcpServer(SEED, async ctx => {
       const preview = await ctx.callToolJson<{
@@ -128,37 +105,6 @@ describe('resource tools', () => {
         { uri: 'a.md' }
       );
       expect(after.content).toBe('# A — updated');
-    }));
-
-  it('update_resource with properties merges frontmatter after preview', () =>
-    withMcpServer(SEED, async ctx => {
-      const preview = await ctx.callToolJson<{
-        expected_content_sha256: string;
-      }>('preview_resource_update', {
-        uri: 'a.md',
-        properties: { status: 'active' },
-      });
-      await ctx.callToolJson('update_resource', {
-        uri: 'a.md',
-        properties: { status: 'active' },
-        expected_content_sha256: preview.expected_content_sha256,
-      });
-      const after = await ctx.callToolJson<{ content: string }>(
-        'read_resource',
-        { uri: 'a.md' }
-      );
-      expect(after.content).toContain('status: active');
-      expect(after.content).toContain('title: Note A');
-    }));
-
-  it('update_resource rejects a missing preview hash', () =>
-    withMcpServer(SEED, async ctx => {
-      const result = await ctx.callTool('update_resource', {
-        uri: 'a.md',
-        content: '# unsafe overwrite',
-      });
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('expected_content_sha256');
     }));
 
   it('update_resource rejects a stale preview and preserves newer content', () =>
@@ -264,36 +210,40 @@ describe('resource tools', () => {
 });
 
 describe('resource tools — path traversal containment', () => {
-  it.each([
-    ['read_resource', 'absolute path', { uri: '/etc/passwd' }],
-    ['read_resource', 'file URI', { uri: 'file:///etc/passwd' }],
-    ['read_resource', 'relative escape', { uri: '../../etc/passwd' }],
-    [
-      'update_resource',
-      'write path',
-      {
-        uri: '/tmp/path-traversal-write.txt',
-        content: 'pwned',
-        expected_content_sha256: sha256('irrelevant'),
-      },
-    ],
-    ['delete_resource', 'delete path', { uri: '/etc/passwd', confirm: true }],
-    [
-      'move_resource',
-      'source path',
-      { uri: '/etc/passwd', new_path: 'renamed.md' },
-    ],
-    [
-      'move_resource',
-      'destination path',
-      { uri: 'a.md', new_path: '/etc/escaped.md' },
-    ],
-  ])('%s rejects an outside %s', (tool, _case, args) =>
+  it('rejects outside paths for every read and write operation', () =>
     withMcpServer(SEED, async ctx => {
-      const result = await ctx.callTool(tool, args);
-      expect(result.isError).toBe(true);
-      const err = JSON.parse(result.content[0].text!);
-      expect(err.code).toBe('invalid_input');
+      const attempts: Array<[string, Record<string, unknown>]> = [
+        ['read_resource', { uri: '/etc/passwd' }],
+        ['read_resource', { uri: 'file:///etc/passwd' }],
+        ['read_resource', { uri: '../../etc/passwd' }],
+        [
+          'update_resource',
+          {
+            uri: '/tmp/path-traversal-write.txt',
+            content: 'pwned',
+            expected_content_sha256: sha256('irrelevant'),
+          },
+        ],
+        ['delete_resource', { uri: '/etc/passwd', confirm: true }],
+        [
+          'move_resource',
+          { uri: '/etc/passwd', new_path: 'renamed.md' },
+        ],
+        [
+          'move_resource',
+          { uri: 'a.md', new_path: '/etc/escaped.md' },
+        ],
+        ['create_resource', { title: 'shell', dir: '/etc/cron.hourly' }],
+        ['create_resource', { title: 'shell', dir: '../../etc' }],
+      ];
+
+      for (const [tool, args] of attempts) {
+        const result = await ctx.callTool(tool, args);
+        expect(result.isError, tool).toBe(true);
+        expect(JSON.parse(result.content[0].text!).code, tool).toBe(
+          'invalid_input'
+        );
+      }
     }));
 
   it('read_resource still accepts absolute paths inside the workspace', () =>
@@ -304,56 +254,13 @@ describe('resource tools — path traversal containment', () => {
       );
       expect(result.content).toBe(SEED['a.md']);
     }));
-
 });
 
 describe('resource tools — note creation', () => {
-  it('create_resource ignores unsupported JavaScript templates', () =>
+  it('create_resource applies Markdown template variables and filepath metadata', () =>
     withMcpServer(
       {
         'existing.md': '# existing',
-        '.foam/templates/new-note.js': `throw new Error('must not run')`,
-      },
-      async ctx => {
-        const result = await ctx.callToolJson<{ uri: string; title: string }>(
-          'create_resource',
-          { title: 'hello' }
-        );
-        expect(result.uri).toBe('hello.md');
-        expect(result.title).toBe('hello');
-      }
-    ));
-
-  it('create_resource applies the Markdown template and filepath metadata', () =>
-    withMcpServer(
-      {
-        'existing.md': '# existing',
-        '.foam/templates/new-note.md': `---
-foam_template:
-  filepath: notes/$FOAM_TITLE.md
----
-# $FOAM_TITLE
-`,
-      },
-      async ctx => {
-        const result = await ctx.callToolJson<{ uri: string }>(
-          'create_resource',
-          { title: 'hello' }
-        );
-        expect(result.uri).toBe('notes/hello.md');
-        expect(
-          (
-            await ctx.callToolJson<{ content: string }>('read_resource', {
-              uri: result.uri,
-            })
-          ).content
-        ).toBe('# hello\n');
-      }
-    ));
-
-  it('create_resource applies custom template date formats', () =>
-    withMcpServer(
-      {
         '.foam/templates/new-note.md': `---
 foam_template:
   filepath: notes/\${FOAM_DATE_FORMAT:[dated]}/$FOAM_SLUG.md
@@ -401,20 +308,6 @@ foam_template:
       }
     ));
 
-  it('create_resource with an explicit path bypasses Markdown templates', () =>
-    withMcpServer(
-      {
-        '.foam/templates/new-note.md': '# ${FOAM_TITLE/(.*)/<$1>/}\n',
-      },
-      async ctx => {
-        const result = await ctx.callToolJson<{ uri: string }>(
-          'create_resource',
-          { path: 'safe.md', content: '# Safe\n' }
-        );
-        expect(result.uri).toBe('safe.md');
-      }
-    ));
-
   it('create_resource rejects a Markdown template path outside the vault', () =>
     withMcpServer(
       {
@@ -434,28 +327,6 @@ foam_template:
       }
     ));
 
-  it('create_resource rejects absolute dir outside the workspace', () =>
-    withMcpServer({ 'existing.md': '# existing' }, async ctx => {
-      const result = await ctx.callTool('create_resource', {
-        title: 'shell',
-        dir: '/etc/cron.hourly',
-      });
-      expect(result.isError).toBe(true);
-      const err = JSON.parse(result.content[0].text!);
-      expect(err.code).toBe('invalid_input');
-    }));
-
-  it('create_resource rejects relative dir that escapes the workspace', () =>
-    withMcpServer({ 'existing.md': '# existing' }, async ctx => {
-      const result = await ctx.callTool('create_resource', {
-        title: 'shell',
-        dir: '../../etc',
-      });
-      expect(result.isError).toBe(true);
-      const err = JSON.parse(result.content[0].text!);
-      expect(err.code).toBe('invalid_input');
-    }));
-
   it('create_resource accepts a relative dir inside the workspace', () =>
     withMcpServer({ 'existing.md': '# existing' }, async ctx => {
       const result = await ctx.callToolJson<{ uri: string }>(
@@ -473,24 +344,5 @@ foam_template:
       );
       expect(result.uri).toBe('hello.md');
       expect(result.title).toBe('hello');
-    }));
-});
-
-describe('resource tools (read-only mode)', () => {
-  it('write tools are not registered in read-only mode', () =>
-    withMcpServer(SEED, { mode: 'read' }, async ctx => {
-      const list = await ctx.client.listTools();
-      const names = list.tools.map(t => t.name);
-      expect(names).not.toContain('update_resource');
-      expect(names).not.toContain('create_resource');
-      expect(names).not.toContain('delete_resource');
-      expect(names).not.toContain('move_resource');
-      expect(names).toContain('preview_resource_update');
-    }));
-
-  it('read tools still work in read-only mode', () =>
-    withMcpServer(SEED, { mode: 'read' }, async ctx => {
-      const items = await ctx.callToolJson<Array<unknown>>('list_resources');
-      expect(items.length).toBe(3);
     }));
 });

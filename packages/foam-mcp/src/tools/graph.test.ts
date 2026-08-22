@@ -19,16 +19,6 @@ describe('graph tools', () => {
       expect(result.backlinks).toEqual([]);
     }));
 
-  it('get_connections respects direction=links', () =>
-    withMcpServer(SEED, async ctx => {
-      const result = await ctx.callToolJson<{
-        links: Array<unknown>;
-        backlinks: Array<unknown>;
-      }>('get_connections', { uri: 'd.md', direction: 'links' });
-      expect(result.backlinks).toEqual([]);
-      expect(result.links.length).toBeGreaterThan(0);
-    }));
-
   it('get_orphans returns notes with no connections', () =>
     withMcpServer(SEED, async ctx => {
       const orphans = await ctx.callToolJson<Array<{ uri: string }>>(

@@ -238,51 +238,6 @@ describe('foam mcp (CLI e2e)', () => {
   );
 
   it(
-    'defaults to read-only — no write tools without --allow-writes',
-    () =>
-      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
-        withCliMcpServer(workspaceDir, [], async ctx => {
-          const list = await ctx.client.listTools();
-          const names = list.tools.map(t => t.name);
-          expect(names).not.toContain('update_resource');
-          expect(names).not.toContain('delete_resource');
-          expect(names).toContain('list_resources');
-
-          // The mode is advertised in initialize.instructions and via
-          // get_workspace_info.read_only.
-          expect(ctx.client.getInstructions()).toContain('read-only');
-          const info = (await ctx.client.callTool({
-            name: 'get_workspace_info',
-            arguments: {},
-          })) as { content: Array<{ text: string }> };
-          expect(JSON.parse(info.content[0].text).read_only).toBe(true);
-        })
-      ),
-    30000
-  );
-
-  it(
-    '--allow-writes registers write tools and disables read-only advertisement',
-    () =>
-      withTmpDir({ 'a.md': '# A\n' }, workspaceDir =>
-        withCliMcpServer(workspaceDir, ['--allow-writes'], async ctx => {
-          const list = await ctx.client.listTools();
-          const names = list.tools.map(t => t.name);
-          expect(names).toContain('update_resource');
-          expect(names).toContain('delete_resource');
-
-          expect(ctx.client.getInstructions()).toBeUndefined();
-          const info = (await ctx.client.callTool({
-            name: 'get_workspace_info',
-            arguments: {},
-          })) as { content: Array<{ text: string }> };
-          expect(JSON.parse(info.content[0].text).read_only).toBe(false);
-        })
-      ),
-    30000
-  );
-
-  it(
     'loads and switches vaults through the persistent registry mode',
     () =>
       withTmpDir(

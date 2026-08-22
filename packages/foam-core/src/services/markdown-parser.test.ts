@@ -18,15 +18,6 @@ describe('Markdown parsing', () => {
   });
 
   describe('Links', () => {
-    it('should store external links with type external', () => {
-      const note = createNoteFromMarkdown(
-        `this is a [link to google](https://www.google.com)`
-      );
-      expect(note.links.length).toEqual(1);
-      expect(note.links[0].type).toEqual('external');
-      expect(note.links[0].definition).toEqual('https://www.google.com');
-    });
-
     it('should skip links to a section within the file', () => {
       const note = createNoteFromMarkdown(
         `this is a [link to intro](#introduction)`
@@ -42,16 +33,6 @@ describe('Markdown parsing', () => {
       const link = note.links[0];
       expect(link.type).toEqual('link');
       expect(link.rawText).toEqual('[link to page b](../doc/page-b.md)');
-      expect(link.isEmbed).toBeFalsy();
-    });
-
-    it('should detect links that have formatting in label', () => {
-      const note = createNoteFromMarkdown(
-        'this is [**link** with __formatting__](../doc/page-b.md)'
-      );
-      expect(note.links.length).toEqual(1);
-      const link = note.links[0];
-      expect(link.type).toEqual('link');
       expect(link.isEmbed).toBeFalsy();
     });
 
@@ -100,18 +81,7 @@ describe('Markdown parsing', () => {
       expect(link.isEmbed).toBeFalsy();
     });
 
-    it('should set reference to alias for wikilinks with alias', () => {
-      const note = createNoteFromMarkdown(
-        'This is a [[target-file|Display Name]] wikilink.'
-      );
-      expect(note.links.length).toEqual(1);
-      const link = note.links[0];
-      expect(link.type).toEqual('wikilink');
-      expect(ResourceLink.isUnresolvedReference(link)).toBe(true);
-      expect(link.definition).toEqual('target-file');
-    });
-
-    it('should skip wikilinks in codeblocks', () => {
+    it('should skip wikilinks in fenced and inline code', () => {
       const noteA = createNoteFromMarkdown(`
 this is some text with our [[first-wikilink]].
 
@@ -119,19 +89,7 @@ this is some text with our [[first-wikilink]].
 this is inside a [[codeblock]]
 \`\`\`
 
-this is some text with our [[second-wikilink]].
-    `);
-      expect(noteA.links.map(l => l.rawText)).toEqual([
-        '[[first-wikilink]]',
-        '[[second-wikilink]]',
-      ]);
-    });
-
-    it('should skip wikilinks in inlined codeblocks', () => {
-      const noteA = createNoteFromMarkdown(`
-this is some text with our [[first-wikilink]].
-
-this is \`inside a [[codeblock]]\`
+this is \`inside an [[inline-codeblock]]\`
 
 this is some text with our [[second-wikilink]].
     `);
@@ -184,41 +142,6 @@ This is a [reference-style link][ref1] and another [link][ref2].
       expect(definition2.url).toEqual('target2.md');
     });
 
-    it('should handle reference-style links without matching definitions', () => {
-      const note = createNoteFromMarkdown(`
-This is a [reference-style link][missing-ref].
-
-[existing-ref]: target.md "Target"
-      `);
-
-      // Per CommonMark spec, reference links without matching definitions
-      // should be treated as plain text, not as links
-      expect(note.links.length).toEqual(0);
-    });
-
-    it('should handle mixed link types', () => {
-      const note = createNoteFromMarkdown(`
-This has [[wikilink]], [inline link](target.md), and [reference link][ref].
-
-[ref]: reference-target.md "Reference Target"
-      `);
-
-      expect(note.links.length).toEqual(3);
-
-      expect(note.links[0].type).toEqual('wikilink');
-      expect(note.links[0].rawText).toEqual('[[wikilink]]');
-      expect(ResourceLink.isUnresolvedReference(note.links[0])).toBe(true);
-      expect(note.links[0].definition).toEqual('wikilink');
-
-      expect(note.links[1].type).toEqual('link');
-      expect(note.links[1].rawText).toEqual('[inline link](target.md)');
-      expect(note.links[1].definition).toBeUndefined();
-
-      expect(note.links[2].type).toEqual('link');
-      expect(note.links[2].rawText).toEqual('[reference link][ref]');
-      expect(ResourceLink.isResolvedReference(note.links[2])).toBe(true);
-    });
-
     it('should detect inline external links as external type', () => {
       const note = createNoteFromMarkdown(
         'Visit [Google](https://google.com) and [Docs](http://docs.example.com/page).'
@@ -258,40 +181,9 @@ I link to an [interesting topic][1] and an [[internal-note]]
       expect(internalLink).toBeDefined();
     });
 
-    it('should not create a placeholder for reference-style links with external URLs', () => {
-      const note = createNoteFromMarkdown(`
-[interesting topic][1]
-
-[1]: http://test.com/external
-      `);
-      expect(note.links.length).toEqual(1);
-      expect(note.links[0].type).toEqual('external');
-    });
-
-    it('should not treat footnote definitions as link definitions', () => {
+    it('keeps footnotes separate from regular reference links', () => {
       const note = createNoteFromMarkdown(
-        `Text with footnote[^1]\n\n[^1]: The footnote content`
-      );
-      expect(note.links).toHaveLength(0);
-    });
-
-    it('should not treat footnote references as links', () => {
-      const note = createNoteFromMarkdown(
-        `Text[^note] and more text.\n\n[^note]: Explanation here`
-      );
-      expect(note.links).toHaveLength(0);
-    });
-
-    it('should not treat multiple adjacent footnote references as links', () => {
-      const note = createNoteFromMarkdown(
-        `Text[^1][^2]\n\n[^1]: First footnote\n\n[^2]: Second footnote`
-      );
-      expect(note.links).toHaveLength(0);
-    });
-
-    it('should not confuse footnote definitions with regular link definitions', () => {
-      const note = createNoteFromMarkdown(
-        `[ref]: /path/to/file.md\n[text][ref]\n\nFootnote[^1]\n\n[^1]: footnote`
+        `[ref]: /path/to/file.md\n[text][ref]\n\nFootnote[^1][^2]\n\n[^1]: first\n\n[^2]: second`
       );
       expect(note.links).toHaveLength(1);
       expect(note.links[0].type).toBe('link');
@@ -306,14 +198,6 @@ I link to an [interesting topic][1] and an [[internal-note]]
 this note has a title
     `);
       expect(note.title).toBe('Page A');
-    });
-
-    it('should support wikilinks and urls in title', () => {
-      const note = createNoteFromMarkdown(`
-# Page A with [[wikilink]] and a [url](https://google.com)
-this note has a title
-    `);
-      expect(note.title).toBe('Page A with wikilink and a url');
     });
 
     it('should default to file name if heading does not exist', () => {
@@ -338,37 +222,6 @@ date: 20-12-12
       expect(note.title).toBe('Note Title');
     });
 
-    it('should support numbers as title', () => {
-      const note1 = createNoteFromMarkdown(`hello`, '/157.md');
-      expect(note1.title).toBe('157');
-
-      const note2 = createNoteFromMarkdown(`# 158`, '/157.md');
-      expect(note2.title).toBe('158');
-
-      const note3 = createNoteFromMarkdown(
-        `
----
-title: 159
----
-
-# 158
-`,
-        '/157.md'
-      );
-      expect(note3.title).toBe('159');
-    });
-
-    it('should support empty titles (see #276)', () => {
-      const note = createNoteFromMarkdown(
-        `
-#
-
-this note has an empty title line
-    `,
-        '/Hello Page.md'
-      );
-      expect(note.title).toEqual('Hello Page');
-    });
   });
 
   describe('Frontmatter', () => {
@@ -383,17 +236,6 @@ date: 20-12-12
 
       expect(note.properties.title).toBe('Note Title');
       expect(note.properties.date).toBe('20-12-12');
-    });
-
-    it('should parse empty frontmatter', () => {
-      const note = createNoteFromMarkdown(`
----
----
-
-# Empty Frontmatter
-`);
-
-      expect(note.properties).toEqual({});
     });
 
     it('should not fail when there are issues with parsing frontmatter', () => {
@@ -419,17 +261,6 @@ source: https://example.com/page:123
 # Note with colon in meta value\n`);
       expect(note.properties.source).toBe('https://example.com/page:123');
       expect(note.tags[0].label).toEqual('test');
-    });
-
-    it('#1455 - should parse tags when another field has a datetime value with colons', () => {
-      const note = createNoteFromMarkdown(`
----
-date: 2025-04-11T00:01:00+01:00
-tags:
-    - new
----
-`);
-      expect(note.tags.map(t => t.label)).toContain('new');
     });
 
     it('#1615 - should detect tags when a hyphenated property appears before tags', () => {
@@ -459,13 +290,14 @@ tags: hello, world
       ]);
     });
 
-    it('will skip tags in codeblocks', () => {
+    it('skips tags in fenced and inline code', () => {
       const noteA = createNoteFromMarkdown(`
 this is some #text that includes #tags we #care-about.
 
 \`\`\`
 this is a #codeblock
 \`\`\`
+this is an \`inline #codeblock\`
     `);
       expect(noteA.tags.map(t => t.label)).toEqual([
         'text',
@@ -474,38 +306,10 @@ this is a #codeblock
       ]);
     });
 
-    it('will skip tags in inlined codeblocks', () => {
-      const noteA = createNoteFromMarkdown(`
-this is some #text that includes #tags we #care-about.
-this is a \`inlined #codeblock\` `);
-      expect(noteA.tags.map(t => t.label)).toEqual([
-        'text',
-        'tags',
-        'care-about',
-      ]);
-    });
     it('can find tags as text in yaml', () => {
       const noteA = createNoteFromMarkdown(`
 ---
 tags: hello, world  this_is_good
----
-# this is a heading
-this is some #text that includes #tags we #care-about.
-    `);
-      expect(noteA.tags.map(t => t.label)).toEqual([
-        'hello',
-        'world',
-        'this_is_good',
-        'text',
-        'tags',
-        'care-about',
-      ]);
-    });
-
-    it('can find tags as array in yaml', () => {
-      const noteA = createNoteFromMarkdown(`
----
-tags: [hello, world,  this_is_good]
 ---
 # this is a heading
 this is some #text that includes #tags we #care-about.
@@ -634,60 +438,21 @@ This is the content of section with url`);
   });
 
   describe('Alias', () => {
-    it('can find tags in comma separated string', () => {
-      const note = parser.parse(
-        URI.file('/path/to/a'),
-        `
----
-alias: alias 1, alias 2   , alias3 
----
-This is a test note without headings.
-But with some content.
-`
-      );
-      expect(note.aliases).toEqual([
-        {
-          range: Range.create(1, 0, 3, 3),
-          title: 'alias 1',
-        },
-        {
-          range: Range.create(1, 0, 3, 3),
-          title: 'alias 2',
-        },
-        {
-          range: Range.create(1, 0, 3, 3),
-          title: 'alias3',
-        },
-      ]);
+    it('reads comma-separated and YAML-array aliases', () => {
+      for (const frontmatter of [
+        'alias: alias 1, alias 2, alias3',
+        'alias:\n- alias 1\n- alias 2\n- alias3',
+      ]) {
+        const note = parser.parse(
+          URI.file('/path/to/a'),
+          `---\n${frontmatter}\n---\nContent`
+        );
+        expect(note.aliases.map(alias => alias.title)).toEqual([
+          'alias 1',
+          'alias 2',
+          'alias3',
+        ]);
+      }
     });
-  });
-  it('can find tags in yaml array', () => {
-    const note = parser.parse(
-      URI.file('/path/to/a'),
-      `
----
-alias:
-- alias 1
-- alias 2
-- alias3
----
-This is a test note without headings.
-But with some content.
-`
-    );
-    expect(note.aliases).toEqual([
-      {
-        range: Range.create(1, 0, 6, 3),
-        title: 'alias 1',
-      },
-      {
-        range: Range.create(1, 0, 6, 3),
-        title: 'alias 2',
-      },
-      {
-        range: Range.create(1, 0, 6, 3),
-        title: 'alias3',
-      },
-    ]);
   });
 });

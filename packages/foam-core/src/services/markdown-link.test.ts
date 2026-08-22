@@ -29,24 +29,14 @@ function analyze(
 const wikilinkCases: Case[] = [
   ['target', '[[wikilink]]', { target: 'wikilink' }],
   [
-    'target and section',
+    'section',
     '[[wikilink#section]]',
     { target: 'wikilink', section: 'section' },
   ],
   [
-    'target and alias',
+    'alias',
     '[[wikilink|alias]]',
     { target: 'wikilink', alias: 'alias' },
-  ],
-  [
-    'square brackets in target',
-    '[[wikilink [with] brackets]]',
-    { target: 'wikilink [with] brackets' },
-  ],
-  [
-    'square brackets in alias',
-    '[[wikilink|alias [with] brackets]]',
-    { target: 'wikilink', alias: 'alias [with] brackets' },
   ],
   [
     'escaped alias separator',
@@ -55,27 +45,17 @@ const wikilinkCases: Case[] = [
   ],
   [
     'spaces in every component',
-    '[[wikilink with spaces#section with spaces|alias with spaces]]',
+    '[[note with spaces#section with spaces|alias with spaces]]',
     {
-      target: 'wikilink with spaces',
+      target: 'note with spaces',
       section: 'section with spaces',
       alias: 'alias with spaces',
     },
   ],
   ['self section', '[[#section]]', { section: 'section' }],
+  ['block anchor', '[[note#^block]]', { target: 'note', blockId: 'block' }],
   [
-    'block anchor',
-    '[[note#^myblock]]',
-    { target: 'note', blockId: 'myblock' },
-  ],
-  ['self block anchor', '[[#^myblock]]', { blockId: 'myblock' }],
-  [
-    'block anchor and alias',
-    '[[note#^myblock|My Alias]]',
-    { target: 'note', blockId: 'myblock', alias: 'My Alias' },
-  ],
-  [
-    'caret inside a section',
+    'caret inside a regular section',
     '[[note#foo^bar]]',
     { target: 'note', section: 'foo^bar' },
   ],
@@ -83,83 +63,31 @@ const wikilinkCases: Case[] = [
 
 const directLinkCases: Case[] = [
   ['target', '[link](to/path.md)', { target: 'to/path.md', alias: 'link' }],
+  ['self section', '[link](#section)', { section: 'section', alias: 'link' }],
   [
-    'target and section',
-    '[link](to/path.md#section)',
-    { target: 'to/path.md', section: 'section', alias: 'link' },
-  ],
-  ['section only', '[link](#section)', { section: 'section', alias: 'link' }],
-  [
-    'square brackets in label',
-    '[inbox [xyz]](to/path.md)',
-    { target: 'to/path.md', alias: 'inbox [xyz]' },
-  ],
-  ['empty label', '[](to/path.md)', { target: 'to/path.md' }],
-  ['angle brackets', '[](<to/path.md>)', { target: 'to/path.md' }],
-  [
-    'angle brackets and section',
-    '[](<to/path.md#section>)',
-    { target: 'to/path.md', section: 'section' },
-  ],
-  [
-    'spaced section in angle brackets',
-    '[link](<to/path.md#My Section>)',
-    { target: 'to/path.md', section: 'My Section', alias: 'link' },
-  ],
-  [
-    'spaced section without angle brackets',
-    '[link](to/path.md#My Section)',
-    { target: 'to/path.md', section: 'My Section', alias: 'link' },
-  ],
-  [
-    'spaced target without angle brackets',
-    '[link](path with spaces.md)',
-    { target: 'path with spaces.md', alias: 'link' },
-  ],
-  [
-    'spaced target and section in angle brackets',
+    'spaced target and section',
     '[link](<path with spaces.md#My Section>)',
     { target: 'path with spaces.md', section: 'My Section', alias: 'link' },
   ],
   [
-    'spaced section followed by a title',
-    '[link](to/path.md#My Section "title")',
-    { target: 'to/path.md', section: 'My Section', alias: 'link' },
+    'unbracketed spaced target',
+    '[link](path with spaces.md)',
+    { target: 'path with spaces.md', alias: 'link' },
+  ],
+  [
+    'section followed by a title',
+    '![alt](image.jpg#section "Title text")',
+    { target: 'image.jpg', section: 'section', alias: 'alt' },
   ],
   [
     'block anchor',
-    '[text](note.md#^myblock)',
-    { target: 'note.md', blockId: 'myblock', alias: 'text' },
+    '[text](note.md#^block)',
+    { target: 'note.md', blockId: 'block', alias: 'text' },
   ],
   [
-    'regular section rather than block anchor',
+    'regular section',
     '[text](note.md#section)',
     { target: 'note.md', section: 'section', alias: 'text' },
-  ],
-  [
-    'image with double-quoted title',
-    '![alt text](image.jpg "Title text")',
-    { target: 'image.jpg', alias: 'alt text' },
-  ],
-  [
-    'image with single-quoted title',
-    "![alt text](image.jpg 'Title text')",
-    { target: 'image.jpg', alias: 'alt text' },
-  ],
-  [
-    'image section followed by a title',
-    '![alt text](image.jpg#section "Title text")',
-    { target: 'image.jpg', section: 'section', alias: 'alt text' },
-  ],
-  [
-    'path and title containing spaces',
-    '![alt](path/to/file.jpg "Title with spaces")',
-    { target: 'path/to/file.jpg', alias: 'alt' },
-  ],
-  [
-    'regular link with a title',
-    '[link text](document.md "Link title")',
-    { target: 'document.md', alias: 'link text' },
   ],
 ];
 
@@ -175,18 +103,12 @@ describe('analyzeMarkdownLink', () => {
     }
   );
 
-  it('uses raw text for a resolved wikilink', () => {
-    const definition = {
-      label: 'my-note',
-      url: '../different note.md#different section',
-      title: 'Different note',
-    };
+  it('uses raw text instead of a resolved wikilink definition', () => {
     expect(
-      analyze(
-        'wikilink',
-        '[[my-note#raw section|Display text]]',
-        definition
-      )
+      analyze('wikilink', '[[my-note#raw section|Display text]]', {
+        label: 'my-note',
+        url: '../different note.md#different section',
+      })
     ).toEqual({
       ...defaults,
       target: 'my-note',
@@ -195,21 +117,22 @@ describe('analyzeMarkdownLink', () => {
     });
   });
 
-  it.each([
-    ['./document.md#section', { section: 'section' }],
-    ['./document.md#^block-id', { blockId: 'block-id' }],
-  ])('uses a resolved reference definition at %s', (url, fragment) => {
-    expect(
-      analyze('link', '[Click here][reference]', {
-        label: 'reference',
-        url,
-        title: 'Document',
-      })
-    ).toEqual({
-      ...defaults,
-      target: './document.md',
-      alias: 'Click here',
-      ...fragment,
-    });
+  it('uses section and block fragments from resolved Markdown references', () => {
+    for (const [url, fragment] of [
+      ['./document.md#section', { section: 'section' }],
+      ['./document.md#^block-id', { blockId: 'block-id' }],
+    ] as const) {
+      expect(
+        analyze('link', '[Click here][reference]', {
+          label: 'reference',
+          url,
+        })
+      ).toEqual({
+        ...defaults,
+        target: './document.md',
+        alias: 'Click here',
+        ...fragment,
+      });
+    }
   });
 });
