@@ -35,7 +35,7 @@ Explorer」。插件更新後也必須使用新 task，既有 task 不會熱重�
 - 註解使用公開的 `updateModelContext()`，不是 Codex 私有註解資料模型。
 - 目前主要在 macOS 驗證；其他平台尚未完整測試。
 
-## 開發
+## 本機建置
 
 需求：Node.js 22+、Yarn Classic 1.x，以及支援 Plugins/MCP Apps 的 Codex App。
 
@@ -56,7 +56,7 @@ codex plugin list
 ```
 
 直接執行 `./scripts/launch_codex_vault_mcp` 只會啟動 stdio server，不會顯示
-Codex UI。完整更新流程見[開發指南](docs/development.md)。
+Codex UI。
 
 ## 寫入
 
@@ -70,7 +70,6 @@ Codex UI。完整更新流程見[開發指南](docs/development.md)。
 
 - [使用指南](docs/usage.md)
 - [架構與能力邊界](docs/architecture.md)
-- [開發指南](docs/development.md)
 - [安全性與本機資料](docs/security-and-data.md)
 - [Fork 與授權](docs/fork-and-license.md)
 

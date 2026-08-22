@@ -8,7 +8,7 @@ import {
   VaultManager,
   VaultFilePolicy,
 } from '@foam/mcp';
-import { Logger } from '@foam/core';
+import { type ILogger, Logger } from '@foam/core';
 import { loadWorkspaceFromDirectory } from '../support/filesystem';
 import { pickVaultFolder } from '../support/folder-picker';
 import { NodeWatcher } from '../support/watcher';
@@ -18,7 +18,6 @@ import {
   getString,
   resolveWorkspaceDir,
 } from '../support/args';
-import type { CliLogger } from '../support/types';
 import { VaultRegistry } from '../support/vault-registry';
 import { NodeVaultWorkspaceManager } from '../support/vault-workspace-manager';
 
@@ -81,7 +80,7 @@ export function parseMcpArgs(argv: string[]): McpArgs {
 
 export async function runMcpCommand(
   args: McpArgs,
-  logger: CliLogger
+  logger: ILogger
 ): Promise<number> {
   // The MCP transport owns stdout — anything written there is interpreted
   // as protocol messages. Send our own logs to stderr only.

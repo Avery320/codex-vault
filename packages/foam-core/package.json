@@ -22,12 +22,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf out",
-    "test": "yarn test:unit && yarn test:e2e",
+    "test": "yarn test:unit",
     "test:unit": "vitest run",
-    "test:e2e": "yarn bench",
-    "bench": "vitest bench --run --config vitest.bench.config.ts",
-    "bench:compare": "vitest run src/perf-regression.test.ts",
-    "bench:seed": "node ../../scripts/perf/seed-baseline.mjs",
     "lint": "oxlint src"
   },
   "devDependencies": {

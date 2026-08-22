@@ -39,7 +39,7 @@ reader、backlinks 與 graph。revision 讓等待建立前發生的事件不會�
 
 `@foam/*` 名稱暫時保留以避免不完整的跨套件改名。
 
-根目錄的 `build`、`test`、`lint`、`bench` 與 `clean` 執行上圖的 Codex Vault
+根目錄的 `build`、`test`、`lint` 與 `clean` 執行上圖的 Codex Vault
 packages。原始 Foam VS Code extension 不在現行 source tree 或 build graph 中；需要
 追溯尚未搬移的行為時，請查閱 Git history 與上游 Foam repository。
 

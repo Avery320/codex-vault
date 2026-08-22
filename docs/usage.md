@@ -35,7 +35,7 @@ reader、backlinks 與知識圖譜，不需要手動重新整理。切到背景�
 寫入預設關閉。啟用後仍須先 `preview_resource_update`，再以相同 SHA-256 呼叫
 `update_resource`。若回傳 `conflict`，必須重新讀取與預覽。
 
-一般刪除移到 `.foam/trash`；永久刪除需要額外指定與確認。
+刪除經確認後會移到作業系統垃圾桶，可由系統介面復原。
 
 ## 常見問題
 

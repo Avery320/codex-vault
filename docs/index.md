@@ -2,7 +2,6 @@
 
 - [使用指南](usage.md)
 - [架構與能力邊界](architecture.md)
-- [開發指南](development.md)
 - [安全性與本機資料](security-and-data.md)
 - [Fork 與授權](fork-and-license.md)
 

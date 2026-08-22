@@ -2,7 +2,7 @@
   "name": "@foam/mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Model Context Protocol server library for Foam — exposes the Foam knowledge graph to AI agents",
+  "description": "Codex Vault MCP server, tools, and interactive explorer",
   "license": "MIT",
   "main": "out/index.js",
   "types": "out/index.d.ts",
@@ -17,7 +17,6 @@
     "clean": "rimraf out",
     "test": "yarn test:unit",
     "test:unit": "vitest run",
-    "bench": "echo 'No benchmarks for @foam/mcp'",
     "lint": "oxlint src ui"
   },
   "devDependencies": {

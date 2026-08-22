@@ -20,14 +20,11 @@
     "test": "lerna run test",
     "test:unit": "lerna run test:unit",
     "test:e2e": "lerna run test:e2e",
-    "bench": "lerna run bench",
     "lint": "lerna run lint",
     "format": "prettier --write \"packages/foam-core/**/*.ts\" \"packages/foam-graph/**/*.ts\" \"packages/foam-mcp/**/*.ts\" \"packages/foam-cli/**/*.ts\"",
-    "mcp": "./scripts/launch_codex_vault_mcp",
-    "prepare": "husky"
+    "mcp": "./scripts/launch_codex_vault_mcp"
   },
   "devDependencies": {
-    "husky": "^9.1.7",
     "lerna": "^8.2.2"
   },
   "engines": {

@@ -1,7 +1,7 @@
 {
   "name": "@foam/graph-view",
   "version": "0.40.0",
-  "description": "Foam graph visualization web component",
+  "description": "Codex Vault knowledge graph web component",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -23,10 +23,8 @@
     "build": "node build.cjs",
     "build:lib": "node build.cjs --lib",
     "clean": "rimraf out dist",
-    "test": "yarn test:unit && yarn test:e2e",
+    "test": "yarn test:unit",
     "test:unit": "vitest run",
-    "test:e2e": "echo 'No e2e tests for @foam/graph-view'",
-    "bench": "echo 'No benchmarks for @foam/graph-view'",
     "lint": "oxlint src"
   },
   "peerDependencies": {

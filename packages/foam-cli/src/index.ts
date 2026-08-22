@@ -20,9 +20,7 @@ Options:
   --version   Show the runtime version
 `;
 
-export type { ILogger as CliLogger } from '@foam/core';
-
-export function renderCliHelp(): string {
+function renderCliHelp(): string {
   return CLI_HELP;
 }
 
@@ -33,7 +31,7 @@ class ConsoleLogger extends BaseLogger {
   }
 }
 
-export async function runCli(
+async function runCli(
   argv: string[],
   logger: ILogger = new ConsoleLogger()
 ): Promise<number> {

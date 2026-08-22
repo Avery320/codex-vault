@@ -18,10 +18,7 @@ jobs:
           node-version: '22'
           cache: yarn
       - run: yarn install --frozen-lockfile
-      - run: yarn workspace @foam/core lint
-      - run: yarn workspace @foam/graph-view lint
-      - run: yarn workspace @foam/mcp lint
-      - run: yarn workspace @foam/cli lint
+      - run: yarn lint
 
   test:
     name: Build and test Codex Vault
@@ -35,7 +32,4 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
       - run: yarn build
-      - run: yarn workspace @foam/core test:unit
-      - run: yarn workspace @foam/graph-view test:unit
-      - run: yarn workspace @foam/mcp test
-      - run: yarn workspace @foam/cli test
+      - run: yarn test
