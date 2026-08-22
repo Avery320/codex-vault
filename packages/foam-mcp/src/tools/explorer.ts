@@ -88,7 +88,15 @@ export function registerExplorerTool(
       title: '開啟知識庫',
       description:
         'Open the interactive Codex Vault explorer with file navigation, Markdown reading, search, backlinks, and a knowledge graph.',
-      inputSchema: {},
+      inputSchema: {
+        project_path: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            'Absolute path of the current Codex project. Used to select its containing vault.'
+          ),
+      },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -102,12 +110,18 @@ export function registerExplorerTool(
         'openai/toolInvocation/invoked': '知識庫已開啟',
       },
     },
-    async () => {
-      const state = await buildExplorerState(
-        workspaceProvider,
-        vaultManager,
-        undefined
-      );
+    async args => {
+      const projectWorkspace =
+        args.project_path && vaultManager
+          ? await vaultManager.openVault({ projectPath: args.project_path })
+          : undefined;
+      const projectNeedsSelection =
+        args.project_path !== undefined &&
+        vaultManager !== undefined &&
+        projectWorkspace === null;
+      const state = projectNeedsSelection
+        ? await buildVaultSelectionState(vaultManager)
+        : await buildExplorerState(workspaceProvider, vaultManager, undefined);
 
       return {
         content: [
@@ -130,24 +144,11 @@ async function buildExplorerState(
   focusUriInput: string | undefined
 ) {
   const active = workspaceProvider.getActive();
+  if (!active) return buildVaultSelectionState(vaultManager);
+
   const vaults = vaultManager
     ? await vaultManager.listVaults()
-    : active
-    ? [{ ...active.vault, active: true }]
-    : [];
-
-  if (!active) {
-    return {
-      focus_uri: undefined,
-      active_vault: null,
-      vaults,
-      files: [],
-      graph: { nodeInfo: {}, links: [] },
-      summary: { note_count: 0, connection_count: 0 },
-      revision: 0,
-      needs_vault_selection: true,
-    };
-  }
+    : [{ ...active.vault, active: true }];
 
   const { foam, rootUri } = active;
   let focusUri: string | undefined;
@@ -184,5 +185,26 @@ async function buildExplorerState(
     },
     revision: active.changeFeed.revision,
     needs_vault_selection: false,
+  };
+}
+
+async function buildVaultSelectionState(
+  vaultManager: VaultManager | undefined
+) {
+  const vaults = vaultManager
+    ? (await vaultManager.listVaults()).map(vault => ({
+        ...vault,
+        active: false,
+      }))
+    : [];
+  return {
+    focus_uri: undefined,
+    active_vault: null,
+    vaults,
+    files: [],
+    graph: { nodeInfo: {}, links: [] },
+    summary: { note_count: 0, connection_count: 0 },
+    revision: 0,
+    needs_vault_selection: true,
   };
 }

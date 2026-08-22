@@ -84,9 +84,59 @@ describe('NodeVaultWorkspaceManager', () => {
     }
   });
 
-  it('recognizes an Obsidian vault containing the current Codex project', async () => {
+  it('declares project_path and opens the vault bound to that project', async () => {
     const { rootDir, cleanup } = createTmpDir({}, 'codex-vault-manager-');
-    let manager: NodeVaultWorkspaceManager | undefined;
+    try {
+      const vaultA = path.join(rootDir, 'Alpha');
+      const vaultB = path.join(rootDir, 'Beta');
+      const projectPath = path.join(rootDir, 'current-project');
+      await fs.mkdir(vaultA);
+      await fs.mkdir(vaultB);
+      await fs.mkdir(projectPath);
+      await fs.writeFile(path.join(vaultA, 'alpha.md'), '# Alpha');
+      await fs.writeFile(path.join(vaultB, 'beta.md'), '# Beta');
+
+      let id = 0;
+      const registry = new VaultRegistry({
+        registryPath: path.join(rootDir, 'config', 'vaults.json'),
+        createId: () => `vault-${++id}`,
+      });
+      const manager = new NodeVaultWorkspaceManager(registry);
+      await manager.initialize();
+      const alpha = await manager.registerVault({
+        path: vaultA,
+        projectPath,
+      });
+      await manager.registerVault({ path: vaultB });
+
+      await withVaultManagerMcp(manager, async client => {
+        const explorer = (await client.listTools()).tools.find(
+          tool => tool.name === 'show_vault_explorer'
+        );
+        expect(explorer?.inputSchema).toMatchObject({
+          type: 'object',
+          properties: { project_path: { type: 'string' } },
+        });
+
+        const result = await showVaultExplorer(client, {
+          project_path: projectPath,
+        });
+        expect(result.structuredContent.active_vault).toMatchObject({
+          id: alpha.vault.id,
+          name: 'Alpha',
+        });
+        expect(result.structuredContent.needs_vault_selection).toBe(false);
+        expect(result.structuredContent.files.map(file => file.uri)).toEqual([
+          'alpha.md',
+        ]);
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('recognizes an unregistered Obsidian vault containing the project', async () => {
+    const { rootDir, cleanup } = createTmpDir({}, 'codex-vault-manager-');
     try {
       const vaultPath = path.join(rootDir, 'Knowledge');
       const projectPath = path.join(vaultPath, 'projects', 'robot');
@@ -98,23 +148,140 @@ describe('NodeVaultWorkspaceManager', () => {
         registryPath: path.join(rootDir, 'config', 'vaults.json'),
         createId: () => 'knowledge-vault',
       });
-      manager = new NodeVaultWorkspaceManager(registry);
+      const manager = new NodeVaultWorkspaceManager(registry);
       await manager.initialize();
 
-      const active = await manager.openVault({ projectPath });
-      expect(active?.vault).toMatchObject({
-        id: 'knowledge-vault',
-        name: 'Knowledge',
+      await withVaultManagerMcp(manager, async client => {
+        const result = await showVaultExplorer(client, {
+          project_path: projectPath,
+        });
+        expect(result.structuredContent.active_vault).toMatchObject({
+          id: 'knowledge-vault',
+          name: 'Knowledge',
+        });
+        expect(result.structuredContent.needs_vault_selection).toBe(false);
+        expect(
+          (await manager.listVaults()).filter(vault => vault.active)
+        ).toHaveLength(1);
       });
-      expect((await manager.listVaults()).filter(vault => vault.active)).toHaveLength(
-        1
-      );
     } finally {
-      await manager?.close();
+      cleanup();
+    }
+  });
+
+  it('requests vault selection when the project is outside every vault', async () => {
+    const { rootDir, cleanup } = createTmpDir({}, 'codex-vault-manager-');
+    try {
+      const vaultPath = path.join(rootDir, 'Knowledge');
+      const projectPath = path.join(rootDir, 'unrelated-project');
+      await fs.mkdir(vaultPath);
+      await fs.mkdir(projectPath);
+      await fs.writeFile(path.join(vaultPath, 'home.md'), '# Home');
+
+      const registry = new VaultRegistry({
+        registryPath: path.join(rootDir, 'config', 'vaults.json'),
+        createId: () => 'knowledge-vault',
+      });
+      const manager = new NodeVaultWorkspaceManager(registry);
+      await manager.initialize();
+      const active = await manager.registerVault({ path: vaultPath });
+
+      await withVaultManagerMcp(manager, async client => {
+        const result = await showVaultExplorer(client, {
+          project_path: projectPath,
+        });
+        expect(result.structuredContent).toMatchObject({
+          active_vault: null,
+          needs_vault_selection: true,
+          files: [],
+          vaults: [
+            {
+              id: active.vault.id,
+              name: 'Knowledge',
+              active: false,
+            },
+          ],
+        });
+        expect(manager.getActive()?.vault.id).toBe(active.vault.id);
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps the active vault when project_path is omitted', async () => {
+    const { rootDir, cleanup } = createTmpDir({}, 'codex-vault-manager-');
+    try {
+      const vaultPath = path.join(rootDir, 'Knowledge');
+      await fs.mkdir(vaultPath);
+      await fs.writeFile(path.join(vaultPath, 'home.md'), '# Home');
+
+      const registry = new VaultRegistry({
+        registryPath: path.join(rootDir, 'config', 'vaults.json'),
+        createId: () => 'knowledge-vault',
+      });
+      const manager = new NodeVaultWorkspaceManager(registry);
+      await manager.initialize();
+      const active = await manager.registerVault({ path: vaultPath });
+
+      await withVaultManagerMcp(manager, async client => {
+        const result = await showVaultExplorer(client);
+        expect(result.structuredContent.active_vault).toMatchObject({
+          id: active.vault.id,
+          name: 'Knowledge',
+        });
+        expect(result.structuredContent.needs_vault_selection).toBe(false);
+      });
+    } finally {
       cleanup();
     }
   });
 });
+
+interface ExplorerResult {
+  structuredContent: {
+    active_vault: { id: string; name: string } | null;
+    vaults: Array<{ id: string; name: string; active: boolean }>;
+    files: Array<{ uri: string }>;
+    needs_vault_selection: boolean;
+  };
+}
+
+async function withVaultManagerMcp<T>(
+  manager: NodeVaultWorkspaceManager,
+  fn: (client: Client) => Promise<T>
+): Promise<T> {
+  const server = new FoamMcpServer({
+    workspaceProvider: manager,
+    vaultManager: manager,
+    mode: 'read',
+  });
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  const client = new Client(
+    { name: 'vault-manager-test', version: '0.0.0' },
+    { capabilities: {} }
+  );
+  await client.connect(clientTransport);
+
+  try {
+    return await fn(client);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
+async function showVaultExplorer(
+  client: Client,
+  args: Record<string, unknown> = {}
+): Promise<ExplorerResult> {
+  return client.callTool({
+    name: 'show_vault_explorer',
+    arguments: args,
+  }) as unknown as Promise<ExplorerResult>;
+}
 
 async function listResourceUris(client: Client): Promise<string[]> {
   const result = (await client.callTool({

@@ -65,6 +65,7 @@ export class NodeVaultWorkspaceManager implements VaultManager {
             vault = await this.registry.register({ vaultPath: vaultRoot });
           }
         }
+        if (!vault) return null;
       }
       vault ??= this.registry.getActive();
       if (!vault) return null;
